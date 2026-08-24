@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>จดหมายสายลม — ribbon wind</title>
+<style>
+  :root{ --bg-top:#dfe2e6; --bg-bot:#eee9de; --ink:#33333a; --gold:#c69a54; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:linear-gradient(165deg,var(--bg-top),var(--bg-bot));
+    font-family:'Georgia',serif;color:var(--ink);height:100vh;
+    display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;}
+  #stage{flex:1;position:relative;}
+  canvas{display:block;width:100%;height:100%;}
+  .title{position:absolute;top:20px;left:0;right:0;text-align:center;
+    font-size:12px;letter-spacing:0.4em;opacity:0.4;pointer-events:none;}
+  .hint{position:absolute;top:42px;left:0;right:0;text-align:center;
+    font-size:10.5px;letter-spacing:0.05em;opacity:0.3;font-style:italic;pointer-events:none;}
+  .panel{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,0.5);backdrop-filter:blur(8px);
+    border:1px solid rgba(90,96,110,0.15);border-radius:14px;
+    padding:12px 22px;display:flex;flex-direction:column;gap:5px;align-items:center;}
+  .panel label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.55;}
+  input[type=range]{width:210px;accent-color:#6b7078;}
+  .val{font-size:11px;opacity:0.45;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title">จดหมายสายลม</div>
+  <div class="hint">— ริ้วลม 3 แบบ ขยับจริง · ปรับความแรง/ทิศ —</div>
+  <canvas id="c"></canvas>
+  <div class="panel">
+    <label>ความแรง · intensity</label>
+    <input type="range" id="intensity" min="0" max="100" value="65">
+    <span class="val" id="val"></span>
+    <label style="margin-top:6px">ทิศลม · wind ← →</label>
+    <input type="range" id="wind" min="-100" max="100" value="60">
+    <span class="val" id="windval"></span>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+let W,H,DPR;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=canvas.clientWidth;H=canvas.clientHeight;
+  canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);
+const slider=document.getElementById('intensity'), valEl=document.getElementById('val');
+const windSlider=document.getElementById('wind'), windValEl=document.getElementById('windval');
+function label(v){return v<25?'เบา':v<55?'ปานกลาง':v<80?'แรง':'พายุ';}
+function windLabel(v){const a=Math.abs(v);const dir=v<-8?'ไปซ้าย':v>8?'ไปขวา':'เกือบนิ่ง';const s=a<30?'เบา':a<70?'กลาง':'แรง';return(v>-8&&v<8)?dir:dir+' · '+s;}
+slider.addEventListener('input',()=>valEl.textContent=label(+slider.value));
+windSlider.addEventListener('input',()=>windValEl.textContent=windLabel(+windSlider.value));
+valEl.textContent=label(+slider.value);windValEl.textContent=windLabel(+windSlider.value);
+
+const col=(a)=>`rgba(84,90,104,${a})`;
+let t=0;
+
+// 4: few breathing ribbons
+function wind4(cx,cy,intensity,dir){
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const zoneW=Math.min(W*0.6,150), lines=4;
+  const bend=(8+intensity*10);
+  for(let l=0;l<lines;l++){
+    const baseY=-30+(l/(lines-1))*60;
+    ctx.strokeStyle=col(0.12+intensity*0.24);
+    ctx.lineWidth=1.2+intensity*0.8;
+    ctx.beginPath();
+    for(let i=0;i<=54;i++){
+      const f=i/54;const x=-zoneW/2+f*zoneW;
+      const bulge=Math.sin(f*Math.PI)*bend*Math.sin(t*0.6+l*0.7);
+      const y=baseY+bulge;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// 5: flag-flick ribbons, trailing end whips with the wind
+function wind5(cx,cy,intensity,dir){
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const flowDir=dir>=0?1:-1;
+  const zoneW=Math.min(W*0.6,150), lines=4;
+  for(let l=0;l<lines;l++){
+    const baseY=-28+(l/(lines-1))*56;
+    ctx.strokeStyle=col(0.12+intensity*0.26);
+    ctx.lineWidth=1.2+intensity*0.7;
+    ctx.beginPath();
+    for(let i=0;i<=56;i++){
+      const f=i/56;const x=-zoneW/2+f*zoneW;
+      const trail = flowDir>0 ? f : (1-f);           // amplitude grows toward trailing end
+      const amp=2+trail*trail*(6+intensity*11);
+      const y=baseY+Math.sin(f*Math.PI*2*1.4 + t*(1.1+intensity)*flowDir + l)*amp;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// 6: fade-along ribbons, drifting
+function wind6(cx,cy,intensity,dir){
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const flowDir=dir>=0?1:-1;
+  const zoneW=Math.min(W*0.6,150), lines=4;
+  const drift=t*(0.4+intensity*0.5)*flowDir;
+  for(let l=0;l<lines;l++){
+    const baseY=-30+(l/(lines-1))*60;
+    const amp=4+intensity*7;
+    const steps=56;
+    for(let i=0;i<steps;i++){
+      const f0=i/steps,f1=(i+1)/steps;
+      const x0=-zoneW/2+f0*zoneW,x1=-zoneW/2+f1*zoneW;
+      const y0=baseY+Math.sin(f0*Math.PI*1.2+drift+l*0.6)*amp;
+      const y1=baseY+Math.sin(f1*Math.PI*1.2+drift+l*0.6)*amp;
+      const along = flowDir>0 ? f0 : (1-f0);
+      const a=(0.06+intensity*0.28)*Math.pow(along,0.7);
+      ctx.strokeStyle=col(a);
+      ctx.lineWidth=1+intensity*0.9;
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function lbl(x,y,txt){ctx.fillStyle=col(0.55);ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(txt,x,y);}
+
+function frame(){
+  t+=0.016;
+  ctx.clearRect(0,0,W,H);
+  const intensity=+slider.value/100;
+  const dir=+windSlider.value/100;
+  const cx=W*0.5;
+  const y1=H*0.22,y2=H*0.45,y3=H*0.68;
+  wind4(cx,y1,intensity,dir); lbl(cx,y1+56,'4 · ริ้วน้อยเส้น หายใจ');
+  wind5(cx,y2,intensity,dir); lbl(cx,y2+56,'5 · ริ้วปลายสะบัด');
+  wind6(cx,y3,intensity,dir); lbl(cx,y3+56,'6 · ริ้วไล่จาง');
+  requestAnimationFrame(frame);
+}
+resize();frame();
+</script>
+</body>
+</html>

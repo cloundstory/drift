@@ -1,0 +1,2799 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e4e3e0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>จดหมายสายลม</title>
+<style>
+:root{
+  --gold:#c69a54;
+  --line:rgba(84,90,104,.30);
+  --line-soft:rgba(84,90,104,.15);
+  --txt:rgba(51,51,58,.92);
+  --dim:rgba(84,90,104,.55);
+  --faint:rgba(84,90,104,.38);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  background:linear-gradient(165deg,#dfe2e6,#eee9de);
+  color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;
+  font-size:15px;line-height:1.8;
+  -webkit-user-select:none;user-select:none;
+  overscroll-behavior:none;
+}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+.veil{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column}
+.veil>*{pointer-events:auto}
+header.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(env(safe-area-inset-top) + 15px) 15px 8px}
+.brand{font-size:12px;letter-spacing:.34em;color:var(--faint);pointer-events:none}
+.tools{display:flex;gap:7px}
+.spacer{flex:1;pointer-events:none}
+
+button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
+.btn{border:1px solid var(--line-soft);border-radius:999px;padding:10px 16px;background:rgba(255,255,255,.42);backdrop-filter:blur(7px);font-size:13px;letter-spacing:.05em;transition:background .2s,border-color .2s}
+.btn:active{background:rgba(255,255,255,.85)}
+.btn.gold{border-color:rgba(198,154,84,.5);color:#8b6a33}
+.btn.ghost{border-color:transparent;background:none;color:var(--dim)}
+.btn[disabled]{opacity:.38;pointer-events:none}
+.btn.wide{width:100%;text-align:center;padding:12px;border-radius:12px}
+
+.dock{padding:8px 12px calc(env(safe-area-inset-bottom) + 12px);display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.dock::-webkit-scrollbar{display:none}
+.play{display:flex;align-items:center;gap:10px;padding:0 14px 2px}
+.play[hidden]{display:none}
+.play input{flex:1;accent-color:#c69a54;height:32px;background:none}
+/* ยังไม่ได้เลือกฉบับ = โชว์แต่ปุ่ม ให้เห็นว่ามีทางเข้าอยู่ตรงนี้
+   ทางเข้าที่มองไม่เห็นเท่ากับไม่มี — แต่ยังไม่เลือกฉบับให้เอง ตามข้อ 7 */
+.play.solo{justify-content:center}
+.play.solo input,.play.solo .ptime{display:none}
+.pbtn{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:999px;
+  background:rgba(255,255,255,.62);backdrop-filter:blur(7px);padding:8px 16px;font-size:12px;letter-spacing:.06em}
+.ptime{flex:0 0 auto;min-width:78px;text-align:right;font-size:11px;color:var(--dim);
+  font-family:ui-monospace,Menlo,monospace}
+.chip{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:13px;background:rgba(255,255,255,.5);backdrop-filter:blur(7px);padding:8px 13px;min-width:130px;max-width:210px;text-align:left}
+.chip .who{font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip .eta{font-size:11px;color:var(--dim);letter-spacing:.02em;white-space:nowrap}
+.chip.sel{background:rgba(255,255,255,.92)}
+.chip.here{border-color:rgba(198,154,84,.5)}
+.chip.here .eta{color:#8b6a33}
+.chip.gone{opacity:.55}
+
+.hint{position:fixed;left:0;right:0;top:68%;transform:translateY(-50%);text-align:center;font-size:12.5px;letter-spacing:.1em;color:var(--faint);line-height:2.2;pointer-events:none;transition:opacity .6s}
+
+/* ---------- sheets ---------- */
+.sheet{position:fixed;inset:0;z-index:20;display:none;background:linear-gradient(165deg,rgba(223,226,230,.975),rgba(238,233,222,.975));backdrop-filter:blur(12px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 46px) 18px calc(env(safe-area-inset-bottom) + 34px)}
+.sheet.on{display:block;animation:rise .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.wrap{max-width:540px;margin:0 auto}
+.close{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:10px;z-index:2;font-size:12px;letter-spacing:.12em;color:var(--dim);padding:12px 14px}
+h2{font-size:15px;font-weight:normal;letter-spacing:.2em;margin-bottom:5px}
+.sub{font-size:12.5px;color:var(--dim);margin-bottom:22px;letter-spacing:.02em}
+
+label.f{display:block;margin-bottom:15px}
+label.f>span{display:block;font-size:11.5px;color:var(--dim);letter-spacing:.14em;margin-bottom:6px}
+/* 16px = กัน iOS Safari ซูมอัตโนมัติตอนโฟกัส (mobile-first) */
+input,textarea{width:100%;font:inherit;font-size:16px;color:var(--txt);background:rgba(255,255,255,.42);border:1px solid var(--line-soft);border-radius:9px;padding:11px 13px;outline:none;-webkit-user-select:text;user-select:text;transition:border-color .2s,background .2s}
+input:focus,textarea:focus{border-color:rgba(198,154,84,.5);background:rgba(255,255,255,.7)}
+textarea{min-height:200px;resize:vertical;line-height:2}
+.count{text-align:right;font-size:11px;color:var(--faint);margin-top:5px;letter-spacing:.04em}
+.count.over{color:#a8574a}
+
+.hits{display:flex;flex-direction:column;gap:2px;margin:-9px 0 15px}
+.hit{text-align:left;padding:9px 12px;border-radius:8px;font-size:13.5px;background:rgba(255,255,255,.36)}
+.hit small{color:var(--dim);font-size:11.5px;letter-spacing:.02em}
+.hit:active{background:rgba(255,255,255,.8)}
+
+.note{font-size:12px;color:var(--dim);line-height:1.9;letter-spacing:.02em}
+.rule{height:1px;background:var(--line-soft);margin:20px 0}
+.row{display:flex;gap:9px}
+.row>*{flex:1}
+
+.fc{border:1px solid var(--line-soft);border-radius:14px;background:rgba(255,255,255,.32);padding:16px;margin-bottom:16px}
+.fc canvas{width:100%;height:120px;display:block;margin:-6px 0 6px}
+.fc .big{font-size:21px;letter-spacing:.05em}
+.fc .poem{font-size:14px;line-height:2;margin-top:9px}
+.fc .meta{font-size:11.5px;color:var(--faint);margin-top:9px;letter-spacing:.04em}
+
+.pick{width:100%;text-align:left;border:1px solid var(--line-soft);border-radius:13px;padding:14px 16px;background:rgba(255,255,255,.28);margin-bottom:9px}
+.pick b{display:block;font-weight:normal;font-size:14.5px;margin-bottom:3px}
+.pick small{display:block;font-size:12.5px;color:var(--dim);line-height:1.8}
+.pick.on{border-color:rgba(198,154,84,.6);background:rgba(255,255,255,.62)}
+
+.warn{border-left:2px solid rgba(198,154,84,.55);padding-left:13px;font-size:13px;line-height:1.95;margin:16px 0;color:var(--txt)}
+.link{font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.55;word-break:break-all;color:var(--dim);background:rgba(255,255,255,.4);border:1px solid var(--line-soft);border-radius:10px;padding:11px;max-height:112px;overflow:auto;margin-bottom:11px;-webkit-user-select:text;user-select:text}
+
+/* read */
+.paperwrap{position:relative;margin:0 auto 16px;max-width:500px}
+#rCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ptext{position:relative;padding:36px 32px 30px;min-height:330px;font-size:15px;line-height:2.15;white-space:pre-wrap;word-break:break-word;color:rgba(43,43,47,.9);-webkit-user-select:text;user-select:text}
+.sig{margin-top:26px;text-align:right;font-size:13.5px;color:rgba(43,43,47,.6);letter-spacing:.08em}
+.rmeta{font-size:11.5px;color:var(--dim);letter-spacing:.1em;margin-bottom:12px}
+.log{display:none;border-top:1px solid var(--line-soft);margin-top:16px;padding-top:12px}
+.log.on{display:block}
+.li{display:flex;gap:12px;font-size:12px;color:var(--dim);padding:4px 0;line-height:1.8}
+.li i{font-style:normal;flex:0 0 62px;color:var(--faint);letter-spacing:.02em}
+.waiting{text-align:center;padding:40px 20px;font-size:14px;line-height:2.2;color:var(--dim)}
+.waiting b{display:block;font-weight:normal;font-size:19px;color:var(--txt);letter-spacing:.05em;margin-bottom:10px}
+
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="hint" id="hint">ยังไม่มีจดหมายอยู่กลางลม<br><span style="opacity:.6">ปัดเพื่อหมุนโลก</span></div>
+
+<div class="veil">
+  <header class="bar">
+    <div class="brand">จดหมายสายลม</div>
+    <div class="tools">
+      <button class="btn ghost" id="btnVault">คลัง</button>
+      <button class="btn gold" id="btnWrite">เขียนจดหมาย</button>
+    </div>
+  </header>
+  <div class="spacer"></div>
+  <div class="play" id="play" hidden>
+    <button class="pbtn" id="pPlay">ดูการเดินทาง</button>
+    <input type="range" id="pScrub" min="0" max="1000" value="0" aria-label="เลื่อนดูการเดินทาง">
+    <span class="ptime" id="pTime"></span>
+  </div>
+  <div class="dock" id="dock"></div>
+</div>
+
+<section class="sheet" id="compose">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>ฝากสายลม</h2>
+    <p class="sub">ลมจะพาไปเอง — เร็วช้าแล้วแต่ฟ้าวันนี้</p>
+    <label class="f"><span>ถึงใคร</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></label>
+    <label class="f"><span>เขาอยู่ที่ไหน</span><input id="cPlace" placeholder="พิมพ์ชื่อเมือง เช่น Tokyo / เชียงใหม่" autocomplete="off"></label>
+    <div class="hits" id="cHits"></div>
+    <label class="f"><span>ข้อความ</span><textarea id="cBody" placeholder="เขียนสิ่งที่อยากบอก…"></textarea><div class="count" id="cCount">0</div></label>
+    <label class="f"><span>ลงชื่อ</span><input id="cFrom" placeholder="ชื่อคุณ" autocomplete="off"></label>
+    <div class="note" id="cOrigin"></div>
+    <div class="rule"></div>
+    <button class="btn wide gold" id="btnSend">ปล่อยให้ลมพา</button>
+  </div>
+</section>
+
+<section class="sheet" id="forecast">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>สายลมตอบกลับ</h2>
+    <p class="sub" id="fcRoute"></p>
+    <div class="fc">
+      <canvas id="fcSky"></canvas>
+      <div class="big" id="fcTime"></div>
+      <div class="poem" id="fcPoem"></div>
+      <div class="meta" id="fcMeta"></div>
+    </div>
+    <div id="fcChoice"></div>
+    <button class="btn wide gold" id="btnConfirm">ส่ง</button>
+    <button class="btn wide ghost" data-close style="margin-top:6px">กลับไปแก้</button>
+  </div>
+</section>
+
+<section class="sheet" id="sent">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>ออกเดินทางแล้ว</h2>
+    <p class="sub" id="sentSub"></p>
+    <div class="link" id="sentLink"></div>
+    <div class="row">
+      <button class="btn" id="btnCopy">คัดลอกลิงก์</button>
+      <button class="btn" id="btnShare">ส่งต่อ…</button>
+    </div>
+    <button class="btn wide" id="btnFile" style="margin-top:8px">บันทึกเป็นไฟล์ (ส่งแทนลิงก์ได้)</button>
+    <div class="warn" id="sentWarn">ลิงก์นี้คือตัวจดหมาย ส่งให้ผู้รับทางแชท — เขาเปิดเมื่อไหร่ก็ได้ จดหมายเดินทางต่อเองแม้ยังไม่มีใครเปิด และจะอ่านได้ก็ต่อเมื่อลมพาไปถึงแล้ว<br><br>ถ้าแอปแชทตัดลิงก์ขาด ให้ส่งเป็นไฟล์แทน — ผู้รับกด “คลัง → Import” ได้ผลเหมือนกัน</div>
+  </div>
+</section>
+
+<section class="sheet" id="read">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <p class="rmeta" id="rMeta"></p>
+    <div id="rStage"></div>
+    <button class="btn ghost" id="btnLog" style="font-size:12px;letter-spacing:.1em;margin-top:4px">บันทึกการเดินทาง</button>
+    <div class="log" id="rLog"></div>
+  </div>
+</section>
+
+<section class="sheet" id="vault">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>คลังจดหมาย</h2>
+    <p class="sub">เก็บในเครื่องนี้เท่านั้น — ล้างข้อมูลเบราว์เซอร์แล้วหาย</p>
+    <label class="f"><span>ชื่อคุณ</span><input id="vName" placeholder="ชื่อที่จะปรากฏบนจดหมาย"></label>
+    <label class="f"><span>ที่อยู่ของคุณ (ต้นทาง)</span><input id="vPlace" placeholder="พิมพ์ชื่อเมือง" autocomplete="off"></label>
+    <div class="hits" id="vHits"></div>
+    <div class="note" id="vOrigin"></div>
+    <button class="btn ghost" id="btnHere" style="margin-top:6px;font-size:12px">ใช้ตำแหน่งปัจจุบัน</button>
+    <div class="rule"></div>
+    <div class="row">
+      <button class="btn" id="btnExport">Export JSON</button>
+      <button class="btn" id="btnImport">Import JSON</button>
+    </div>
+    <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
+    <div class="rule"></div>
+    <label class="f"><span>รับจดหมายจากรหัส</span>
+      <textarea id="vCode" placeholder="วางลิงก์ทั้งอัน หรือเฉพาะรหัสหลัง # ก็ได้" style="min-height:84px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5"></textarea></label>
+    <button class="btn wide" id="btnCode">รับจดหมาย</button>
+    <div class="note" style="margin-top:8px">ใช้ตอนแชทตัดลิงก์ขาด หรือเปิดลิงก์ตรง ๆ ไม่ได้</div>
+    <div class="rule"></div>
+    <div class="note" id="vStat"></div>
+    <div class="rule"></div>
+    <button class="btn wide ghost" id="btnWipe" style="color:#a8574a">ล้างข้อมูลทั้งหมด</button>
+  </div>
+</section>
+
+<div id="toast"></div>
+<script>
+/* ============================================================
+   จดหมายสายลม — เฟส 1 (no-backend)
+   single-file HTML + localStorage + URL-encode
+   ค่าคงที่ทั้งหมดรวมไว้ใน CFG เพื่อจูนได้จุดเดียว (ดู §11 ของ CONCEPT)
+   ============================================================ */
+'use strict';
+
+const CFG = {
+  SPEED:      20000/48,  // km/h — ระยะไกลสุดบนโลก ~20,000 กม. = ~2 วัน
+  FLOOR_H:    6,         // เวลาฐานที่ระยะหมุด (ก่อนลมคูณ)
+  ANCHOR_KM:  600,       // ระยะหมุด = โซนกลางของประเทศ (กรุงเทพ→เชียงใหม่ 584 กม.)
+  FLOOR_MIN:  0.5,       // พื้นแข็ง — ต่อให้ลมส่งท้ายแรงแค่ไหนก็ต้องไม่เร็วกว่าครึ่งชั่วโมง
+  WIND_CAP:   0.28,      // เพดานผลของลมส่งท้าย/ปะทะ ±28%
+  WIND_REF:   150,       // ตัวหาร: ลม 42 กม./ชม. ตรงทิศ = เร็วขึ้นเต็มเพดาน
+  HOLD_KMH:   50,        // พายุปานกลาง — จอดรอ
+  LOST_KMH:   88,        // พายุรุนแรง — เสี่ยงหาย
+  HOLD_MAX:   6,         // ชม. จอดสูงสุด (ปานกลาง)
+  HOLD_MAX_S: 12,        // ชม. จอดสูงสุด (รุนแรง)
+  DETOUR_FRAC:0.35,      // "อ้อม" = +เวลาตามสัดส่วน (ไม่คำนวณเส้นเลี่ยงจริง)
+  DETOUR_MIN: 4,         // ชม. — อ้อมต้องช้าลงรู้สึกได้เสมอ
+  DETOUR_MAX: 14,        // ชม. — แต่ต้องไม่นานจนไม่มีใครเลือก
+  LOSS_CROSS: 0.14,      // โอกาสหายเมื่อเลือกข้ามพายุรุนแรง
+  LOSS_DETOUR:0.02,      // โอกาสหายเมื่อเลือกอ้อม
+  SEGS:       12,        // จำนวนช่วงที่สุ่มพยากรณ์บนเส้นทาง
+  MAX_BODY:   1100,      // ตัวอักษรสูงสุด (คุมความยาว URL)
+  URL_WARN:   2000,      // ความยาว URL ที่เริ่มเสี่ยงกับบางเบราว์เซอร์
+  MAX_ANIM:   6,         // เพดานจดหมายที่ animate พร้อมกันบน globe
+  /* ---------- หมอก (ข้อ 1-8, 31, 41) ---------- */
+  FOG:        0.72,      // ความทึบที่ถูกลบออกนอกวงเปิด
+  FOG_SOFT:   0.55,      // ขอบวงเปิดนุ่มแค่ไหน (0 = คม)
+  REVEAL_FRAC:0.22,      // รัศมีวงเปิด = สัดส่วนของความยาวเส้นทาง (หลัก 46.2)
+  REVEAL_MIN: 120,       // กม. — วงเล็กสุด
+  REVEAL_MAX: 2400,      // กม. — วงใหญ่สุด
+  /* ---------- กล้อง (ข้อ 27 · ส่วนหนึ่งของ 24-29) ---------- */
+  ZOOM_MAX:   60,        // เพดานแข็ง — เพดานจริงคิดจากระยะพอดีของฉบับที่เลือก (G.zoomMax)
+  ZOOM_PAST:  3,         // ซูมเข้าได้ลึกสุดกี่เท่าของระยะพอดี
+  ZOOM_FIT:   0.39       // เส้นทางกินสัดส่วนเท่านี้ของ *กล่องที่ใช้ได้จริง* (G.fitBox)
+                         // 0.50 ของเดิมคิดจากกล้องที่อยู่กลางเส้นทาง แต่โค้ดวางกล้องไว้ที่ตัวจดหมาย
+                         // พอ prog=0 หรือ 1 ปลายอีกข้างจึงไปอยู่ที่ขอบพอดี ไม่เหลือระยะขอบเลย
+                         // 0.39 = ปลายไกลอยู่ที่ 78% ของครึ่งกล่อง เหลือขอบ 22% ให้จุด ป้าย และลมที่พาเบนออกข้าง
+};
+
+const RAD = Math.PI/180, DEG = 180/Math.PI, ER = 6371;
+const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me' };
+const KIND = ['clear','wind','drizzle','rain','storm'];
+
+/* ---------- คณิตศาสตร์ทรงกลม (ยกจาก globe-study) ---------- */
+function toXYZ(latDeg,lngDeg){
+  const lat=latDeg*RAD, lng=lngDeg*RAD;
+  return {x:Math.cos(lat)*Math.sin(lng), y:Math.sin(lat), z:Math.cos(lat)*Math.cos(lng)};
+}
+function fromXYZ(v){
+  return {lat:Math.asin(Math.max(-1,Math.min(1,v.y)))*DEG, lng:Math.atan2(v.x,v.z)*DEG};
+}
+function slerpV(a,b,t){
+  const pa=toXYZ(a.lat,a.lng), pb=toXYZ(b.lat,b.lng);
+  let dot=pa.x*pb.x+pa.y*pb.y+pa.z*pb.z;
+  dot=Math.max(-1,Math.min(1,dot));
+  const om=Math.acos(dot);
+  if(om<1e-4) return pa;
+  const s0=Math.sin((1-t)*om)/Math.sin(om), s1=Math.sin(t*om)/Math.sin(om);
+  return {x:pa.x*s0+pb.x*s1, y:pa.y*s0+pb.y*s1, z:pa.z*s0+pb.z*s1};
+}
+function slerpLL(a,b,t){ return fromXYZ(slerpV(a,b,t)); }
+function gcDist(a,b){
+  const dLat=(b.lat-a.lat)*RAD, dLng=(b.lng-a.lng)*RAD;
+  const s=Math.sin(dLat/2)**2 + Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dLng/2)**2;
+  return 2*ER*Math.asin(Math.min(1,Math.sqrt(s)));
+}
+function bearing(a,b){
+  const p1=a.lat*RAD,p2=b.lat*RAD,dl=(b.lng-a.lng)*RAD;
+  const y=Math.sin(dl)*Math.cos(p2);
+  const x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  return (Math.atan2(y,x)*DEG+360)%360;
+}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* seeded random — ผลการ roll ต้องคงที่ ฝังใน URL ได้ */
+function seeded(seed){
+  let h=1779033703^seed.length;
+  for(let i=0;i<seed.length;i++){ h=Math.imul(h^seed.charCodeAt(i),3432918353); h=h<<13|h>>>19; }
+  return function(){ h=Math.imul(h^h>>>16,2246822507); h=Math.imul(h^h>>>13,3266489909); return ((h^=h>>>16)>>>0)/4294967296; };
+}
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ---------- storage ----------
+   localStorage ใช้ไม่ได้ในบางบริบท (data: URL, private mode) → fallback ในหน่วยความจำ
+   เพื่อไม่ให้แอปพังทั้งใบ แต่เตือนผู้ใช้ว่าประวัติจะไม่ถูกเก็บ */
+const memo = {};
+let LS_OK = true;
+const LS = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ LS_OK=false; return memo[k]||null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ LS_OK=false; memo[k]=v; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){ delete memo[k]; } }
+};
+const store = {
+  letters(){ try{ return JSON.parse(LS.get(K.LETTERS)||'[]'); }catch(e){ return []; } },
+  saveAll(a){ LS.set(K.LETTERS, JSON.stringify(a)); _driftCache.clear(); _streamCache.clear(); _wfCache.clear(); },
+  put(rec){
+    const a=this.letters(); const i=a.findIndex(x=>x.id===rec.id);
+    if(i>=0) a[i]=rec; else a.push(rec);
+    this.saveAll(a); return rec;
+  },
+  me(){ try{ return JSON.parse(LS.get(K.ME)||'null'); }catch(e){ return null; } },
+  setMe(m){ LS.set(K.ME, JSON.stringify(m)); }
+};
+
+/* ---------- URL codec (deflate + base64url ถ้าเบราว์เซอร์รองรับ) ---------- */
+function b64u(bytes){
+  let s=''; const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function unb64u(str){
+  const s=str.replace(/-/g,'+').replace(/_/g,'/');
+  const bin=atob(s+'==='.slice((s.length+3)%4));
+  const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+async function packPayload(obj){
+  const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream==='function'){
+    try{
+      const cs=new CompressionStream('deflate-raw');
+      const buf=await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer();
+      return 'z'+b64u(new Uint8Array(buf));
+    }catch(e){}
+  }
+  return 'r'+b64u(bytes);
+}
+/* ---------- ตรวจข้อมูลที่มาจากภายนอก (ข้อ 57.1) ----------
+   จดหมายที่มาจากลิงก์หรือไฟล์คือข้อมูลของคนอื่น ไม่ใช่ของเรา
+   ต้องตรวจ *ก่อนเก็บ* ไม่ใช่ตรวจตอนวาด เพราะจุดที่วาดมีหลายที่และลืมได้ทีละจุด
+   ทุกช่องถูกบังคับชนิดและช่วงค่า — ค่าที่ผิดถูกแทนด้วยค่าตั้งต้น ไม่ใช่ปฏิเสธทั้งฉบับ
+   ยกเว้น id กับ lg ที่ขาดไม่ได้ ถ้าไม่มีก็ไม่ใช่จดหมาย */
+const _num=(v,lo,hi,d)=>{ const x=(typeof v==='number'&&isFinite(v))?v:NaN; return isNaN(x)?d:clamp(x,lo,hi); };
+const _str=(v,max)=>String(v==null?'':v).slice(0,max);
+function sanitizeRec(r){
+  if(!r||typeof r!=='object'||Array.isArray(r)) return null;
+  if(typeof r.id!=='string'||!r.id||r.id.length>40) return null;
+  if(!Array.isArray(r.lg)||!r.lg.length||r.lg.length>64) return null;
+  const pt=q=>({ n:_str(q&&q.n,60), p:_str(q&&q.p,80),
+                 la:_num(q&&q.la,-90,90,0), lo:_num(q&&q.lo,-180,180,0) });
+  const lg=r.lg.map(l=>{
+    const a=Array.isArray(l)?l:[];
+    return [ _num(a[0],0,240,0.1), _num(a[1],0,48,0), Math.round(_num(a[2],0,400,12)),
+             Math.round(_num(a[3],0,360,180)), _num(a[4],0,500,0),
+             Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,2,0)) ];
+  });
+  /* wf ต้องเป็นตัวอักษรในชุด base64 เท่านั้น — ตัวแปลกทำให้ถอดออกมาเป็น NaN แล้วลมหายทั้งสนาม */
+  const wfOk = typeof r.wf==='string' && r.wf.length<=8000 && /^[A-Za-z0-9+/]*$/.test(r.wf);
+  const out={ id:r.id, f:pt(r.f), t:pt(r.t),
+    s:_num(r.s, 0, Date.now()+864e5, Date.now()),
+    th:_num(r.th, 0, 24*60, 1), rt: r.rt==='d'?'d':'x', lg,
+    lo:Math.round(_num(r.lo,-1,lg.length,-1)),
+    bd:_str(r.bd, CFG.MAX_BODY) };
+  if(wfOk) out.wf=r.wf;
+  return out;
+}
+async function unpackPayload(str){
+  const mode=str[0], data=unb64u(str.slice(1));
+  let bytes=data;
+  if(mode==='z'){
+    const ds=new DecompressionStream('deflate-raw');
+    const buf=await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
+    bytes=new Uint8Array(buf);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+/* ---------- Open-Meteo ---------- */
+async function geocode(q){
+  const u='https://geocoding-api.open-meteo.com/v1/search?count=6&language=th&format=json&name='+encodeURIComponent(q);
+  const r=await fetch(u); if(!r.ok) throw new Error('geo');
+  const j=await r.json();
+  return (j.results||[]).map(x=>({
+    name:x.name, lat:x.latitude, lng:x.longitude,
+    place:[x.name,x.admin1,x.country].filter(Boolean).join(', ')
+  }));
+}
+async function reverseName(lat,lng){
+  try{
+    const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=th&format=json&name=${lat.toFixed(2)},${lng.toFixed(2)}`);
+    const j=await r.json();
+    if(j.results&&j.results[0]) return j.results[0].name;
+  }catch(e){}
+  return lat.toFixed(2)+'°, '+lng.toFixed(2)+'°';
+}
+/* ---------- แคชลมของภูมิภาค (ข้อ 58) ----------
+   เดิมทุกครั้งที่ส่งจดหมาย แอปยิง Open-Meteo 238 พิกัด → ส่ง 3 ฉบับในนาทีเดียวก็ชนเพดาน 600/นาที
+   และมือถือไทยใช้ CGNAT คนจำนวนมากจึงแบ่งโควตาก้อนเดียวกันโดยไม่รู้ตัว
+   ตอนนี้มีตัวดึงล่วงหน้า (tools/fetch_wind.py) เก็บลมทั้งภูมิภาคเป็นไฟล์เดียวทุก 6 ชม.
+   แอปอ่านจากไฟล์นั้นแทน → ราคาคงที่ต่อวัน ไม่โตตามจำนวนผู้ใช้
+
+   สิ่งที่ *ไม่* เปลี่ยน: ผู้ส่งยังเข้ารหัสสิ่งที่ตัวเองใช้ลง wf ในลิงก์เหมือนเดิม
+   ผู้รับยังเล่นจากลิงก์และไม่เคยแตะ API — ความตรงกันสองฝั่งไม่ถูกแตะเลย
+
+   แผ่นแคชเป็น "รายการ" ตั้งแต่วันแรก เผื่อวันหน้าเพิ่มแผ่นหยาบที่ครอบกว้างกว่า
+   แอปเลือกแผ่นที่ละเอียดที่สุดที่ครอบจุดทั้งหมดได้ ไม่มีแผ่นไหนครอบก็ยิงตรงเหมือนเดิม */
+const WCACHE={ DIR:'wind/', COVER_H:36 };   /* แคชต้องมีลมล่วงหน้าอย่างน้อยเท่านี้ ไม่งั้นยิงตรง */
+let _wcMan=null;
+function wcManifest(){
+  if(!_wcMan) _wcMan=(async()=>{
+    try{
+      const r=await fetch(WCACHE.DIR+'index.json',{cache:'no-cache'});
+      if(!r.ok) return null;
+      const m=await r.json();
+      return (m&&m.v===1&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
+    }catch(e){ return null; }     /* ไม่มีแคชก็ไม่ใช่ความผิดพลาด แค่ถอยไปทางเดิม */
+  })();
+  return _wcMan;
+}
+/* แผ่นที่ละเอียดที่สุดที่ครอบทุกจุด และมีลมล่วงหน้าพอสำหรับการเดินทาง */
+function wcPick(man,pts){
+  let la0=90,la1=-90,lo0=180,lo1=-180;
+  for(const p of pts){
+    if(p.lat<la0)la0=p.lat; if(p.lat>la1)la1=p.lat;
+    if(p.lng<lo0)lo0=p.lng; if(p.lng>lo1)lo1=p.lng;
+  }
+  const now=Date.now();
+  let best=null;
+  for(const t of man.tiles){
+    if(la0<t.la0||la1>t.la1||lo0<t.lo0||lo1>t.lo1) continue;
+    const t0=Date.parse(t.t0+':00Z'), end=t0+(t.slices-1)*t.stepH*3600000;
+    if(!(t0<=now+3600000 && end>=now+WCACHE.COVER_H*3600000)) continue;
+    if(!best||t.step<best.step) best=t;
+  }
+  return best;
+}
+async function wcLoad(man,t){
+  if(t._d) return t._d;
+  const r=await fetch(WCACHE.DIR+t.file+'?v='+encodeURIComponent(man.issued));
+  if(!r.ok) throw new Error('tile '+r.status);
+  const raw=new Uint8Array(await r.arrayBuffer());
+  /* zlib.compress ของ python มีหัว zlib จึงเป็น 'deflate' ไม่ใช่ 'deflate-raw' */
+  const ds=new DecompressionStream('deflate');
+  const out=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer());
+  if(out.length!==3*t.slices*t.nx*t.ny) throw new Error('tile size');
+  t._d=out; return out;
+}
+/* อ่านลมของพิกัดหนึ่งออกมาในรูปเดียวกับที่ Open-Meteo คืนมา
+   sampleWx() จึงใช้ต่อได้โดยไม่รู้ว่าข้อมูลมาจากไหน */
+function wcSeries(t,d,lat,lng){
+  const n=t.nx*t.ny;
+  const gx=clamp((lng-t.lo0)/t.step,0,t.nx-1), gy=clamp((lat-t.la0)/t.step,0,t.ny-1);
+  const x0=Math.floor(gx), x1=Math.min(t.nx-1,x0+1), fx=gx-x0;
+  const y0=Math.floor(gy), y1=Math.min(t.ny-1,y0+1), fy=gy-y0;
+  const w=[[x0,y0,(1-fx)*(1-fy)],[x1,y0,fx*(1-fy)],[x0,y1,(1-fx)*fy],[x1,y1,fx*fy]];
+  const at=(v,sl,ix,iy)=>d[(v*t.slices+sl)*n + iy*t.nx + ix];
+  const t0=Date.parse(t.t0+':00Z');
+  const time=[],spd=[],dir=[],pre=[];
+  for(let sl=0;sl<t.slices;sl++){
+    time.push(new Date(t0+sl*t.stepH*3600000).toISOString().slice(0,16));
+    let sp=0, pr=0, ex=0, nn=0;
+    for(const [ix,iy,k] of w){
+      sp += at(0,sl,ix,iy)*2*k;                    /* 1 หน่วย = 2 กม./ชม. */
+      pr += at(2,sl,ix,iy)*0.1*k;                  /* 1 หน่วย = 0.1 มม. */
+      /* ทิศเป็นมุม เฉลี่ยตรง ๆ ไม่ได้ — 350° กับ 10° จะได้ 180° ซึ่งตรงข้ามกับความจริง
+         ต้องแตกเป็นเวกเตอร์ก่อนแล้วค่อยรวม */
+      const a=at(1,sl,ix,iy)*5.625*RAD;
+      ex+=Math.sin(a)*k; nn+=Math.cos(a)*k;
+    }
+    spd.push(sp); pre.push(pr);
+    dir.push((Math.atan2(ex,nn)*DEG+360)%360);
+  }
+  return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre}};
+}
+/* ดึงพยากรณ์ทุกจุดบนเส้นทางในคำขอเดียว (Open-Meteo รับหลายพิกัดได้)
+   ลองแคชภูมิภาคก่อนเสมอ ไม่ได้ค่อยยิงตรง */
+async function fetchWx(pts){
+  try{
+    const man=await wcManifest();
+    if(man){
+      const t=wcPick(man,pts);
+      if(t){
+        const d=await wcLoad(man,t);
+        WX_SRC='cache:'+t.id;
+        return pts.map(p=>wcSeries(t,d,p.lat,p.lng));
+      }
+    }
+  }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ — ถอยไปยิงตรง */ }
+  WX_SRC='api';
+  return fetchWxLive(pts);
+}
+let WX_SRC='';
+async function fetchWxLive(pts){
+  const la=pts.map(p=>p.lat.toFixed(3)).join(',');
+  const lo=pts.map(p=>p.lng.toFixed(3)).join(',');
+  const u='https://api.open-meteo.com/v1/forecast'
+    +'?latitude='+la+'&longitude='+lo
+    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation'
+    +'&wind_speed_unit=kmh&forecast_days=4&timezone=UTC';
+  /* คำขอที่ค้างจะค้างตลอดไป ผู้ใช้เห็นแค่ปุ่มกดไม่ได้ — ต้องมีเพดานเวลาเสมอ */
+  const ac=new AbortController();
+  const timer=setTimeout(()=>ac.abort(),15000);
+  let r;
+  try{ r=await fetch(u,{signal:ac.signal}); }
+  catch(e){ throw new Error(ac.signal.aborted?'wx timeout':'wx offline'); }
+  finally{ clearTimeout(timer); }
+  if(!r.ok) throw new Error('wx '+r.status);
+  const j=await r.json();
+  return Array.isArray(j)?j:[j];
+}
+function sampleWx(loc,hoursFromNow){
+  const h=loc&&loc.hourly;
+  if(!h||!h.time) return {spd:12,dir:180,pre:0};
+  /* หา offset ของ "ตอนนี้" จากเวลาแรกในชุด
+     ชุดจาก API ห่างกัน 1 ชม. · ชุดจากแคชภูมิภาคห่างกัน 3 ชม. → ต้องอ่านระยะห่างจากข้อมูลเอง
+     ไม่ใช่สมมติว่าเป็นราย 1 ชม. (ข้อ 58) */
+  const t0=Date.parse(h.time[0]+':00Z');
+  const stepH = h.time.length>1 ? Math.max(1,(Date.parse(h.time[1]+':00Z')-t0)/3600000) : 1;
+  const idx=clamp(Math.round(((Date.now()-t0)/3600000 + hoursFromNow)/stepH), 0, h.time.length-1);
+  return {
+    spd: h.wind_speed_10m[idx] ?? 12,
+    dir: h.wind_direction_10m[idx] ?? 180,
+    pre: h.precipitation[idx] ?? 0
+  };
+}
+
+/* เวลาจอดรอพายุ — แยกออกมาเพราะต้องใช้ตอนประเมินเวลาสุ่มลมด้วย */
+function holdOf(spd,mode){
+  const raw = spd>=CFG.LOST_KMH ? 2 : (spd>=CFG.HOLD_KMH ? 1 : 0);
+  if(mode==='d' && raw===2) return clamp((spd-CFG.HOLD_KMH)/18, 0, 2);   /* อ้อม = เลียบขอบพายุ */
+  if(raw===1) return clamp((spd-CFG.HOLD_KMH)/9+0.5, 0.5, CFG.HOLD_MAX);
+  if(raw===2) return clamp((spd-CFG.LOST_KMH)/9+2,   2,   CFG.HOLD_MAX_S);
+  return 0;
+}
+/* ---------- จำลองการเดินทาง ----------
+   mode 'x' = ข้าม, 'd' = อ้อม
+   legs[i] = [ชม.เดินทาง, ชม.จอด, ลม km/h, ทิศลม°, ฝน mm, kind, ระดับพายุ]
+
+   เวลาเดินทางมาจาก "เส้นทางที่ลมพัดพาจริง" ไม่ใช่ระยะเส้นตรงหารความเร็วอีกต่อไป
+   ลมพาอ้อมไกลขึ้น = ใช้เวลานานขึ้น (ตัดสินไว้ 23 ส.ค.) */
+/* ดัชนีจุดแนวกลางในทางเดินลม — แนวกลางคือคอลัมน์ตรงกลางของแต่ละแถว */
+const wfMid = i => WF.NG*WF.NG + i;   /* จุดแนวเส้นทางอยู่ต่อท้ายตารางสนาม */
+/* cwx = พยากรณ์ของ "ทางเดินลมทั้งชุด" (13×5 = 65 จุด) ดึงมาในคำขอเดียว
+   แนวกลาง 13 จุดคือชุดเดิมที่เคยดึงแยก จึงไม่มีคำขอเพิ่ม */
+function simulate(cpts, cwx, dist, mode, seedId){
+  const A=cpts[wfMid(0)], B=cpts[wfMid(CFG.SEGS)];
+  /* ไก่กับไข่: เวลาที่ใช้สุ่มลมขึ้นกับเส้นทาง แต่เส้นทางขึ้นกับลม
+     → วนสองรอบ รอบแรกเดาจากเส้นตรง รอบสองใช้เวลาจากเส้นทางจริง
+     รอบสุดท้ายต้องสร้างเส้นทางจากลม "ชุดที่จะเก็บลง URL" เท่านั้น ไม่งั้นผู้รับได้คนละเส้น */
+  let legT=null, W=null, run=null, wfRaw=null, field=null;
+  for(let pass=0; pass<3; pass++){
+    const at=[]; let acc=0;
+    for(let i=0;i<CFG.SEGS;i++){
+      at.push(acc);
+      acc += legT ? legT[i] : (dist/CFG.SEGS)/CFG.SPEED;
+      if(W) acc += holdOf(W[i].spd, mode);
+    }
+    W=[];
+    for(let i=0;i<CFG.SEGS;i++){
+      const w=sampleWx(cwx[wfMid(i)], at[i]);
+      /* ปัดก่อนใช้ ไม่ใช่ปัดตอนเก็บ — ผู้รับมีแต่ค่าที่ปัดแล้ว ต้องคำนวณจากค่าเดียวกัน */
+      W.push({spd:Math.round(w.spd), dir:Math.round(w.dir), pre:r2(w.pre)});
+    }
+    /* สนามลมเต็ม 4 ช่วงเวลา วางตามสัดส่วนของการเดินทาง (0, 1/3, 2/3, 1)
+       ต้องเข้ารหัสแล้วถอดกลับก่อนใช้เสมอ ผู้ส่งจึงคำนวณจากค่าชุดเดียวกับผู้รับ */
+    const total = at[CFG.SEGS-1] + (legT?legT[CFG.SEGS-1]:(dist/CFG.SEGS)/CFG.SPEED);
+    const samples=[];
+    for(let t=0;t<WF.NT;t++){
+      const hh = total*(t/(WF.NT-1));
+      for(let k=0;k<WF.NG*WF.NG;k++){
+        const w=sampleWx(cwx[k], hh);
+        samples.push({spd:w.spd, dir:w.dir});
+      }
+    }
+    wfRaw = wfEncode(samples);
+    field = { pts:wfPoints(A,B), slices:(()=>{
+      const flat=wfDecode(wfRaw), per=WF.NG*WF.NG, out=[];
+      for(let t=0;t<WF.NT;t++) out.push(flat.slice(t*per,(t+1)*per));
+      return out;
+    })() };
+    run=driftRun(A,B,driftNodes(A,B,W),CFG.SEGS,field);
+    legT=run.legT;
+  }
+  let t=0, legs=[], worstSeverity=0, rawWorst=0, boostSum=0;
+  const severeIdx=[];
+  for(let i=0;i<CFG.SEGS;i++){
+    const w=W[i];
+    const brg=bearing(cpts[wfMid(i)],cpts[wfMid(i+1)]);
+    const blowTo=(w.dir+180)%360;                 // dir = ลมมาจากทิศไหน
+    const align=Math.cos((blowTo-brg)*RAD);       // +1 ส่งท้าย, -1 ปะทะหน้า
+    /* boost ไม่ได้คุมเวลาแล้ว เหลือไว้บอกว่า "ลมไปทางเดียวกับจดหมายไหม" ในคำบรรยาย */
+    boostSum+=clamp(align*w.spd/CFG.WIND_REF, -CFG.WIND_CAP, CFG.WIND_CAP);
+
+    const raw = w.spd>=CFG.LOST_KMH ? 2 : (w.spd>=CFG.HOLD_KMH ? 1 : 0);
+    const dodged = (mode==='d' && raw===2);
+    const sev = dodged ? 1 : raw;
+    const hold = holdOf(w.spd, mode);
+    if(sev>worstSeverity) worstSeverity=sev;
+    if(raw>rawWorst) rawWorst=raw;
+    if(raw===2) severeIdx.push(i);
+
+    let kind;
+    if(sev>0) kind=4;
+    else if(w.pre>=2.5) kind=3;
+    else if(w.pre>=0.15) kind=2;
+    else if(w.spd>=22) kind=1;
+    else kind=0;
+
+    /* เก็บค่าเต็มไว้ก่อน ยังไม่ปัด — ต้องยืดด้วยตัวคูณเวลาฐานให้เสร็จก่อน
+       ไม่งั้นเส้นทางสั้นมาก ๆ จะถูกปัดเป็น 0 ตั้งแต่ยังไม่ได้ยืด แล้วคูณเท่าไหร่ก็ยังเป็น 0
+       (เจอจริงกับกรุงเทพ-นนทบุรี 12 กม. ได้เวลารวม 0 ชั่วโมง) */
+    legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev]);
+    t+=legT[i]+hold;
+  }
+  if(mode==='d') t+=clamp(t*CFG.DETOUR_FRAC, CFG.DETOUR_MIN, CFG.DETOUR_MAX);
+  /* ---------- พื้นเวลา (ข้อ 45.1) ----------
+     ของเดิม: ถ้ารวมแล้วไม่ถึง 6 ชม. ให้ตั้งเป็น 6 ตรง ๆ
+     ปัญหา: การตั้งค่าตรง ๆ "ทับ" ผลของลมจนหายเกลี้ยง
+     วัดแล้วว่าเส้นทางในประเทศไทย **ทุกเส้น** ได้ 6 ชม. เท่ากันหมด
+     ทั้งที่ลมจริงทำให้ต่างกันตั้งแต่ −23% (กรุงเทพ→อุบล ลมส่งท้าย)
+     ถึง +36% (กรุงเทพ→ภูเก็ต ลมมรสุมปะทะหน้า)
+     → ที่สเกลประเทศ กฎนี้ลบพระเอกของแอปทิ้งทั้งหมด
+
+     แก้เป็น: พื้นกำหนดแค่ "เวลาฐาน" แล้วให้อัตราส่วนที่ลมทำคูณลงไป
+     ระยะไกลที่เกินพื้นอยู่แล้วไม่มีอะไรเปลี่ยน (k=1) */
+  /* เวลาฐานยึด "โซนกลางของประเทศ" เป็นหมุด แล้วไล่ลงตามรากที่สองของระยะ
+     (กอล์ฟ 23 ส.ค.: อ้างอิงโซนกลาง แล้วขยายขอบระยะเวลา)
+     ของเดิมพื้นแบน 6 ชม. เท่ากันหมดตั้งแต่ 0 ถึง 2,500 กม.
+     → กรุงเทพ-นนทบุรี 15 กม. ใช้เวลาเท่ากับกรุงเทพ-เชียงใหม่ ซึ่งไม่มีเหตุผลรองรับ
+     ใช้รากที่สองเพราะเป็นเส้นเดียวที่ทำให้ระยะใกล้มากยังรู้สึกว่าเป็นการเดินทาง
+     (15 กม. ได้ 1 ชม. ไม่ใช่ 2 นาที) โดยไม่ดันระยะกลางให้นานเกิน
+     เพดานที่ FLOOR_H ทำให้ระยะไกลไม่ขยับเลย — เส้นตรงจะเข้ามาแทนเองที่ 2,500 กม. */
+  const straightH = dist/CFG.SPEED;
+  const anchored = CFG.FLOOR_H*Math.min(1, Math.sqrt(dist/CFG.ANCHOR_KM));
+  const baseH = Math.max(anchored, straightH);
+  /* ยืดแล้วบวกใหม่จากค่าที่ปัดแล้วเสมอ ไม่ใช่ปัด t แยกต่างหาก
+     ปัดทีละช่วง 12 ช่วง คลาดได้ถึง 0.12 ชม. = 7 นาที ซึ่งเป็นบั๊กที่มีมาแต่เดิม
+     แต่เพิ่งเห็นชัดตอนตัวคูณใหญ่ขึ้นที่ระยะใกล้ */
+  /* คิดตัวคูณทั้งหมดด้วยค่าเต็มก่อน แล้วค่อยปัดครั้งเดียวตอนท้าย */
+  let k = (straightH>0 && baseH>straightH) ? baseH/straightH : 1;
+  /* พื้นแข็ง: ลมส่งท้ายแรงผิดปกติต้องไม่ทำให้จดหมายถึงเร็วจนไม่รู้สึกว่าเดินทาง */
+  if(t*k>0 && t*k<CFG.FLOOR_MIN) k *= CFG.FLOOR_MIN/(t*k);
+  legs.forEach(l=>{ l[0]=r2(l[0]*k); l[1]=r2(l[1]*k); });
+  /* total ต้องเท่าผลรวมของ legs เป๊ะ — letterState() เดินตาม legs แต่ตัดสินว่าถึงจาก th */
+  t = r2(legs.reduce((a,l)=>a+l[0]+l[1], 0));
+  /* โอกาสหาย — roll ครั้งเดียวตอนส่ง (deterministic ฝังใน URL) */
+  let lost=-1;
+  const rng=seeded(seedId+mode);
+  if(rawWorst===2){                               /* หายได้เฉพาะเส้นที่มีพายุรุนแรงจริง */
+    const p = mode==='d' ? CFG.LOSS_DETOUR : CFG.LOSS_CROSS;
+    if(p>0 && rng()<p && severeIdx.length){
+      lost=severeIdx[Math.floor(rng()*severeIdx.length)];
+    }
+  }
+  return { legs, total:r2(t), worst:worstSeverity, raw:rawWorst, boost:boostSum/CFG.SEGS, lost,
+           travelled:run.travelled, direct:run.direct, ratio:run.ratio, wf:wfRaw };
+}
+const r2 = v => Math.round(v*100)/100;
+
+function routePoints(from,to){
+  const pts=[];
+  for(let i=0;i<=CFG.SEGS;i++) pts.push(slerpLL(from,to,i/CFG.SEGS));
+  return pts;
+}
+
+/* ---------- drift — ลมพัดพาจดหมายจริง (ข้อ 9-12, 30) ----------
+   เฟส 1 ไม่มี backend ผู้รับเปิดลิงก์ทีหลังแล้วดึงพยากรณ์ซ้ำไม่ได้ (และพยากรณ์เก่าก็หมดอายุไปแล้ว)
+   เส้นทางจึงต้อง "สร้างกลับมาได้" จากสิ่งที่อยู่ใน URL อยู่แล้ว คือลม 12 ค่าใน lg
+   ไม่ต้องเพิ่มไบต์ใน URL ไม่ต้องดึงพยากรณ์เพิ่ม
+
+   วัดแล้ว (กรุงเทพ→แวนคูเวอร์ ลมจริง): เส้นทางจากลม 12 ค่า ต่างจากเส้นทางที่ใช้
+   ตารางลม 80 จุดเฉลี่ย 141 กม. สูงสุด 479 กม. — ราว 5-18px บนลูกโลก
+   และไม่มีอันไหน "ถูกกว่า" เพราะเส้นทางจริงของจดหมายไม่มีอยู่จริง
+
+   กติกาที่ห้ามพัง: ผู้ส่งกับผู้รับต้องได้เส้นทางเดียวกันเป๊ะ
+   → ทุกอินพุตต้องเป็นค่าที่ปัดแล้วอย่างที่เก็บลง URL (ลมเป็นจำนวนเต็ม พิกัด 4 ตำแหน่ง) */
+/* ---------- สนามลมเต็ม (ข้อ 53) ----------
+   ลม 12 ค่าบนเส้นตรงพอสำหรับ "เส้นทางโค้งไปทางไหน" (ข้อ 43) แต่ไม่พอให้ลมเป็นพระเอก
+   สนามจากจุดที่เรียงเป็นเส้นตรงไม่มีความหมุนวน ริ้วลมจึงเกือบขนานกันหมด
+   และไม่เปลี่ยนตามเวลาเลย ทั้งที่ลมจริงเปลี่ยนทุกชั่วโมง
+
+   เก็บทางเดินลม 13 ตามยาว × 5 ตามขวาง × 4 ช่วงเวลา = 260 ค่า
+   จุดละ 2 ตัวอักษร (ความเร็ว 1 · ทิศ 1) = 520 ตัวอักษรใน URL
+   กอล์ฟตัดสิน 23 ส.ค.: ความยาวลิงก์ไม่ใช่ข้อจำกัดจริง เพราะเฟส 2 จะใช้ล็อกอินแทนลิงก์อยู่แล้ว
+
+   พิกัดของทางเดินคำนวณกลับได้จากต้นทาง-ปลายทาง จึงไม่ต้องเก็บ */
+/* ---------- จาก "ทางเดินลม" เป็น "สนามลมที่มีอิทธิพลต่อการเดินทาง" ----------
+   กอล์ฟ: ลมไม่ใช่รายละเอียดของแผนที่ ข้อ 31 บอกเองว่าหมอกปิดแผ่นดินแต่ไม่ปิดลม
+   แสดงลมกว้างแค่ไหนจึงไม่ผิดเจตนาของหมอก
+
+   ตารางเดิม 13 ตามยาว × 5 ตามขวาง ใช้งบผิดที่: ถี่ตามยาว 51 กม. แต่ห่างตามขวาง 130 กม.
+   ทั้งที่กระแสลมไม่ได้ไหลตามเส้นทางของเรา
+   ของใหม่กระจายจุดให้ทั่วบริเวณแทน — กว้างขึ้นและถี่ขึ้นพร้อมกันด้วยจำนวนจุดใกล้เคียงเดิม
+
+   พิกัดวัดในระบบของเส้นทาง: ตามยาว 0 = ต้นทาง 1 = ปลายทาง · ตามขวางเป็นสัดส่วนของระยะ */
+const WF={ VER:'4', NG:15, NT:3,
+  /* ---- กฎข้อ 56: กระแสลมต้องมีที่มา ----
+     สนามต้องกว้างพอจะครอบ *ต้นกำเนิดของกระแสที่มีอิทธิพลต่อการเดินทางนี้*
+     ห้ามใช้กรอบที่คำนวณจากต้นทาง-ปลายทางเพียงอย่างเดียวเป็นขอบเขตของลม
+
+     พื้นล่าง 750 กม. ไม่ใช่เลขสวย — มรสุมตะวันตกเฉียงใต้เดินทางจากอันดามัน
+     เข้าฝั่งไทยราว 600-800 กม. พื้นที่เล็กกว่าสเกลของปรากฏการณ์เอง
+     = ตัดสาเหตุออกจากภาพ ริ้วลมจะ "เริ่มจากกลางอากาศ" ผิดทั้งภาพและฟิสิกส์
+     ในประเทศพื้นเป็นตัวคุม (609 กม. → สนาม 1,500 กม.)
+     ระดับทวีปสัดส่วนคุม · ข้ามมหาสมุทรเพดานคุม (แลกกับจุดห่าง 857 กม.)
+
+     ถ้าจะแก้ตัวเลขพวกนี้ ตัวชี้วัดรับงานคือจุดของริ้วอยู่ในจอราว 70-85%
+     ที่ซูมตั้งต้น — 100% ในจอ แปลว่ากลับไปเป็น "ทางเดิน" ไม่ใช่สนามแล้ว */
+  HALF_FRAC:1.10, HALF_MIN:750, HALF_MAX:6000 };
+function wfHalfKm(dist){ return clamp(dist*WF.HALF_FRAC, WF.HALF_MIN, WF.HALF_MAX); }
+/* ตารางจัตุรัสรอบจุดกึ่งกลางเส้นทาง วางแกนตามทิศของเส้นทาง เรียงตามยาวก่อนแล้วตามขวาง
+   ต่อท้ายด้วยจุดบนเส้นทาง 13 จุด สำหรับสุ่มลมของแต่ละช่วง (lg) — ดึงในคำขอเดียวกัน
+   เพราะสนามครอบกว้างกว่าเส้นทางมาก จุดของเส้นทางจึงไม่ตรงกับช่องตารางอีกต่อไป */
+function wfPoints(A,B){
+  const a={lat:r4(A.lat),lng:r4(A.lng)}, b={lat:r4(B.lat),lng:r4(B.lng)};
+  const D=gcDist(a,b), half=wfHalfKm(D), out=[];
+  const mid=slerpLL(a,b,0.5), brg=bearing(a,b);
+  out.A=a; out.B=b; out.half=half; out.dAB=D; out.mid=mid; out.brg=brg;
+  for(let i=0;i<WF.NG;i++){
+    const al=(i/(WF.NG-1)-0.5)*2*half;
+    const c = al===0 ? mid : destPoint(mid.lat,mid.lng, al>0?brg:(brg+180)%360, Math.abs(al));
+    for(let j=0;j<WF.NG;j++){
+      const cr=(j/(WF.NG-1)-0.5)*2*half;
+      out.push(cr===0?{lat:c.lat,lng:c.lng}:destPoint(c.lat,c.lng,(brg+90)%360,cr));
+    }
+  }
+  for(let i=0;i<=CFG.SEGS;i++) out.push(slerpLL(a,b,i/CFG.SEGS));
+  return out;
+}
+/* เข้ารหัส: ความเร็ว 1 ตัวอักษร (ก้าวละ 2 กม./ชม.) · ทิศ 1 ตัวอักษร (ก้าวละ 5.625°)
+   ต้องปัดก่อนใช้เสมอ ผู้รับจึงคำนวณได้ผลเดียวกันเป๊ะ (กติกาเดียวกับข้อ 43) */
+function wfEncode(samples){
+  let out=WF.VER;
+  for(const w of samples){
+    out += B64[clamp(Math.round(w.spd/2),0,63)] + B64[clamp(Math.round(((w.dir%360)+360)%360/5.625),0,63)%64];
+  }
+  return out;
+}
+function wfDecode(raw){
+  /* รุ่นไม่ตรง = เรขาคณิตคนละแบบ ถอดออกมาก็ผิดที่ ปล่อยให้ถอยไปใช้สนาม 12 ค่าแทน */
+  if(!raw || raw[0]!==WF.VER) return null;
+  const M={}; for(let i=0;i<64;i++) M[B64[i]]=i;
+  const out=[];
+  for(let i=1;i+1<raw.length;i+=2){
+    const spd=M[raw[i]]*2, dir=(M[raw[i+1]]*5.625)%360;
+    const blow=(dir+180)*RAD;
+    out.push({spd, e:Math.sin(blow)*spd, n:Math.cos(blow)*spd});
+  }
+  return out;
+}
+/* สนามลมของจดหมายหนึ่งฉบับ — คำนวณครั้งเดียวแล้วเก็บ */
+const _wfCache=new Map();
+function wfOf(L){
+  if(_wfCache.has(L.id)) return _wfCache.get(L.id);
+  let out=null;
+  if(L.wf){
+    const flat=wfDecode(L.wf);
+    const per=WF.NG*WF.NG;
+    if(flat && flat.length>=per){
+      const slices=[];
+      for(let t=0;t<WF.NT;t++){
+        const off=t*per;
+        slices.push(flat.slice(off,off+per).length===per?flat.slice(off,off+per):slices[slices.length-1]);
+      }
+      out={pts:wfPoints({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo}), slices};
+    }
+  }
+  _wfCache.set(L.id,out);
+  return out;
+}
+/* ลม ณ พิกัดใด ๆ เวลาใดก็ได้ — ถ่วงน้ำหนักผกผันระยะ 4 จุดใกล้สุด แล้วไล่ระดับตามเวลา */
+/* ลม ณ พิกัดใด ๆ เวลาใดก็ได้
+   ทางเดินลมเป็นตาราง 13×5 อยู่แล้ว จึงหาช่องตรง ๆ จากพิกัดได้ ไม่ต้องไล่ทั้ง 65 จุด
+   (ของเดิมไล่ทุกจุดทุกครั้ง = 69,000 ครั้งต่อการสร้างริ้วหนึ่งรอบ ทำให้เฟรมกระตุก 30ms)
+   แล้วผสมสี่มุมแบบ bilinear ซึ่งเรียบกว่าการถ่วงน้ำหนักผกผันระยะด้วย */
+function wfAt(field, lat, lng, tf){
+  const pts=field.pts, P={lat,lng};
+  /* วัดระยะตามแกนเส้นทางจากจุดกึ่งกลาง — ใช้มุมกับระยะตรง ๆ ไม่ต้องไล่ดูทุกจุด */
+  const d=gcDist(pts.mid,P);
+  const th=(bearing(pts.mid,P)-pts.brg)*RAD;
+  const al=d*Math.cos(th), cr=d*Math.sin(th);
+  const gi=clamp((al/pts.half+1)/2*(WF.NG-1),0,WF.NG-1);
+  const gj=clamp((cr/pts.half+1)/2*(WF.NG-1),0,WF.NG-1);
+  const i0=Math.floor(gi), i1=Math.min(WF.NG-1,i0+1), fi=gi-i0;
+  const j0=Math.floor(gj), j1=Math.min(WF.NG-1,j0+1), fj=gj-j0;
+  const u=clamp(tf,0,1)*(WF.NT-1);
+  const t0=Math.floor(u), t1=Math.min(WF.NT-1,t0+1), m=u-t0;
+  const S0=field.slices[t0], S1=field.slices[t1];
+  const at=(i,j,k)=>{ const x=S0[i*WF.NG+j], y=S1[i*WF.NG+j];
+    return k===0 ? x.e+(y.e-x.e)*m : k===1 ? x.n+(y.n-x.n)*m : x.spd+(y.spd-x.spd)*m; };
+  const bl=(k)=>{
+    const q00=at(i0,j0,k), q10=at(i1,j0,k), q01=at(i0,j1,k), q11=at(i1,j1,k);
+    return (q00*(1-fi)+q10*fi)*(1-fj) + (q01*(1-fi)+q11*fi)*fj;
+  };
+  return {e:bl(0), n:bl(1), spd:bl(2)};
+}
+const DRIFT={
+  GAIN:  10,     /* ข้อ 30 — คูณแรงลม ให้เส้นโค้งพอจะเห็นด้วยตา */
+  STEPS: 1600,   /* เพดานก้าว กันวนไม่จบเมื่อลมแรงจนเข้าไม่ถึงปลายทาง */
+  AIM:   100     /* จำนวนก้าวที่อยากได้ต่อเส้นทางหนึ่งเส้น */
+};
+/* ก้าวเดินกับระยะ "ถือว่าถึง" เคยเป็นค่าคงที่ 0.25 ชม. กับ 60 กม.
+   ซึ่งถูกเฉพาะเส้นข้ามทวีป — ที่ 584 กม. ได้แค่ 6 ก้าว เส้นทางจึงหักเป็นเหลี่ยม
+   และที่ 12 กม. ระยะ 60 กม. แปลว่า "ถึงตั้งแต่ยังไม่ออกเดินทาง" (หลัก 46.2) */
+function driftStep(dist){
+  const h=dist/CFG.SPEED;
+  return { dt: clamp(h/DRIFT.AIM, 0.0005, 0.3), near: clamp(dist*0.04, 0.5, 60) };
+}
+const r4 = v => Math.round(v*1e4)/1e4;
+
+/* เดินจากจุดหนึ่งไปตามทิศ+ระยะ บนทรงกลม */
+function destPoint(lat,lng,brgDeg,distKm){
+  const d=distKm/ER, b=brgDeg*RAD, p1=lat*RAD, l1=lng*RAD;
+  const sp=Math.sin(p1), cp=Math.cos(p1), sd=Math.sin(d), cd=Math.cos(d);
+  const p2=Math.asin(sp*cd + cp*sd*Math.cos(b));
+  const l2=l1+Math.atan2(Math.sin(b)*sd*cp, cd - sp*Math.sin(p2));
+  return {lat:p2*DEG, lng:((l2*DEG+540)%360)-180};
+}
+/* สนามลม = โหนดบนเส้นตรง โหนดละหนึ่งช่วง — ปัดพิกัดให้ตรงกับที่เก็บใน URL
+   w[i] ต้องเป็น {spd,dir} ที่ปัดเป็นจำนวนเต็มแล้ว */
+function driftNodes(A,B,w){
+  const a={lat:r4(A.lat),lng:r4(A.lng)}, b={lat:r4(B.lat),lng:r4(B.lng)};
+  const n=w.length, out=[];
+  for(let i=0;i<=n;i++){
+    const p=slerpLL(a,b,i/n), s=w[Math.min(i,n-1)];
+    const blow=(s.dir+180)*RAD;                 /* dir = ลมมาจากทิศไหน */
+    out.push({lat:p.lat, lng:p.lng, e:Math.sin(blow)*s.spd, n:Math.cos(blow)*s.spd, spd:s.spd});
+  }
+  return out;
+}
+/* ลม ณ พิกัดใด ๆ — ถ่วงน้ำหนักผกผันระยะจาก 4 โหนดใกล้สุด (วิธีเดียวกับหน้าโชว์) */
+function windAtNodes(nodes,lat,lng){
+  const P={lat,lng};
+  const bd=[Infinity,Infinity,Infinity,Infinity], bi=[-1,-1,-1,-1];
+  for(let i=0;i<nodes.length;i++){
+    const d=gcDist(P,nodes[i]);
+    if(d>=bd[3]) continue;
+    let s=3;
+    while(s>0 && d<bd[s-1]){ bd[s]=bd[s-1]; bi[s]=bi[s-1]; s--; }
+    bd[s]=d; bi[s]=i;
+  }
+  let e=0,n=0,sp=0,sum=0;
+  for(let k=0;k<4;k++){
+    if(bi[k]<0) continue;
+    const nd=nodes[bi[k]], wt=1/Math.max(1,bd[k]*bd[k]);
+    e+=nd.e*wt; n+=nd.n*wt; sp+=nd.spd*wt; sum+=wt;
+  }
+  return sum ? {e:e/sum, n:n/sum, spd:sp/sum} : {e:0,n:0,spd:0};
+}
+/* เดินจดหมายจาก A ไป B: ตั้งใจมุ่งหน้าปลายทางเสมอ + ลมผลัก
+   คืนเส้นทางจริง กับเวลาที่ใช้ในแต่ละช่วง (ไม่รวมเวลาจอดรอพายุ ซึ่งคิดแยก) */
+function driftRun(A,B,nodes,segs,field){
+  const a={lat:r4(A.lat),lng:r4(A.lng)}, b={lat:r4(B.lat),lng:r4(B.lng)};
+  const direct=gcDist(a,b);
+  const {dt:DT, near:NEAR}=driftStep(direct);
+  const pts=[{lat:a.lat,lng:a.lng}], legT=new Array(segs).fill(0);
+  let p={lat:a.lat,lng:a.lng}, t=0, run=0, far=0, capped=false;
+  for(let s=0;s<DRIFT.STEPS;s++){
+    const left=gcDist(p,b);
+    if(left<NEAR) break;
+    /* เวลาที่ใช้อ่านสนามลมวัดเป็น "คืบไปแล้วกี่ส่วน" ไม่ใช่ชั่วโมง
+       เพราะผู้รับยังไม่รู้เวลารวมตอนกำลังสร้างเส้นทาง ต้องใช้ค่าที่ทั้งสองฝั่งรู้เท่ากัน */
+    const far0=Math.max(far,(direct-left)/direct);
+    const w=field ? wfAt(field,p.lat,p.lng,far0) : windAtNodes(nodes,p.lat,p.lng);
+    const hb=bearing(p,b)*RAD;
+    const E=Math.sin(hb)*CFG.SPEED + w.e*DRIFT.GAIN;
+    const N=Math.cos(hb)*CFG.SPEED + w.n*DRIFT.GAIN;
+    const spd=Math.hypot(E,N), brg=(Math.atan2(E,N)*DEG+360)%360;
+    const step=Math.min(spd*DT, left);
+    const dt=step/Math.max(1,spd);
+    /* ช่วงที่ i วัดจากระยะที่คืบไปตามเส้นตรง — ใช้ค่าสูงสุดที่เคยไปถึง
+       ไม่งั้นตอนลมผลักถอยหลัง ช่วงจะเดินย้อน */
+    far=Math.max(far,(direct-left)/direct);
+    legT[clamp(Math.floor(far*segs),0,segs-1)] += dt;
+    p=destPoint(p.lat,p.lng,brg,step);
+    t+=dt; run+=step;
+    pts.push({lat:p.lat,lng:p.lng});
+    if(s===DRIFT.STEPS-1) capped=true;
+  }
+  /* ตาข่ายกันวนไม่จบ ไม่ใช่เพดานเชิงออกแบบ — ลมแรงจนเข้าปลายทางไม่ได้จริง ๆ
+     ให้เดินเส้นตรงที่เหลือด้วยความเร็วปกติ จะได้มีเวลาถึงเสมอ */
+  if(capped){
+    const left=gcDist(p,b);
+    pts.push({lat:b.lat,lng:b.lng});
+    const dt=left/CFG.SPEED; legT[segs-1]+=dt; t+=dt; run+=left;
+  }else{
+    /* ก้าวสุดท้ายหยุดห่างปลายทางได้ถึง NEAR กม. — ต้องนับระยะช่วงนี้ด้วย
+       ไม่งั้นระยะที่รายงานกับความยาวเส้นทางที่วาดจริงไม่ตรงกัน */
+    const gap=gcDist(p,b);
+    pts.push({lat:b.lat,lng:b.lng});
+    const dt=gap/CFG.SPEED; legT[segs-1]+=dt; t+=dt; run+=gap;
+  }
+  /* ระยะสั้นมากจนได้ก้าวไม่ถึงจำนวนช่วง — แบ่งเวลาเท่ากันแทน ไม่งั้นบางช่วงเป็นศูนย์ */
+  if(legT.some(v=>v<=0)) legT.fill(t/segs);
+  return {pts, legT, hours:t, travelled:run, direct, ratio:run/Math.max(1,direct), capped};
+}
+/* เส้นทางของจดหมายหนึ่งฉบับ — คำนวณครั้งเดียวแล้วเก็บไว้
+   store.letters() แกะ JSON ใหม่ทุกครั้ง จึง cache ที่ id ไม่ใช่ที่ตัว object */
+const _driftCache=new Map();
+function driftPath(L){
+  if(_driftCache.has(L.id)) return _driftCache.get(L.id);
+  let out=null;
+  if(L.lg && L.lg.length){
+    const nodes=driftNodes({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo},L.lg.map(l=>({spd:l[2],dir:l[3]})));
+    /* มีสนามลมเต็มก็ใช้สนามนั้น — ริ้วลมที่เห็นกับเส้นทางที่จดหมายเดินต้องมาจากสนามเดียวกัน
+       ไม่งั้นจดหมายจะลอยสวนกระแสที่ตาเห็น */
+    const r=driftRun({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo},nodes,L.lg.length,wfOf(L));
+    /* ระยะสะสมไว้หาตำแหน่งตามสัดส่วน — prog มาจาก letterState() ซึ่งใช้เวลาใน lg
+       ตำแหน่งจึงผูกกับเวลาที่เก็บไว้ ไม่ใช่กับผลการคำนวณซ้ำ */
+    const cum=[0];
+    for(let i=1;i<r.pts.length;i++) cum.push(cum[i-1]+gcDist(r.pts[i-1],r.pts[i]));
+    out={pts:r.pts, cum, len:cum[cum.length-1], ratio:r.ratio};
+  }
+  _driftCache.set(L.id,out);
+  return out;
+}
+/* ตำแหน่งบนเส้นทาง ณ สัดส่วน 0-1 — ถอยไปเส้นตรงถ้าจดหมายเก่าไม่มีข้อมูลลม */
+function posAt(L,prog){
+  const D=driftPath(L);
+  if(!D||!D.len) return slerpLL({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo},prog);
+  const want=clamp(prog,0,1)*D.len;
+  let lo=0, hi=D.cum.length-1;
+  while(lo<hi-1){ const m=(lo+hi)>>1; if(D.cum[m]<=want) lo=m; else hi=m; }
+  const seg=D.cum[hi]-D.cum[lo];
+  const f=seg>0?(want-D.cum[lo])/seg:0;
+  return slerpLL(D.pts[lo],D.pts[hi],f);
+}
+function posVAt(L,prog){ const p=posAt(L,prog); return toXYZ(p.lat,p.lng); }
+/* ระยะที่ต้องใช้จัดกรอบภาพ (ข้อ 57.4)
+   กล้องไปเกาะที่ *ตัวจดหมาย* ไม่ใช่กลางเส้นทาง กรณีแย่สุดคือตอนอยู่ที่ปลายทั้งสอง
+   จึงต้องครอบจุดที่ไกลจากปลายที่สุด ไม่ใช่แค่ระยะเส้นตรง — กันกรณีลมพาเลยปลายทางแล้ววกกลับ
+
+   หมายเหตุที่วัดแล้ว: ลมพาเบนออก*ข้าง*ได้ถึง 25% ของระยะตรง แต่การเบนข้างไม่ทำให้ค่านี้โต
+   (จุดที่เบนออกข้างยังใกล้ปลายทั้งสองกว่าที่ปลายสองข้างห่างกันเอง)
+   ตัวที่ทำให้ภาพเสียจริงคือกล่องที่เล็กกว่าที่คิด กับกล้องที่อยู่ปลายเส้น ไม่ใช่การเบน */
+function fitKm(L){
+  const A={lat:L.f.la,lng:L.f.lo}, B={lat:L.t.la,lng:L.t.lo};
+  const straight=gcDist(A,B);
+  const D=driftPath(L);
+  if(!D||!D.pts||D.pts.length<2) return straight;
+  if(D.span==null){
+    let m=straight;
+    for(const q of D.pts){ const a=gcDist(A,q), b=gcDist(B,q); if(a>m)m=a; if(b>m)m=b; }
+    D.span=m;
+  }
+  return D.span;
+}
+/* รัศมีวงเปิด วัดเป็นระยะจริงบนผิวโลก (ข้อ 28) และแปรตามความยาวเส้นทาง (หลัก 46.2)
+   ค่าคงที่ 2,400 กม. ใหญ่กว่าเส้นกรุงเทพ-เชียงใหม่ทั้งเส้น 4 เท่า — เปิดหมดจนหมอกไม่เหลือความหมาย */
+function revealKm(L){
+  const d=gcDist({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo});
+  return clamp(d*CFG.REVEAL_FRAC, CFG.REVEAL_MIN, CFG.REVEAL_MAX);
+}
+/* ---------- ริ้วลม (ข้อ 31) ----------
+   หมอกปิดแผ่นดิน แต่ห้ามปิดลม — ถ้าหมอกกลบลมด้วย พระเอกของเรื่องจะเห็นได้แค่ในรูส่องรูเดียว
+   สนามลมคือชุดเดียวกับที่ใช้คำนวณเส้นทาง (13 โหนดจาก lg) ตอนนี้ใช้แล้วทิ้ง ทั้งที่วาดได้เลย
+   ผลคือเห็นสายลมที่จดหมายกำลังขี่อยู่ และเห็นว่า *ทำไม* มันถึงโค้งไปทางนั้น
+   ต้องวาด *หลัง* ขั้นตอนลบความทึบ ไม่ใช่ก่อน
+
+   ทุกค่าที่เป็นระยะแปรตามความยาวเส้นทาง (หลัก 46.2) — ริ้วลมของจดหมายในจังหวัด
+   กับของจดหมายข้ามทวีป ต้องกินพื้นที่บนจอพอ ๆ กัน */
+/* สัดส่วนอ้างอิงจากหน้าโชว์แวนคูเวอร์ที่ตาผ่านแล้ว:
+   ริ้วยาวราว 17% ของเส้นทาง แผ่ออกข้างละ ~15% — ไม่ใช่ 46% และ 55% แบบรอบแรก
+   ซึ่งทำให้ริ้วยาวจนพันกันเป็นเส้นขยุกขยิกเต็มฟ้า */
+/* ริ้วยาว 11 ก้าว = 16% ของเส้นทาง สั้นเกินกว่าจะเห็นว่ากระแสมาจากไหน
+   วัดแล้วว่าความยาวคือตัวแปรหลักของความโค้ง: 11 ก้าว → โค้ง 32° · 22 ก้าว → 53°
+   ลดจำนวนแนวขวางลงเพื่อไม่ให้ริ้วที่ยาวขึ้นทับกันเป็นแผ่น */
+/* เมล็ดริ้วกระจายทั่วสนามลม ไม่ใช่เกาะเส้นทาง — กระแสไม่ได้ไหลตามเส้นทางของเรา
+   ความหนาแน่นเป็นเรื่องของการวาด ไม่ใช่เรื่องของข้อมูล — สนามลมมีข้อมูลจริงครอบทั้งบริเวณอยู่แล้ว
+   ลากเส้นกระแสเพิ่มในสนามเดิมก็เหมือนโรยผงเหล็กเพิ่มบนสนามแม่เหล็ก ไม่ได้สร้างข้อมูลใหม่
+   ที่ 13×9 = 117 ริ้ว พอซูมออกมาแล้วเห็นเป็นหย่อมเส้นเล็ก ๆ ไม่อ่านเป็นสนาม */
+/* ริ้วต้องยาวพอจะเห็นว่าลมมาจากไหน — 0.31 ของระยะทางสั้นเกินกว่าจะเล่าเรื่องมรสุม
+   ผูกความยาวกับ *ขนาดสนาม* ไม่ใช่ระยะทาง เพราะสนามคือขอบเขตที่เรารู้ลมจริง
+   ห้ามลากริ้วยาวเกินสนาม นั่นคือการเดา ไม่ใช่ข้อมูล (กฎข้อ 56.2)
+   ลดจำนวนลงแลกกับความยาว ตามที่กอล์ฟบอกว่ารายละเอียดไม่ต้องซ้ำเยอะ */
+const STREAM={ ROWS:13, COLS:11, STEPS:45, SPREAD:0.16, STEP_FRAC:1/70 };
+const _streamCache=new Map();
+/* ริ้วลมสร้างใหม่เมื่อ "ช่วงเวลา" เปลี่ยน — สนามลมเต็มมี 4 ช่วง ลมจึงเปลี่ยนหน้าตาระหว่างการเดินทาง
+   นี่คือสิ่งที่ทำให้ลมเป็นกระแสที่มีชีวิต ไม่ใช่ภาพนิ่งที่มีคลื่นวิ่งผ่าน */
+function driftStreams(L,tf){
+  const field=wfOf(L);
+  /* 12 ช่วงหมายถึงสร้างริ้วใหม่ 12 ครั้งต่อการเดินทาง ซึ่งกระตุกทุกครั้งที่ 244 ริ้ว
+     6 ช่วงยังเห็นสนามเปลี่ยนชัด แต่สะดุดครึ่งเดียว */
+  const bucket=field?Math.round(clamp(tf||0,0,1)*6):0;
+  const key=L.id+':'+bucket;
+  if(_streamCache.has(key)) return _streamCache.get(key);
+  let out=null;
+  if(L.lg && L.lg.length){
+    const A={lat:L.f.la,lng:L.f.lo}, B={lat:L.t.la,lng:L.t.lo};
+    const dist=gcDist(A,B);
+    /* ต้องหารด้วยจำนวน bucket จริง (6) ไม่ใช่ 12 ที่ค้างจากรุ่นเก่า
+       ถ้าหาร 12 tf จะไปได้แค่ 0.5 → ช่วงเวลาสุดท้ายของสนามไม่เคยถูกวาด
+       ขณะที่เส้นทางของจดหมายใช้ครบ 0..1 → ครึ่งหลังของทุกเที่ยวจะเห็นลมค้างที่กลางทาง
+       ซึ่งขัดกับกฎที่ driftPath เขียนไว้เองว่าริ้วกับเส้นทางต้องมาจากสนามเดียวกัน */
+    const tfb=bucket/6;
+    const nodes=driftNodes(A,B,L.lg.map(l=>({spd:l[2],dir:l[3]})));
+    /* กฎข้อ 56.2: ความยาวริ้ว = สัดส่วนของ *ความกว้างบริเวณที่รู้ลมจริง*
+       สนามเต็มรู้ทั้งจัตุรัส · สนาม 12 ค่ารู้แค่แถบแคบรอบแนวกลาง
+       ของเดิมใช้ dist กับเส้นทางสำรอง → ริ้วยาวเป็น 2 เท่าของแถบที่มันเกิด แล้วทับกันเป็นรอยเปื้อน
+       สองทางนี้จึงต้องได้อัตราส่วน ยาว/กว้าง เท่ากันที่ 0.64 */
+    const knownKm = field ? wfHalfKm(dist)*2 : dist*STREAM.SPREAD*2;
+    const stepKm=Math.max(2, knownKm*STREAM.STEP_FRAC);
+    /* สนามเต็มรู้ลมทั้งทางเดินกว้าง ริ้วจึงกระจายได้เท่าทางเดินจริง
+       สนาม 12 ค่ารู้แค่แนวกลาง กระจายกว้างก็ได้แต่ค่าที่เดาเอา */
+    const lines=[];
+    const brg0=bearing(A,B);
+    const mid0=slerpLL(A,B,0.5), halfF=field?wfHalfKm(dist):dist*STREAM.SPREAD;
+    for(let i=0;i<STREAM.ROWS;i++){
+      /* เมล็ดกระจายทั่วสนามจัตุรัส ไม่เกาะเส้นทาง — ลมพัดผ่านทั้งบริเวณ ไม่ได้ไหลตามเส้นทางเรา */
+      const al=(i/(STREAM.ROWS-1)-0.5)*2*halfF*0.96;
+      const c = field ? (al===0?mid0:destPoint(mid0.lat,mid0.lng, al>0?brg0:(brg0+180)%360, Math.abs(al)))
+                      : slerpLL(A,B,i/(STREAM.ROWS-1));
+      for(let j=0;j<STREAM.COLS;j++){
+        const h=i*31+j*7;
+        const jitA=(Math.sin(h*12.9898)*.5+.5)*360;
+        const jitR=(Math.sin(h*78.233)*.5+.5)*(halfF*2/(STREAM.COLS-1))*0.7;
+        const off=(j/(STREAM.COLS-1)-0.5)*2*halfF*0.96;
+        let p = off===0 ? {lat:c.lat,lng:c.lng} : destPoint(c.lat,c.lng,(brg0+90)%360,off);
+        if(jitR>0.5) p=destPoint(p.lat,p.lng,jitA,jitR);
+        const pts=[toXYZ(p.lat,p.lng)];
+        let ok=true, spd=0, turn=0, prevBrg=null;
+        for(let k=0;k<STREAM.STEPS;k++){
+          const w=field ? wfAt(field,p.lat,p.lng,tfb) : windAtNodes(nodes,p.lat,p.lng);
+          const sp=Math.hypot(w.e,w.n);
+          if(sp<0.5){ ok=false; break; }          /* ลมนิ่งจริง ๆ ก็ไม่ต้องมีริ้ว */
+          if(sp>spd) spd=sp;                      /* ความแรงจริงของริ้วเส้นนี้ — คุมความเข้ม ความหนา และจังหวะ */
+          const br=(Math.atan2(w.e,w.n)*DEG+360)%360;
+          /* กระแสที่วนเป็นวงจริง ๆ มีอยู่ (ในหย่อมความกดอากาศต่ำ) แต่ถ้าวาดจนครบหลายรอบ
+             ริ้วจะกลายเป็นก้อนขยุกขยิก — หยุดวาดที่ 1.25 รอบ ไม่ใช่แก้ข้อมูล แค่หยุดก่อนกลายเป็นเสียงรบกวน */
+          if(prevBrg!==null){ turn+=Math.abs(((br-prevBrg+540)%360)-180); if(turn>450) break; }
+          prevBrg=br;
+          p=destPoint(p.lat,p.lng,br, stepKm);
+          pts.push(toXYZ(p.lat,p.lng));
+        }
+        /* จางลงเมื่อห่างจากเส้นทาง — เรารู้ลมจริงแค่บนแนวเส้นทาง (13 จุด)
+           ยิ่งออกข้างยิ่งเป็นการเดาจากการถ่วงน้ำหนัก จึงไม่ควรวาดเข้มเท่ากัน
+           และช่วยไม่ให้ริ้วรอบนอกกลายเป็นเส้นตรงขนานกันเป็นพืด */
+        if(ok&&pts.length>2){
+          const q=Math.abs(j/(STREAM.COLS-1)-0.5)*2;
+          pts.w=Math.pow(1-q*q,0.9);
+          pts.spd=spd;
+          lines.push(pts);
+        }
+      }
+    }
+    out=lines;
+  }
+  _streamCache.set(key,out);
+  if(_streamCache.size>60) _streamCache.clear();
+  return out;
+}
+/* รอยข้างหลัง (ข้อ 2) — วาดเฉพาะทางที่เดินมาแล้ว ไม่ใช่ทั้งเส้น
+   เส้นเต็มบอกอนาคต ทำให้หมอกไม่ได้ปิดอะไรที่มีความหมาย
+   และรอยที่ยาวขึ้นเรื่อย ๆ = อ่าน progress ได้โดยไม่ต้องมีตัวเลข */
+function trailUpto(L,prog){
+  const D=driftPath(L);
+  if(!D||!D.len) return null;
+  const want=clamp(prog,0,1)*D.len;
+  const out=[];
+  for(let i=0;i<D.pts.length;i++){
+    if(D.cum[i]<=want) out.push(D.pts[i]); else break;
+  }
+  const tip=posAt(L,prog);
+  if(!out.length || gcDist(out[out.length-1],tip)>1) out.push(tip);
+  return out.length>1 ? out : null;
+}
+
+
+/* ---------- สถานะจดหมาย ณ เวลาหนึ่ง ---------- */
+function letterState(L, now){
+  const legs=L.lg, elapsed=(now-L.s)/3600000;   // ชม.
+  let acc=0, prog=0, parked=false, legIdx=0, kind=0, sev=0;
+  const perLeg=1/legs.length;
+  for(let i=0;i<legs.length;i++){
+    const [dur,hold,,,,kd,sv]=legs[i];
+    legIdx=i; kind=kd; sev=sv;
+    if(elapsed < acc+dur){ prog=(i+(elapsed-acc)/dur)*perLeg; break; }
+    acc+=dur;
+    if(elapsed < acc+hold){ prog=(i+1)*perLeg; parked=true; break; }
+    acc+=hold;
+    prog=(i+1)*perLeg;
+  }
+  const gone    = L.lo>=0 && legIdx>=L.lo;
+  const arrived = elapsed>=L.th && L.lo<0;
+  if(gone) prog=Math.min(prog,(L.lo+0.5)/legs.length);   /* หายแล้ว = ค้างอยู่ตรงนั้น */
+  return {
+    prog: clamp(prog,0,1), parked, legIdx, kind, sev, arrived, gone,
+    remain: Math.max(0, L.th-elapsed), elapsed
+  };
+}
+
+/* ---------- ภาษามนุษย์ ---------- */
+function fmtDur(h){
+  if(h<1) return Math.max(1,Math.round(h*60))+' นาที';
+  if(h<24) return Math.round(h)+' ชั่วโมง';
+  const d=Math.floor(h/24), r=Math.round(h%24);
+  return d+' วัน'+(r?' '+r+' ชม.':'');
+}
+function windWord(boost){
+  if(boost>0.12) return 'ลมวันนี้ไปทางเดียวกับจดหมาย';
+  if(boost>0.03) return 'ลมช่วยอยู่บ้าง';
+  if(boost>-0.03) return 'ลมเรื่อย ๆ ไม่ช่วยไม่ขวาง';
+  if(boost>-0.12) return 'ลมพัดสวนมาเป็นช่วง ๆ';
+  return 'ลมย้อนกลับมาเกือบทั้งทาง';
+}
+function poemFor(sim){
+  const s=sim.legs.filter(l=>l[6]>0).length;
+  const rain=sim.legs.filter(l=>l[5]===2||l[5]===3).length;
+  let p=windWord(sim.boost);
+  if(sim.worst===2) p+=' แต่กลางทางมีพายุใหญ่รออยู่';
+  else if(s>0) p+=' มีพายุขวางทาง '+s+' ช่วง จดหมายจะจอดรอจนลมสงบ';
+  else if(rain>2) p+=' ระหว่างทางฝนตกเป็นระยะ';
+  else p+=' ฟ้าเปิดตลอดทาง';
+  return p+'.';
+}
+function kindWord(k){ return ['ฟ้าเปิด','ลมพัด','ฝนปรอย','ฝนหนัก','พายุ'][k]; }
+
+/* ============================================================
+   งานวาด — Canvas 2D, procedural line-art
+   ยกฟังก์ชันจาก prototype: globe-study / weather-set / ribbon-wind / letter-flutter
+   ============================================================ */
+const col = a => 'rgba(84,90,104,'+a+')';
+const frac = v => v-Math.floor(v);
+const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- ชุดสภาพอากาศ 5 ระดับ ---------- */
+function wxClear(ctx,cx,cy,t,scale){
+  const s=scale||1;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  const g=ctx.createRadialGradient(0,-4,0,0,-4,40);
+  g.addColorStop(0,'rgba(198,154,84,0.14)');
+  g.addColorStop(.5,'rgba(198,154,84,0.05)');
+  g.addColorStop(1,'rgba(198,154,84,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,-4,40,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=col(.10);ctx.lineWidth=1;ctx.lineCap='round';
+  for(let i=0;i<2;i++){
+    const yy=-6+i*12+Math.sin(t*.6+i)*1.5;
+    ctx.beginPath();ctx.moveTo(-16,yy);ctx.quadraticCurveTo(0,yy-2,16,yy);ctx.stroke();
+  }
+  ctx.restore();
+}
+/* ลม = ริ้วไล่จาง (wind6) — เข้มด้านต้นลม จางด้านปลายลม บอกทิศในตัว */
+function wxWind(ctx,cx,cy,t,intensity,dir,scale){
+  const s=scale||1;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);ctx.lineCap='round';
+  const flowDir=dir>=0?1:-1, zoneW=130, lines=4;
+  const drift=t*(.4+intensity*.5)*flowDir;
+  for(let l=0;l<lines;l++){
+    const baseY=-30+(l/(lines-1))*60, amp=4+intensity*7, steps=48;
+    for(let i=0;i<steps;i++){
+      const f0=i/steps,f1=(i+1)/steps;
+      const x0=-zoneW/2+f0*zoneW, x1=-zoneW/2+f1*zoneW;
+      const y0=baseY+Math.sin(f0*Math.PI*1.2+drift+l*.6)*amp;
+      const y1=baseY+Math.sin(f1*Math.PI*1.2+drift+l*.6)*amp;
+      const along=flowDir>0?f0:(1-f0);
+      ctx.strokeStyle=col((.06+intensity*.28)*Math.pow(along,.7));
+      ctx.lineWidth=1+intensity*.9;
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function wxDrizzle(ctx,cx,cy,t,intensity,lean,scale){
+  const s=scale||1, zoneW=48, zoneH=48;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);ctx.lineCap='round';
+  const g=ctx.createRadialGradient(0,0,0,0,0,zoneW);
+  g.addColorStop(0,col(.05));g.addColorStop(1,col(0));
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,zoneW,0,Math.PI*2);ctx.fill();
+  const n=Math.round(30+intensity*26);
+  for(let i=0;i<n;i++){
+    const bx=(frac(Math.sin(i*12.9)*.5+.5)-.5)*zoneW*2;
+    const sp=.5+frac(Math.sin(i*5.1)*.5+.5)*.4;
+    let by=(frac(Math.sin(i*7.7)*.5+.5)+t*sp); by=(by%1)*zoneH*2-zoneH;
+    const depth=frac(Math.sin(i*9.3)*.5+.5), len=2+depth*4;
+    ctx.strokeStyle=col((.12+intensity*.28)*(.4+depth*.6));
+    ctx.lineWidth=.6+depth*.7;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+lean*len,by+len);ctx.stroke();
+  }
+  ctx.restore();
+}
+function wxRain(ctx,cx,cy,t,intensity,lean,scale){
+  const s=scale||1, zoneW=52, zoneH=52;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);ctx.lineCap='round';
+  const n=Math.round(13+intensity*15);
+  for(let i=0;i<n;i++){
+    const bx=(frac(Math.sin(i*12.9)*.5+.5)-.5)*zoneW*2;
+    const sp=.8+frac(Math.sin(i*5.1)*.5+.5)*.5;
+    let by=(frac(Math.sin(i*7.7)*.5+.5)+t*sp); by=(by%1)*zoneH*2-zoneH;
+    const len=7+frac(Math.sin(i*3.1)*.5+.5)*5, depth=frac(Math.sin(i*9.3)*.5+.5);
+    ctx.strokeStyle=col((.22+intensity*.35)*(.5+depth*.5));
+    ctx.lineWidth=.8+depth*.8;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+lean*len,by+len);ctx.stroke();
+  }
+  ctx.restore();
+}
+/* พายุ = ริ้วม้วนสองชั้น (ข้อ 36)
+   แบบเดิมเป็น log-spiral 3 แขน x 2 ชั้น + ghost band หนา 5px = ก้อนทึบชิ้นเดียว
+   ในแอปที่เหลือเป็นเส้นโปร่งทั้งหมด จึงหลุดธีม
+   แบบนี้พูดภาษาเดียวกับริ้วลม: ชั้นในสั้น แน่น เข้ม (กำแพงตา) · ชั้นนอกยาว กว้าง จาง
+   อิมแพคมาจากลมรอบตัวที่วนเข้าหาตาพายุ ไม่ใช่จากความทึบของตัวพายุ */
+function wxStorm(ctx,x,y,t,intensity,rich,scale){
+  const s=scale||1;
+  const size=(9+intensity*15)*s;
+  const steps=rich?26:18;          /* LOD: บน globe หยาบได้ · บนการ์ดวาดใหญ่จึงต้องละเอียด */
+  ctx.lineCap='round';
+  const bands=[
+    {arms:7, r0:.46, len:.66, sweep:.95, spin:.34, a:1.00, w:1.00},
+    {arms:3, r0:.26, len:.26, sweep:.70, spin:.62, a:1.35, w:1.15}
+  ];
+  for(const b of bands){
+    for(let a=0;a<b.arms;a++){
+      const off=a*Math.PI*2/b.arms + t*(b.spin+intensity*.5);
+      const r0=size*(b.r0 + (a%2)*.10);
+      const sweep=Math.PI*(b.sweep+intensity*.5);
+      const head=((t*(.5+intensity*.7))+a*0.21)%1.3;   /* คลื่นสว่างวิ่งไล่ไปตามแขน */
+      for(let i=0;i<steps;i++){
+        const f0=i/steps, f1=(i+1)/steps;
+        const th0=off+f0*sweep, th1=off+f1*sweep;
+        const rr0=r0+size*b.len*Math.pow(f0,.85), rr1=r0+size*b.len*Math.pow(f1,.85);
+        const along=Math.pow(1-f0,.85);
+        const near=Math.max(0,1-Math.abs(f0-head)*4.2);
+        const a1=((.12+intensity*.34)*along + near*(.15+intensity*.28)*along)*b.a;
+        if(a1<.01) continue;
+        ctx.strokeStyle=col(Math.min(.55,a1).toFixed(3));
+        /* ความหนาไม่คูณ s: พายุลูกใหญ่ต้องเป็นริ้วบางที่กว้างขึ้น ไม่ใช่ริ้วหนาขึ้น
+           ทำให้ scale ใช้คุมขนาดได้อย่างเดียว หน้าโชว์จึงส่งขนาดตามภูมิศาสตร์เข้ามาได้ */
+        ctx.lineWidth=((.85+intensity*.95)*(1-f0*.5))*(1+near*.7)*b.w;
+        ctx.beginPath();
+        ctx.moveTo(x+Math.cos(th0)*rr0, y+Math.sin(th0)*rr0);
+        ctx.lineTo(x+Math.cos(th1)*rr1, y+Math.sin(th1)*rr1);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.lineWidth=.9; ctx.strokeStyle=col((.26+intensity*.22).toFixed(3));
+  ctx.beginPath(); ctx.arc(x,y,size*.20,0,Math.PI*2); ctx.stroke();
+}
+/* ลมจริง (กม./ชม.) → ความเข้มของภาพพายุ */
+function stormIntensity(spd){ return clamp((spd-40)/70,.25,1); }
+function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale){
+  const lean=dir*.55;
+  if(kind===0) wxClear(ctx,cx,cy,t,scale);
+  else if(kind===1) wxWind(ctx,cx,cy,t,intensity,dir,scale);
+  else if(kind===2) wxDrizzle(ctx,cx,cy,t,intensity,lean,scale);
+  else if(kind===3) wxRain(ctx,cx,cy,t,intensity,lean,scale);
+  else wxStorm(ctx,cx,cy,t,intensity,true,scale);
+}
+
+/* ---------- ชายฝั่งโลก ----------
+   ที่มา: Natural Earth 110m ผ่าน world-atlas (public domain) ลดรูปด้วย Douglas-Peucker 0.35°
+   เข้ารหัส: 1 จุด = 4 ตัวอักษร (lng,lat ความละเอียด 0.25° ≈ 0.5px ที่ R=120) คั่นเส้นด้วย |
+   ~2,100 จุด / 105 เส้น — แปลงเป็นเวกเตอร์ครั้งเดียวตอนโหลด แล้วใช้ซ้ำทุกเฟรม */
+const COAST_RAW='HiAoHfAkHOAkHHAnHYAmHeApHiAo|BTAqBLApBBAuBLAuBTAq|IbAwIgAuIjAoIGAkH3AlIEAqINAwIbAw|DrBCD1BCDvBADmBBDrBC|DaBCDgBBDTBCDaBC|FEBIFNBIFPBGE9BGE3BIFEBI|G+BMG9BHG0BGGuBGGwBIGnBHGkBJGwBLGxBSG3BUG+BM|AAAVAEAXAWAWAoAYBYATB+ASCUAUCUAWBqAZBtAgBdAkB1AjCGAnB6ArBjAsBYAwBXA0BzAyCIA2CHA6CMA7CPA6CzA/DxA+EIBBEPA9E9A7FAA9E2BAExBGFPBCFoBDFrBGF7BCGKBBGPBDGfBAG8BEHDBIG+BRHCBWHBBbHDBcHUBlHpBrHrBqHqBpHYBlHVBiHYBfHRBeHJBYHTBTHZBNHdBBHPA7G2A1GbA1GpAwGYAuGYArGjAnHhAeHnAbIJAhIlAgItAjJeAnJZArJBAqJBAvJDAwJcA1KKA7KRA+KSBAKOBBKSBDKfBGKnBLKyBJK1BMK/BKLNBLLPBJLvBQL2BQL7BNMGBQMNBOMdBQMqBNM8BONQBRNXBWNrBROqBhOxBgO7BbPGBYPQBaPkBYPnBTPfBPPkBNPgBJPnBHPsBIP3BQQHBSQMBXQbBbQrBbQwBfQ3BbRPBaRfBbRrBiR5BcSWBgSeBdSvBbS9BeTTBdTrBfTsBjT2BcUWBcUbBYUjBWUyBVU5BWVWBOVtBNV9BJV1BBVoA+VeA3VeA0VjAvVsAtVXArVPAkV2AZWZAWAAAV|HBCRHMCNHKCLHECMG/CKG7CKGvCOGlCVG0CQG7CWG9CVHBCR|HmCcHpCaHoCYHdCXHbCZHmCc|PpChPjChPkCmPqCkPpCh|UWDFUhDFUgC7UYC6UTDDUTDFUWDF|WEDEWJDDWDC7WEC5V+C3V6CwV1CtVrCvVsC0V6C8WADEWDDGWEDE|WKDXWNDTWNDWWTDQWaDRWYDLWVDLWQDDWNDBWLDDWNDGWMDIWHDKWKDNWLDSWDDeWJDbWKDX|VsEPVmERVgEYVsEP|AAEmWbEkWaElWeEmABEoAAEm|OYEyOaEpOXEpOXElOMEEOGECOAEEN9EQOCEYOAEiOCEnOJEpOPEuOVE4OYEy|UOExUQEuUSEvUVEsUaEcUjEWUnEPUrEOUsEKU1EAU2D4U0DsUpDZUoDSUZDMUUDOUUDQUODNUDDQT+DXT4DaT5DeTzDbT4DhT3DkTwDcTtDeTpDmTdDqTJDnTBDkS/DgSwDgSoDcSiDcScDfSfDjSfDqSVEASXD+SWECSZD/SWEGSZERSZEOSjEVSzEZS8EmS+EjS/EkS+EmS/EoTBEnTHEvTMExTREtTWEsTWEuTaE2TiE4TfE7ThE7TtE3TyE5T0E3TwEzTuEsUBEhUDEjUHEsUJE8UKE9ULE7UOEx|SzE/SsFCSwFDSzE/|TCE/S+E/TAFDTNFGTCE/|SoFIStFFSjFESoFI|S8FIS7FFSwFFSzFHS8FI|SCFNSKFMSLFOSfFHSaFFSBFJR1FNR4FQSCFN|VAFNU9FOU6FTVAFN|UwFSUpFPUhFRUnFSUpFUUpFSUrFSUvFVUuFXUxFXUwFS|TaFcTbFZTQFaTRFdTaFc|U1FWUzFVUyFZUrFdUxFbU1FW|TpFjTqFdTuFbTxFfT5FhUSFZUYFSUfFQUgFOUcFNUdFKUrE+UgE/UYFIUTFJUNFHUOFEULFDT9FIT2FGT7FLT4FSTnFaTkFYTgFdTnFfThFfTaFkTiFnTpFj|TFFuS/FpSxFpSwFmS0FiS9FmS2FgS9FTS5FTS7FWS2FWS0FdSxFcSyFSStFSSuFaSrFdSwFqS0FtS8FsTFFu|TTFtTQFkTOFvTQFxTTFt|R3FRRzFRRqFXRaFvRNF+RWF9RjFwRnFwRvFoRuFlR4FcR3FR|SnFvSsFsSnFrSmFlSiFiShFYSgFZSbFYSVFcSQFaSPFcSJFcSIFiSEFmSEFtSHFwSNFvSNFzSUF0SjGEStF+SlF1SnFv|TKGKTKGFTJGBTHGFTFGDTGF+TBGBTBGFS+GHS4GFS+GLS/GJTGGMTGGPTJGNTKGK|QVGBQRGAQPGDQRGPQXGGQVGB|TAGRS8GMS6GPS8GUS+GUS9GRTAGVTAGR|SqGNSlGJSuGVSvGSSqGN|TGGZTHGUTEGVTFGRTDGRTBGWTEGXTBGaTGGZ|S1GyS5GyS6GsS3GoS3GhTAGfTAGaS8GeS7GdS4GfSzGfS0GiSwGkSwGpSxGoSzGyS1Gy|HKGxHDGwHDGxHKGx|GcGvGXGxGcGyGfGwGcGv|GuG3G4G3G/GyG9GxG1GyGyGuGvGxGoGwGnGzGvGzGqG3GuG3|SJGzSGGxSDGySDG1SLG4SJGz|GRHDGnG5GZG3GcG6GXG7GVG+GJHBGHHCGJHDF8HAGHHFGRHD|S1HDSzHASwHGS2HNS4HMS1HD|TrHxTpHtTnHuTkHrThHsTkHwTrHx|NaH3NUHyNRH0NaH3|MvH3M5H1MzH0MuH1MvH3|MOIBMMH6MCH+MCIBMOIB|L1INL3IKL3IFLzIELxIML1IN|UEH9UBH1T1HyTvHuTsHvTsHyTcHwTgHtTdHmTbHkTZHmTaHpTWHtTiH2TvH2TzH9T2H7T+IBUBINUFIOUIIIUEH9|L2IRL1IOLyIRL2IUL2IR|UQIZUVIaUWIVUQIUUNIQUGITUEIOUAIOT/ISUBIVUGIWUIIeUQIZ|HRIiHYIiHVIgHPIiHQIkHRIi|DiIqDZIrDQIwDPIzDZIxDiIq|HvIzHtIvHvIxHyIwHxIuH6ItH5IqH8IrH9ImH8IjH3IjH3InHyIkHwIkHzImHvInHjImHlIpHjIqHrIzHxI3HyI2HvIz|C9JADBJADAI8DDI5C8I+C7JBC9JA|UPIzUTIsUNItUKInUOIjUOIhULIjUIIgUJI0UGI4UHI9UKI/UJJBULJBUPIz|K1I5KoI3KrI7KpJAK1JFK5JCK1I5|MDJGMAJDL8JHMBJIMDJG|BsJMBoJLBlJOBuJQBvJOBsJM|LEJTLAJOLIJPLEJILIJILSI8LXI7LUI3LWI1K7IwK5IxLCI2K7I4K/I5K9I7K+I+LEI+LEJAK9JDK8JHK6JFK3JLK8JTLEJT|A6JYAyJZA5JZA6JY|GIJjGEJhGAJiGDJkGIJj|AhJnAtJlAqJkAiJlAhJn|F7JvGQJnGMJmGEJoF6JkF5JnFzJmF3JoF4JvF7Jv|KWJyKVJvKaJtKFJmJ1JoJ5JqJwJsJ3JuJvJuJxJxJ3JyJ+JvKEJxKWJy|GhJ1GcJ0GbJ2GgJ5GkJ4GhJ1|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|FRJ8FPJ7FBJ+FHKBFRJ8|AAKGAKKFAAKDAAKG|FmJ+FmJ6FrJ9FwJ6FvJ3FzJ1F6J7F6KAGGJ/GLJ9GIJ5GLJ2GKJ0GDJyF5JyFzJrFoJoFlJmFlJkFbJgFXJcFVJUFbJTFfJMFkJNF8JFGHJFGHI9GQI1GWI6GRJDGXJFGeJKGbJQGWJTGbJXGYJhGpJiGzJdG6JcG7JUHBJRHHJTHOJZHaJMHZJJHrJDHsI/HxI9HxI5HgIxHGIxG0IjG9IpHMItHPIrHMIoHOIhHaIgHeIkHhIgHLIWHIIWHHIaHOIdHDIdHEIbG1IUG1IRG4IPGpIMGwIMGoILGkIEGiIGGkICGgH9GhIAGfIFGfIAGcIBGfIAGhH2GLHmGLHgGQHUGOHNGLHNGJHPGFHYGEHcGAHgF8HfF2HiFrHhFqHhFrHdFnHcFZHfFOHZFLHWFLHPFJHCFPG1FWGxFgGzFlG1FnG8F0G+F1G7FxGxFvGyFvGqFsGoF8GoGCGlGBGUGHGMGKGLGSGOGdGLGhGOGkGUGqGVGxGaGzGYGwGWGxGMG0GPGyGUG3GWG4GZG/GSHHGTHMGQHPGTHYGTHVGSHWGQHdGOHdGKHkGIHrGAH4F/IDF5IGFwIIFvIFFpIGFoIOFnIOFjIRFmIcFiIeFdIiFeIwFdI7FVJCFTJFFLJDFEI1E0IzEhIsEQIoEMIdELIREEIOEAIMD1H5DeHvDdHmDgHmDeHrDbHtDUHpDPHjDNHXDNHXDFHVDEHMDEHMDAHRDAHSC+HLC6HKC0HDCyHCCvHJCrHICnG7CdG/CXG1CUG0CRGkCXGiClGnCsGhCtGlCxGnC4GrC2GtC+GqDAGpC7GnC7GrDLGqDTGrDUGyDmGyD1G0D5G3EZG3EfGyEjGgEtGRFLGLFPGMFRGKFVGRFdGMFfGMFkGQFrGVFuGWFzGbF3GXGJGSGMGOGIGQGGGMGFGMGHGCGKF8GQF8GOF5GQF5GUFxGcFyGdFjGgFVGpFOGnEyGxEqG4ErG+EoHDEbHOEbHSEPHcELHlEJHmEFHnEFHhESHTEVHJEaHFEYHDEPHLEPHQEEHXEHHaECHeD7HsD2HwDuHyDeIJDeITDgIeDdIpDkIoDmIkDlIsDSIzDRI5DLI7DLI+DAJGC4JQCtJRChJWCEJcB/JbCAJYBxJVByJbB3JcB2JdBoJVBrJTBnJRBWJIA9JCBZJOBcJUBUJSBPJUBIJTBJJXBBJXA4JeA+JlBNJnBKJqBNJrA8JqAwJvA+JyBBJyBBJwBJJwA1J5A3J8BDJ9BIKBBeKFBnKDCSKBCuJ8DJKBDMJ/DPKCDZJ+DeKBDfJ+DqJ/EDJ8EIJ6EDJ4EYJ4EcJ2EhJ4EdJ5EfJ7EnJ7E6J3FGJ3FGJ6FJJ6FQJ5FPJ1FSJ4FVJ4FXJ8FOKAFOKFFTKIFcKFFiKBFeJ/FmJ+|EHKMEFKLEOKMEUKKEYKMEfKHEhKIEeKMEmKMEqKLEuKEE8KAE8J+E1J+E4J8E2J7EoJ9ELJ6EAJ9D7KAEOKBD4KCD2KEEAKFDyKGD5KLEHKM|EuKOEqKLEkKOEuKO|GfKMGSKLGMKNGPKPGYKPGfKM|F2KNF5KKF9KNGHKPGOKLGNKIGZKLGnKHGoKFGvKGHAKAHEJ9G9J7HZJzHQJsHFJyHAJxG/JvHLJqHNJmHMJjG9JnHHJgG0JkGlJrGZJpGWJqGYJtGoJuGnJvGtJ1GsJ3GdJ8GfJ9GUKBGLJ/FtKCFqKDFuKFFoKFFnKJFuKOF5KPF2KN|E/KPFKKPFMKOFIKMFOKKFNKHFDKFE2KKE+KLE6KNE/KP|UOKNT/KNUIKPUOKN|FbKLFXKIFSKIFQKOFWKRFmKPFbKL|DuKGDkKEDYKHDgKPDcKRD6KRECKODzKKDuKG|UrKUUmKTUYKVUrKU|FaKUFXKSFNKUFVKXFaKU|UUKWURKTT8KST0KVT2KYT7KZUUKW|FGKbFJKZFHKUE2KWE2KZFGKb|EfKZEoKYEpKWEnKUEJKSEJKTERKVD5KVECKaEcKWEWKaEaKbEfKZ|O2KDOnKDOeKGOeKIOiKJOiKLOqKPOmKPOwKTOvKUPZKbPjKaO6KROuKJOuKGO2KD|FVKcFiKbFlKaFkKYFrKWGLKXGRKUFvKSFeKTFcKYFYKZFMKbFNKdFVKc|D/KfD/KcD8KaDlKYD0KeD/Kf|EXKfEKKfETKhEZKgEXKf|MzKfMjKfMmKgMjKhMsKiMzKf|EZKiEOKiESKjEZKi|FRKgFIKgFFKjFSKiFRKg|FAKhFBKgErKiEvKjEqKlFAKh|R0KhReKgRoKlR1KjR0Kh|MZKnMmKkMcKiMUKbMQKbMHKeMLKfL9KjL6KnMUKoMZKn|M2KqM+KoMsKmMVKpM2Kq|OdKqOOKoOKKpOMKqODKqOYKsOdKq|RgKkRMKkQ9KpRQKtRhKnRgKk|F0KnF5KlFlKhFcKhFYKjFbKmFUKlFNKpFXKsFVKtFeKtFxKpF0Kn|G+K0HYKxHBKuHKKuGzKnGcKlGiKlGfKkGiKiGRKdGYKbGOKZFqKaFqKcFxKdFvKgF8KeFwKhF8KlF0KpGJKqFyKqFiKwF6KzGDKxGGKzGTK1G+K0|JkK2J9KzJSKwJ0KwJ4KvJzKtKRKwKfKtKAKpKJKpKBKjKBKfKGKcJ5KbKBKYKCKVJ9KVKDKRJ6KRJ+KPJ9KOJyKNJ3KJJtKJJ3KGJ5KDJyKCJqKGJrKDJnKBJ3KBJhJ6JRJ4JHJzIxJuIrJmIlJjImJgIiJYIPJbIBJnH/JtH5JwH7JzH4J1H8J5ICJ7IFKAH6J9H1J+H3KDICKCHxKHH1KKHmKWHbKYG+KYGyKcHFKeGrKgGrKiHJKmHLKnHAKoHXKtHVKvHrKxH8KwIGKyIeKvIUKxIVKzIiK1JkK2';
+const B64='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const COAST=(()=>{
+  const M={}; for(let i=0;i<64;i++) M[B64[i]]=i;
+  return COAST_RAW.split('|').map(r=>{
+    const out=[];
+    for(let i=0;i<r.length;i+=4){
+      const lng=(M[r[i]]*64+M[r[i+1]])*.25-180;
+      const lat=(M[r[i+2]]*64+M[r[i+3]])*.25-90;
+      out.push(toXYZ(lat,lng));
+    }
+    return out;
+  });
+})();
+/* ---------- ชายฝั่งอาเซียนความละเอียดสูง (ข้อ 45.3) ----------
+   ที่มา: Natural Earth 50m ผ่าน world-atlas (public domain) ลดรูปด้วย Douglas-Peucker 0.02°
+   เข้ารหัสด้วยกรอบเฉพาะภูมิภาค (lng 92-142, lat -12 ถึง 24) จึงได้ความละเอียด
+   0.0122° ~ 1.4 กม. โดยยังใช้ 4 ตัวอักษรต่อจุดเท่าชุดโลก ซึ่งละเอียดแค่ 0.25° ~ 28 กม.
+   4,073 จุด / 262 เส้น · คลาดจากการเข้ารหัสเฉลี่ย 0.45 กม. สูงสุด 0.83 กม.
+   เหตุผลที่ต้องมี: ชายฝั่งทั้งประเทศไทยในชุดโลกมีแค่ 14 จุด ห่างกันเฉลี่ย 199 กม.
+   ที่ซูมระดับที่จดหมายในประเทศต้องใช้ (17 เท่า) ประเทศไทยจึงเป็นรูปหลายเหลี่ยมหยาบ
+   และหมอกก็ไม่มีอะไรให้ปิด (ข้อ 48.5) */
+const SEA_BOX=[92,-12,142,24];
+const COAST_SEA_RAW='tRWvtMWttKW1tPW1tRWv|0AAA0AAT0DAozzA6zjA9zXA5zSA8zHBKy9BPy9BTzJBdzZBOzcBPziBbznBYz6BI0EA40SBF0bBD0gA+0tAi07Af1KAV1oAT2CAA|2oAA2tAA|31AA4KAU4NAU4GAG4LAE4KAA|40AA44AF5AAF5BAA|/zAA/1AD/2AA|/8AA/7AM//Ac|tuW1t7W0uCXMuRXZuRXruWX0uwYGu9YIu+YDu+XTudW5uZWxuaWou2WTu6WPu9V+vHV4vOVuupWCuDWLt+WHt7V3t9Vst7VbuDU5uZUCunTvubTyuYT7uIUFt7UltrU5tqVDttV2tgWNteWbtkW1tdW+tWXXtVXjteX8teYItmYnt8ZIuHZPuHZGt7Yut7YluFYXuFXtt7XZtoXItmXAtuW1|gZkVgRkNgSkXgck0hIlwhTlzhbl8ilnvi2n9i9oVi5oni8o1jMpgjQpcjPpEjRo9jOozjcn/jUn1jBnsi7njiznNiRm9iPm3iRmsh1lyhclghRlHg/k2guksgqkggZkV|nCp+nLp4nVp9nep8nlp0nipqnzp2n4p1n1pZnspFnbo3nYoknQoinEoVmpoNmVn5mUn/mYoPmVodmWoqmdpDmiqBmfqLmQqSmSqZmWqembqemxqQnCp+|n2lcnqlbnnlhngl5nHmMm7mkm6mynAnCnTnFnfnQngnnncoAnnoWnporoAo4oVowoZofoToJoHnroDnVn4m3n3maoEl9oFl0n+ljn2lc|pspfpypbp4pdqApmqJpjqRpQqSpIqQogqcoPqfn6qlnpqknlqbnmqancqOnwqRnKp9nap9nsp5n4p+oap5orpzo0pmotphowpbpjpWpwpYp1pcpzpqplpspf|qirmqordqprPq2rHq7rAq4q5q5qwq0qlq3p8rBpdq+pTrCpTrIpLrLo+rCpHqypFqipJqcpXqSpfqKpvqIp4qNqBqOqPqFqRp0qspsqwphq7pXrYpVrrprrmqbrrqirm|kvtSlAtVlRtHlYtNlysrlzsmlusUlzrzlpralnrMlirNlarDlRrHlOrQlErdk/rzk1sEk0sYkqsvkfs5katJkRtLkStSkWtXkvtS|7jGo7QGZ6tGc6eGY6bGb6qHP6+H47QIH7kIO72IM8GH28IHp74HA7jGo|wUQPwnQCxHQBxXPxxfPTxoPQxvO/xqOewqPKwkPTwbPbwAPawBPOv8PMvUPbvTPkvLPlvCPdu5POuvPNunPQubPkuPPuuLPruCPNt9PHt/PZt6PnuVQPvWQTvbQSvgQHvlQHv5QYv+QYwUQP|snP2s1Pts6PgtFPTtHPKtFO4s6OzsuOpsZOisNOoryO7rlPQrjPsroP0rzPvr6P0sOP4snP2|nZGBnAF0mhFymMFll8Fhl3FqlpFqliFflXFhlKFdkiFskPFqj/FvjuFljlF4jmGGjrGXjyGVkIGmkSGqknGskzGilIGdlsGFl0GGl/GNmWGTmvGAm0F/m8GDnGGWnfGknkGunXGyneG8npG2nrGinbGQneGHnZGB|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|l5//lo+hlU90lI9i|YL43YS4rYV4RYF4GX33nXx3aXn2qXj2kXX2fXG2OXI2HXE2EWz2CWq1yWb1tWM13Vz1+VY2RVT23VV3pWH4dV/4eWG4rWa4tWg41Wm42W740XJ43XU4+Xe48Xi41Xi4/Xy41Xy5AX45IYE46YL43|cd80cb8ycV89ce85cd80|L7apL3anL7ayL7ap|2qJs2mJr2kJ02nJ32sJx2qJs|ocSToSSWoTSnoWSqodScocST|RkCrRiCjRZCpRZCvRjCyRkCr|lUgIlZgAlngAlpf5lffxlZf5lOfzlIf3lBf0k9f6k/gAlKgKlUgI|crIpcqIlcmImciIucpIwcrIp|b9ItbuIsbfIgbCIfakIpahIwatJEcIJHcRI6cAIzb9It|2hid2cia2Zij2ait2ljC2hid|7DmO69mE7DmX7HmY7JmT7DmO|z9BPz7BOz0Bfz2Bkz0Buz4Bvz8B10ABfz9BP|5FBH4/BA4+BF5OBg5PBv5UBw5QBc5FBH|4vAt4iAl4pAw47A946A44vAt|xOAkxYAexaAVxRATxCAawvAUwsAYwuAkw0Ajw4Anw1A7xABLxEBLxOAk|xbBHxmBGxzBPx8BMyQBcyeBOymBAygA4ygAvyZAwySAhx2AIxdAdxSArxLA/xGBZxLBdxbBH|gdj8gXj5gWkHgckEgdj8|gGjWgCjNf9jXf/jpgGjrgGjW|jun+jkn6jioFjpoPj2oHjun+|jqp0jspujppljnpjjfppjfpujqp0|j9q9kFq9kIrDkLq6kRqzkPqrj2qrjqrBjsrMjurOj9q9|j4qIjyqEjxqHjqqljuqoj4qhj7qRj4qI|nOn8nFn3nDn/nFoMnSobnVoRnOn8|oJmIoGmFoFmMoMm6oKnDoln8o3o0o6pOpApXpCpRo/oepBoJo9n0o5nqosngoknVoTmYoJmI|oppYoupJonpJolpUoppY|pumuptmqpkmqpamcpHmZo4mcoymioumyo1m9pCnHpLnWpYnZpsnJpqm5pumu|p/llp9lepzlkpxlppylup5lwp/ll|oklwollkodlgoXlkoTlrohl1oklw|kKerkFehj/emj9ehj2efjyeXjneWjnedkDe0kGe0kKer|mhgwmWgvmPhAmJhFmLhLmehUmxhIm0hEmuhBmpg2mhgw|rmmsrgm0rhm+rnnNrrnArrm3rvmwrsmsrmms|rHm9rGm6q3nUq6nqrFn5rHnzrEnirInPrHm9|kLtxkLtqj+t1j+t8kGt5kLtx|mStZmZtamitQmjtFmZszmLtBmKtMmOtcmStZ|mhrSmaq2mWrAmYrGmTrQmYrcmZrumlr0mhrS|myrmmvrjmtrpmwrumyrm|nPrNnLrLm8renArinLrinQranPrN|oCsLoJr6nvsbnpsgnnsonuspn8sRoCsL|oqreorrUoerrobryoer3olrvoqre|omrLo1q9pAqmpAqOowqgomqkonqqodq0oWrAoSrDoNrAn4qhoBrXn+rsoZrdomrL|patkpXtcpRtepLtYpBthpAtnpHt2pHuLpPuWpWuIpft/petppatk|mnuTmnuOmVufmWuomnuT|mcwAmdv8mXvzmbvkmYvZmTvYmSvZmTvpmKv7mMwEmXwFmcwA|mS26mN2ymL20mQ3FmU3HmY3BmS26|lc3Qlb3IlX3MlY3blc3Q|ly3vlz3llu3llm3vln30ly3v|mW5imS5hmU5smc5tmW5i|mP6RmL6ImI6ImN6YmP6R|3hUL35UH3/UC4LUD4gTm4yTY4tTQ4hTL4UTQ4NTP4GTW3/T332Tx3tT73pT63lT+3hUL|3pSg4kSZ4zSR5XSN5dSI5HSA4mR+4JSO3qSX3pSg|2/TW22TW2yTf20Tm25Tq29Tm2+Tg3BTf2/TW|2ORj2MRi2LRn2ORu2SRs2ORj|8BGb7oGd7mGk7vGw75Gz8BGh8BGb|1NNy1RNs05N704OB1NNy|xFSVxLSIxHR9xLR1xER0w8RswzRqwwRuwfRzwTSBwoSNxFSV|x6S/x3S8xtS/xoTGxfToxyTwx9TtyATnx6S/|xyT9xsTzxJTsxQT2xrT4xqT+xyT9|xbUZxOUexbUlxgUgxbUZ|xrVUx8VRyRVEyWU0yPUryCUwx7Usx2UvxgVMxbVLxdVFxnU0xtUzxyUuxyUmxmUjxiUoxhUzxVUrxRU3xEU3w8U9xAVJxGVNxMVKxRVOxrVU|wDVAwAU/v1VNvwVawDVFwDVA|uqY+udY9uaZCuWZaufZuurZ5u2Z8u9Zuu3ZSuxZEuqY+|tYVUtXVRtTVXtWVltYVU|tVWetRWdtSWqtXWotVWe|tHUds8Uas9U1tCU4tKU1tHUxtKUotHUd|tLT8tKT6s/T+tEUPtIUOtLT8|thUxtqUgtkUQtoUGt0UGt3UDt6T5t4T1txTxtpT2tmT+tYT5tWUBtZUMtSURtLUctNUvtRUvtYUnteUythUx|uRSYuKSStvSVthSQtTSatYSwtoS9t9SxuRSfuRSY|2tLM2uK42qKw2uKX2qKJ2kKB2UKF18Kj18Ko2IKp2MK+2BLM2ELP2MLL2YLh2ZLq2fLs2iLq2lLa2pLY2tLM|2cJ42ZJn2SJd2KJK2AJD13JM11JT15J12AJ216J615KV1+KW2KKG2cJ4|0YK20RKs0ZLP0fLW0nL50sL10oLb0cLJ0YK2|0OK70JKx0EK00ELI0ALX0FLX0JLR0OK7|u/PCu/O7u3O9u0PFu/PC|uyO9ukO3upPFuwPCuyO9|ubOzuUOsuQOsuQOzuNOyuDOot/Ort+OwuGO7uOO9uaPFufPFubOz|n6NPn7Mwn1M8nvM5nqMhnpMNnpMHnvMKn3MDn7L9n6L2nuLtnoLuncLQnVLUnOLRnJLlnYMEnfMwnfNInnNcnxNinxNdn6NP|nOL+nHLwm5L2m3LxmyLxmwL4m0MNm5MUm0Mum3M3nSNInWNBnXMknLMNnOL+|mdLqmXLnmJL/mPMMmOMRmSMUmWMUmcMKmeMDmdLq|n/OBn3NznxN0nqN9noOLntOQn8OOn/OJn/OB|rlQ+rkQ8rfRCrVRpraR0rgRwreRermRIrlQ+|rjSJr8SGr4SCrdR7qyR4quSDq5SIrjSJ|qMSTqUSPqbSVqeSSqfSKqkSMqpSHqpR/qaR+qPR4qBR9pxR0pfRxpYSCpcSVpfSYpzSbqMST|owR3oyRyotRyorR/owR3|n8TQn+TJn7TDn+S3oHTGoPTIoWTDoYS9oVSwoQSqoJSpoGSxoBSyn+Sin5Sdn1Skn6Srn3TBniSgnbSyndTDnjTPn8TQ|n3SGnxR9n0SKn2SLn3SG|mOUnmRUimPUcmFUdl9UZmEUnmOUn|sjcgsbcesacksjc5scdDsfdasjdZsndTssc9smcwsjcg|sccOsccJsXcUsVchsdcTsccO|smcCsicDshcKsjcMsncHsmcC|rFbcrCbYq4bfq5bpq0b4q1b+q7b3rFbc|qwaDqvaAqsaNqvaUqzaPqwaJqwaD|kgKJkdJ2kZKWkcLEkiKukgKJ|zLIizJIczDImy4IrzGItzLIi|xvGjxoGfx8G9yJG4x+GvxyGrxvGj|yVHHyEHHyEHQyBHWyFHgyFHryKHsyPIDyXIIymIgylImyvIsy3IiyvIayzIHytHyyZHWyVHH|wbHMwWHCwRHCwHHQwIHdwZHbwbHM|u7Iku3IhuwIpu4Ixu8Isu7Ik|t2G8uMG4uOG0uGGqt2GxtzG5t2G8|tVHytQHvtRH+tZH8tZH1tVHy|siHtsjHlsQHdsHHNrkHUrQHJrRHVreHtryHosSH4scHtsiHt|rEG3q+Gkq4GorEG3|oNDBoFC9oFDFoQDUoUDOoMDKoNDB|nnB8ndB9ncCHneCNnwCUoBCpoJCuoNCZoECUn9CInnB8|mQCgmLCfmBCkmOCxmZCxmYCnmQCg|psG3puGwp7G1qTGzqZGwqZGiphGUpaGbpgGlpdGqpgGypmG4psG3|pUGipJGLpCGIo+GVo3GUo+GjpDGjpGGepQGwpWGtpUGi|o3GoorGlokGXofGXoYGHoTGLoNGEoGGKn+GLoSGioLGnoWGpocGmoqGxo3Go|oFGfoDGantGanuGhn2Gqn9GsoGGooFGf|jJFzjDFzjCGEjIGWjLGRjQGQjRGMjPGEjIF7jJFz|ipGsimGsilGwimG1irG3iuGxipGs|eOFveLFseDF2eKF7eOF2eOFv|d6I8d0I6duI+dvJId+JLeHJEeIJAd+JAd6I8|ahLAafK8aXK8aWLBabLJafLKahLHahLA|hLcig8ccgzcqg2c4g+c5hIcxhLci|g1bKg1bGgtbQgsbbg0bcg3bZg1bK|fQPLfNO3fIPCfOPQfRPSfQPL|fHOde1OIeyONe0OjevOwezPMe3PZfEPjfDPTfIOpfFOifHOd|VsSdVjSYVgSjVmSmVtSjVsSd|WqTPWaTDWWTEWTTIWXTlWjTmWtTfWuTTWqTP|VnafVjaaVfadVnaqVnaf|U4b5Utb1Unb6UycHUmcLUfcaUfchUzc1UzctU+caU/cJU4b5|SSa8SSa0SMa5SLbCSNbESRbDSSa8|RnabRjaaRjaeRhaxRtaoRnab|MbZBMhYyMcYgMSYYMKYaMCYtMDY7MGZAMOY/MWZHMbZB|NWXGNSXCNKXPNGXuNIX0NQXuNXXhNWXG|NbX7NcXsNKX6M5X/M1YGM1YMM2YONZYBNbX7|OHWqOGWmNbW2NYW6NcXRNgXWNuXFOFW3OHWq|OTW4OMW1N8XGNtXNNuXZN0XaOFXPOTW4|OcWTOQWTOUWlOYWkOdWbOcWT|OoXMOoXGOjXIOfXPOkXWOoXM|OqWhOoWfOhWuOlW4OuWnOqWh|PJWwPJWtPCWzPCW6PJWw|PZXbPeXWPiXaPcXGPUXIPRXPPTXWPXXWPZXb|QHXfQHXXQMXTQNXMQMXCQGW0QAW2P+W/P6XCP9XGP7XNPrXIPrXSP1XbQAXbQHXf|PrW0PlWxPfW7PgW/PpW5PrW0|QPVcQIVgQAVvQDVuQPVc|QWVBQZU/QcVFQpU1QlU1QiUwQQU9QFU5P7VAQDVXQLVTQMVMQWVB|P+UvQHUgQAURP5UTP1UKPyUYPsUgPwUpP1UnP+Uv|PBUtO3UpOrUsOyU7PAU1PEUxPBUt|UvQAUsPvUjPmUdPnUaPxUTP2UQPtT/PoUBPyT7QJUBQeUDQxURQ1UlQuUwQiU2QTUvQA|TzQLTwQITuQLTvQST1QRTzQL|TDP/S9P+S3QHS8QLTFQHTDP/|Q9JiQ4JfQzJlQ+JvQ/JrQ9Ji|HBX8HTXcHaXXHmXEHhWdHdWVHSWZHLW0G/XAG7XBGyXcGgX3GuX3G3YEHBX8|NRLmNKLlM8L4NDL7NSLyNULuNRLm|KyPrK1PaKsPmKqPzKgQBKfQYKjQYK0P/K1PyKyPr|KgQdKaQUKQQUKNQsKOQ2KQQ4KgQkKgQd|KCRKKDRIJvRUJpRfJsRvJwRwJ2RqKCRK|JLSLJDSKIvSeIuSmIdTNIjTnIzTtI4ToJISxJTScJUSPJLSL|IRUZIMUTIFUYIOU7IGVVINVTIYU4IRUZ|G1ZBG0Y+GsZLGiZRGxZPG1ZB|FuZhFkZjFJZ8FDZ8E4aDEwaXE1aaE4ahE/aeFHaRFQaNFqZzFuZh|ETfqESfnENfpEIfzETfyETfq|Y0ZoYxZmYuZqYtaNYvaQYzaJY0Zo|gLiEgGh+gFiPgMiYgViZgViKgTiGgLiE|Xi60Xl6wXt6zXv6uXs6mXl6qXZ6qXY6tXc6yXi60|T+7CTy60Tu60T07IT+7C|T36hTt6fT66uT36h|TP6NTM6MTF6WTJ6bTS6VTP6N|TB6VTB6TS66aS86iTB6V|StkxSpkzSxk6SwkzStkx|PcnzPdngPanTPbnNPYnKPTniPKnxPPnwPWn3Pcnz|OJpZOEpZOFpkOIplOJpZ|NlqFNjp5Nfp+NiqHNlqF|NWqpNWqmNMqoNKq7NNq6NWqp|PUXtPIXlO6XsO/X3PIX6PUXzPWXwPUXt|PpaMPjaLPhaQPmacPpaM|KnevKlesKfeuKgfBKjfDKre8Knev|KDg0KIgoKEghKBgjJ6geJygvJ7guKDg0|Jzg7JvhDJzhRJ3hAJzg7|KVmkKRmmKOmvKTmvKVmk|KVmYKUmJKMmFKKmLKKmVKVmY|IcjcIXjvIdjqIcjc|INjYIMjPIEjKIBjbIGj2IIjwIPjtINjY|IFlbIAlZIClkIEllIFlb|CbheCWhVCMhxCIhzCIiBCKiGCViMCYiJCehuCbhe|COiaCGiPCDiWCLigCOia|Bej/Bgj7Bbj8BXkCBakLBej/|B2jVBwjVBrjfBtjkBxjlB1jdB2jV|B+jqB5jmB3j3B6j8B9j7B8j1B+jq|BBlkA9lkA7loA6lsA+lwBClpBBlk|ApoGAnoCAeoFAdocAlopAqotAvoXApoG|A5pkA1phAxpkA0ppA1pyA4ptA5pk|BTquBXqfBOqqBTqu|A7sMA4sFA4sVA6sXA8sWA7sM|A7p1A5pyA3p1AsqcAyqkA3rABBrEBArMA7rTA7roA+r2A9sDBCsOBEscBCsgBHs2BGtEBMtTBXtaBYtJBTtCBXs1BJsVBPsLBRrnBMreBHrcBHq/A9qpBBqcA7p1|IYo0ISo2IXpCIYo0|H9ozIDofICobH4otHyorH5o2H9oz|H6m/H1m5H3nEH+nMIDnMIDnHH6m/|H+pvH9psH7puH8p5IEqRIBp0H+pv|IWqfISqfISq0IWqrIdqlIWqf|HxqHHyqBHtqHHsqaHyqMHxqH|IZqNIXp1IPp5IKqSIWqUIZqN|H2q7Hxq9HvrEHxrLH1rKH2q7|HxrWHsrKHmrRHrrXHxrW|INruISrrIRrgILrSIFrQIFr3IMr0INru|IFsnIFsUIAsdIAsxIFsn|HIyOHGyMHByUHAylHGyqHLyiHIyO|JEi1JGinJAiwJBi6JEi1|DmxcDkxZDgxdDoxpDmxc|DLxrDGxgDExwDVyIDWyBDSxzDLxr|CK2iCB2rB623CE26CP23CK2i|B64sB84cB24iB04qB04yB64s|BT4vBU4lBQ4pBL44BL5CBT4v|CM4GCf33Cc3sCV3oCQ3rCO32CH3+CM4G|pXoLpVoLpYoXpcoUpcoOpXoL|qmnFqmm/qcnOqZnYqinUqmnF|nmignmianbiVnaienciingienkijnmig|rPhtrOhnrHh6rJiGrPiArPht|remYrdmVrambremrrgmjremY|pvpwpkpwpaqEpnqGpwp3pvpw|qDp8qBp2p9p6p5qKqDp8|2zJ52xJ42xJ+24KG2zJ5|2nJV2mJU2jJZ2pJj2sJk2nJV|uDQHt/P9t3P/uDQH|tkPctmPXtaPftgPjtkPc|pBKupAKoo7Kxo7K4o/K2pBKu|oeL9oeLyobLyoXL9oZMAoeL9|k1IrkqIskpI3k1Iyk1Ir|npGJnnGCniGEnjGLnsGUnyGVn3GRntGPnpGJ|gtGdgoGfgoGyg2G2g2GxgtGd|bl93bm9ybZ+Cbe+Cbl93|an7ual7sag75am8Cat7/ao75an7u|ab7zaR7xaU72ab77ab7z|cK80cA80b983cN9BcK80|Tan0TTntTTnzTbn5Tdn5Tan0|OfoYOcoUOXofOfoY|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|yIatyFavyIaxyIat';
+const COAST_SEA=(()=>{
+  const M={}; for(let i=0;i<64;i++) M[B64[i]]=i;
+  const sx=(SEA_BOX[2]-SEA_BOX[0])/4095, sy=(SEA_BOX[3]-SEA_BOX[1])/4095;
+  return COAST_SEA_RAW.split('|').map(r=>{
+    const out=[];
+    for(let i=0;i<r.length;i+=4){
+      out.push(toXYZ((M[r[i+2]]*64+M[r[i+3]])*sy+SEA_BOX[1], (M[r[i]]*64+M[r[i+1]])*sx+SEA_BOX[0]));
+    }
+    return out;
+  });
+})();
+/* แยกชุดโลกเป็นส่วนนอกกรอบกับส่วนในกรอบ เพื่อสลับเฉพาะส่วนในกรอบตอนซูมเข้า
+   ถ้าวาดทับกันทั้งคู่จะเห็นชายฝั่งซ้อนกันสองเส้นที่ไม่ตรงกัน เพราะชุดโลกคลาดได้ถึง 28 กม.
+   จุดที่ข้ามขอบกรอบถูกใส่ไว้ในทั้งสองชุด เส้นจึงไม่ขาดตรงรอยต่อ */
+const COAST_OUT=[], COAST_IN=[];
+(()=>{
+  const has=v=>{ const p=fromXYZ(v);
+    return p.lng>=SEA_BOX[0]&&p.lng<=SEA_BOX[2]&&p.lat>=SEA_BOX[1]&&p.lat<=SEA_BOX[3]; };
+  const o=[], i2=[];
+  COAST.forEach(line=>{
+    let cur=null, curIn=null;
+    line.forEach(v=>{
+      if(has(v)){
+        if(!curIn) i2.push(curIn=[]);
+        curIn.push(v);
+        if(cur){ cur.push(v); cur=null; }
+      }else{
+        if(!cur) o.push(cur=[]);
+        cur.push(v);
+        if(curIn){ curIn.push(v); curIn=null; }
+      }
+    });
+  });
+  o.forEach(r=>{ if(r.length>=2) COAST_OUT.push(r); });
+  i2.forEach(r=>{ if(r.length>=2) COAST_IN.push(r); });
+})();
+/* ---------- ไฟเมืองกลางคืน ----------
+   ที่มา: Natural Earth populated places (public domain) 202 เมืองที่ประชากร >= 200,000
+   1 เมือง = 5 ตัวอักษร (lng,lat + ความสว่างตาม log ประชากร) */
+const CITY_RAW='T/H34GoILyFDG2yP0G0yIVEKyS2HlwQxHCwQ6HHuHmDeuD3HwuNNHguIjEMuTuHztSiIItS0GitNmJHsNEIMsLZIrsTMH+sLeGCrR7FPrFxIPrLQI2rGcE4qOeH3qMNFXqGoF6qSZHBpS2HMoQGGcoRiGfoG1DinGPHPmLBIKmGSIXmRvFtmMFFFmOCHtlNSGmlUtDhlF/HvkOLHLkFTHfkR3G8kGcIEkUUDRkRwHjkRRGrjLAF9jIQEpjNTIIjE/HPjQuIXiDmH/iNAD/iMGI6iLcH7iMCIQiTHIEhPlHyhMvIAhMaDghKyHuhNbHohNrGMhNjFjhHEGSgNtFNgKrIDgNKIygKKGjfNhHufL5H7eMRIpeDkIteEsIHeMFHsdPlINdGHHFdG4GydOXIKdLPF+dOQHddOBGldGvGydM4IacHpEDcNeHvcTvH0cM+JAcLhIzbMkI5bK1HwbGWFnbOOEcbMcImbL+F3bG/EmaLuGMaNMEhaHvDcaKwGbaKZGOaR0GWaLVGBaOeHNaRnF1aNSEAaFrGfZNSFpZLhI4ZOtHNZWLDVZMNFXZNBEBZNBEqZGAGQYGSGMYMYJVYLpIhYMtITYMKIwXLKGZXGhIeXM0JZXOCIJXOFFwXODIPXMiIbXPjICXMCJHXNgHoXK3I9XKlGBWLkI5WNdHnWFmGiWMMGYWFzGgVGdGwVRQG3VN9GWVF3GZVLYGeVMfINVQlHXVR8IoVNIFgVGyDkUP6IUUL7JYUMaF5UKbGKUP0HvULaGBTRqGwTMwJMTKQGwTO6HGTO6IATMQIfTMaIXTNDIkSNXEwSNsGlROpHKRO2EXRL2FqROaHRRM1JDQMmIQPOAGOPMlITPM5D0PSyGqOMUIpOKSGXNMzJWNWLDDNMKH4MM+DzMPuI1MNFFaLUlDbLQFHaLMKIgLLaGCKScF8KHaGTKUdFCKLuIkKMUEOJHnGDJHzF/JTGFGIGbHMIHLEcINVH1INfFPHQPGEHM4EFHK7GDH';
+const CITY=(()=>{
+  const M={}; for(let i=0;i<64;i++) M[B64[i]]=i;
+  const out=[];
+  for(let i=0;i+5<=CITY_RAW.length;i+=5){
+    const lng=(M[CITY_RAW[i]]*64+M[CITY_RAW[i+1]])*.25-180;
+    const lat=(M[CITY_RAW[i+2]]*64+M[CITY_RAW[i+3]])*.25-90;
+    out.push({v:toXYZ(lat,lng), m:M[CITY_RAW[i+4]]/63});
+  }
+  return out;
+})();
+/* เส้นกริด — คงที่ คำนวณครั้งเดียว */
+const GRID=(()=>{
+  const g=[];
+  for(let lat=-60;lat<=60;lat+=30){ const v=[]; for(let a=0;a<=360;a+=4) v.push(toXYZ(lat,a)); g.push(v); }
+  for(let lng=0;lng<360;lng+=30){ const v=[]; for(let a=-84;a<=84;a+=4) v.push(toXYZ(a,lng)); g.push(v); }
+  return g;
+})();
+/* ทิศดวงอาทิตย์ (subsolar point) ณ เวลาใดก็ได้
+   แยก sunAt(ms) ออกจาก sunVec() เพราะหน้าโชว์ย่อการเดินทาง 34 ชม. ให้เหลือ 48 วินาที
+   ถ้าอ่าน Date.now() ตรง ๆ ดวงอาทิตย์จะขยับแค่ 0.013 ชม. เส้นแบ่งกลางวัน-กลางคืนแทบไม่เดิน
+   แอปจริงเดินตามเวลาจริงจึงไม่เจอปัญหานี้ แต่โค้ดต้องเปิดทางให้ป้อนเวลาเองได้ */
+function sunAt(ms){
+  const d=new Date(ms);
+  const doy=(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(d.getUTCFullYear(),0,0))/86400000;
+  const dec=-23.44*Math.cos((360/365.24)*(doy+10)*RAD);          /* ความเอียงตามฤดู */
+  const lng=180-(d.getUTCHours()+d.getUTCMinutes()/60)*15;       /* เที่ยงวันอยู่ลองจิจูดไหน */
+  return toXYZ(dec,lng);
+}
+let SUN_MS=null;                                     /* null = เวลาจริง · ใส่ ms เพื่อย่อ/ย้อนเวลา */
+let SUN_BUCKET=3e5;                                  /* ดวงอาทิตย์ขยับทีละกี่ ms ก่อนวาดโลกใหม่ */
+function sunMs(){ return SUN_MS===null?Date.now():SUN_MS; }
+/* ทุกครั้งที่บักเก็ตเปลี่ยน = ทั้ง cache ดวงอาทิตย์และ cache ทรงกลมหมดอายุพร้อมกัน
+   ตอนเวลาเดินจริง 5 นาทีถูกแล้ว แต่ตอนย่อเวลาต้องขยาย ไม่งั้นวาดโลกใหม่เต็มคุณภาพถี่เกินไป */
+function sunKey(){ return Math.floor(sunMs()/SUN_BUCKET); }
+let _sunK=null,_sun=null;
+function sunVec(){
+  const k=sunKey();
+  if(_sun&&_sunK===k) return _sun;
+  _sunK=k;
+  return (_sun=sunAt(sunMs()));
+}
+/* มุมดวงอาทิตย์ที่พิกัดหนึ่ง ณ เวลาหนึ่ง — มากกว่า 0 คือกลางวัน */
+function sunDot(lat,lng,ms){
+  const s=sunAt(ms), v=toXYZ(lat,lng);
+  return v.x*s.x+v.y*s.y+v.z*s.z;
+}
+/* ความนุ่มของรอยต่อกลางวัน-กลางคืน (ข้อ 39) — 0 = คมแบบเดิม · 1 = นุ่มสุด
+   0.9 มาจากการเลือกด้วยตา ไม่ใช่ตัวเลข: ที่ค่านี้เงาทำหน้าที่เหมือนแรเงาให้ลูกโลกดูกลม */
+let SOFT=0.90;
+/* เพดานเวลาวาดโลกหนึ่งครั้ง (ms) — เกินกว่านี้ค่อยยอมลดรายละเอียดตอนหมุน
+   งบทั้งเฟรมคือ 16.7ms และยังต้องเหลือให้จดหมาย เส้นทาง สภาพอากาศ */
+const PAINT_BUDGET=6;
+
+/* ---------- GLOBE 2.5D ---------- */
+const G = {
+  rotY:.3, rotX:-.25, vY:0, vX:0, drag:false, lastX:0, lastY:0,
+  _pY:.3, _pX:-.25, _pZ:1, _cost:0,
+  target:null, W:0, H:0, R:0, R0:0, CX:0, CY:0,
+  /* ซูมยังไม่ใช่ระบบเต็มตามข้อ 24-29 (ยังไม่มีหุบนิ้ว ยังไม่มีกระดาษ)
+     มีเท่าที่หมอกต้องใช้: วงเปิดของเส้นทางในประเทศกว้าง ~6px ที่ซูม 1 เท่า
+     ต้องซูมราว 17 เท่าถึงจะเห็นอะไร */
+  zoom:1, zTarget:1,
+  rotate(p){
+    const x=p.x*Math.cos(this.rotY)-p.z*Math.sin(this.rotY);
+    const z=p.x*Math.sin(this.rotY)+p.z*Math.cos(this.rotY);
+    const y=p.y;
+    return {x, y:y*Math.cos(this.rotX)-z*Math.sin(this.rotX), z:y*Math.sin(this.rotX)+z*Math.cos(this.rotX)};
+  },
+  project(p){ return {x:this.CX+p.x*this.R, y:this.CY-p.y*this.R, z:p.z}; },
+  pipe(lat,lng){ return this.project(this.rotate(toXYZ(lat,lng))); },
+  pipeV(v){ return this.project(this.rotate(v)); },
+  focus(ll,z){
+    this.target={y:ll.lng*RAD, x:clamp(ll.lat*RAD,-1.3,1.3)};
+    this.vY=this.vX=0;
+    if(z!==undefined) this.zTarget=clamp(z,1,CFG.ZOOM_MAX);
+  },
+  /* ซูมที่ทำให้เส้นทางกินพื้นที่ ZOOM_FIT ของด้านสั้นของจอ
+     ปลายทั้งสองอยู่ห่างจากจุดกลางภาพข้างละครึ่งมุม ระยะบนจอจึงเป็น 2·R·sin(มุม/2) */
+  /* เพดานซูมต้องสัมพันธ์กับเส้นทางที่กำลังดู ไม่ใช่ค่าคงที่
+     ซูมพอดีของเส้นในจังหวัดกับของเส้นข้ามทวีปห่างกัน 17 เท่า เพดานเดียวจึงใช้ไม่ได้ */
+  zoomMax(km){ return km?clamp(this.fitZoom(km)*CFG.ZOOM_PAST,4,CFG.ZOOM_MAX):CFG.ZOOM_MAX; },
+  /* กล่องที่ใช้วางเส้นทางได้จริง — ไม่ใช่ขนาด canvas ดิบ (ข้อ 57.4)
+     แถบหัวจอกับแถบจดหมายทับพื้นที่อยู่ กล้องอยู่ที่ CY จึงเหลือระยะข้างละไม่เท่ากัน
+     ใช้ข้างที่แคบกว่าเป็นตัวคุม ไม่งั้นเส้นทางจะโผล่ไปอยู่ใต้แถบ */
+  /* ต้องวัดสด ไม่ใช่วัดครั้งเดียวตอนเปลี่ยนขนาดจอ — แถบเล่นกับแถบจดหมาย
+     โผล่/หายและสูงไม่เท่ากันตามจำนวนฉบับและสถานะที่เลือก */
+  pads(){
+    const H=this.H;
+    const bot=e=>{ if(!e) return 0; const r=e.getBoundingClientRect();
+                   return r.height>0 ? Math.max(0,H-r.top) : 0; };
+    const bar=document.querySelector('header');
+    const t = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
+    return {t, b:Math.max(bot(document.getElementById('play')), bot(document.getElementById('dock')))};
+  },
+  fitBox(){
+    const {t,b}=this.pads();
+    const up=this.CY-t, dn=(this.H-b)-this.CY;
+    return Math.max(120, Math.min(this.W, 2*Math.min(up,dn)));
+  },
+  fitZoom(km){
+    const th=km/ER;
+    const chord=2*Math.sin(th/2);
+    if(chord<1e-6) return CFG.ZOOM_MAX;
+    return clamp((CFG.ZOOM_FIT*this.fitBox())/(chord*this.R0), 1, CFG.ZOOM_MAX);
+  },
+  step(){
+    /* ซูมไหลเข้าหาเป้าเสมอ ไม่ว่าจะกำลังหมุนไปหาเป้าหรือไม่ */
+    if(Math.abs(this.zTarget-this.zoom)>1e-4){
+      this.zoom+=(this.zTarget-this.zoom)*.12;
+      if(Math.abs(this.zTarget-this.zoom)<=1e-4) this.zoom=this.zTarget;
+      this.R=this.R0*this.zoom;
+    }
+    if(this.target){
+      let dy=this.target.y-this.rotY;
+      while(dy>Math.PI) dy-=Math.PI*2; while(dy<-Math.PI) dy+=Math.PI*2;
+      this.rotY+=dy*.10; this.rotX+=(this.target.x-this.rotX)*.10;
+      if(Math.abs(dy)<.002&&Math.abs(this.target.x-this.rotX)<.002) this.target=null;
+      return;
+    }
+    if(!this.drag){
+      this.rotY+=this.vY; this.rotX+=this.vX;
+      this.rotX=clamp(this.rotX,-1.3,1.3);
+      this.vY*=.94; this.vX*=.94;
+      if(Math.abs(this.vY)<2e-4) this.vY=0;
+      if(Math.abs(this.vX)<2e-4) this.vX=0;
+    }
+  },
+  /* ---------- แสง ----------
+     กลางวัน = เส้นหมึกบนพื้นกระดาษ · กลางคืน = พื้นมืดจริง + เส้นสีอ่อน + ไฟเมือง
+     ทั้งสองฝั่งไล่ข้ามกันตรงรอยต่อ = สนธยา */
+  /* แถบสนธยาของ "เส้น" ต้องแคบกว่าแถบของ "พื้น" มาก ไม่งั้นเส้นกลางวันกับกลางคืน
+     จะทับกันเป็นบริเวณกว้างจนได้สีเทากลาง ๆ แทนที่จะเห็นการกลับขั้ว
+     พื้นมีตัวเบลอใน paint() ทำให้นุ่มอยู่แล้ว เส้นจึงขยายแค่พอประมาณ */
+  band(){ return .30+SOFT*.20; },
+  /* ชุดชายฝั่งที่ต้องวาด ณ ระดับซูมนี้ — ไล่จากชุดโลกไปชุดภูมิภาคระหว่างซูม 3 ถึง 5
+     ต่ำกว่านั้นรายละเอียด 2 กม. เล็กกว่าครึ่งพิกเซล ไม่คุ้มที่จะวาดจุดเพิ่มอีก 4,000 จุด */
+  coastSets(){
+    const f=clamp((this.zoom-3)/2,0,1);
+    const out=[[COAST_OUT,1]];
+    if(f<1) out.push([COAST_IN,1-f]);
+    if(f>0) out.push([COAST_SEA,f]);
+    return out;
+  },
+  /* รัศมีเบลอของแถบสนธยา — เป็นความกว้างจริงบนผิวโลก จึงโตตามซูมโดยธรรมชาติ
+     แต่พอกว้างเกินจอแล้วตาไม่เห็นความต่างอีก ขณะที่ราคายังขึ้นเรื่อย ๆ
+     ที่ซูม 17 เท่า R=4147 จะได้เบลอ 896px ซึ่งทำให้การวาดโลกหนึ่งครั้งใช้ 12ms */
+  blurPx(){ return SOFT*Math.min(this.R, Math.min(this.W,this.H)*0.5)*0.24; },
+  /* กรอบที่ต้องเติมสีจริง = ส่วนร่วมของ "จอ" กับ "วงโลก"
+     ที่ซูม 1 ทรงกลมเล็กกว่าจอ · ที่ซูมสูงจอเล็กกว่าทรงกลม — เอาอันที่เล็กกว่าเสมอ */
+  fillBox(){
+    const {CX,CY,R}=this;
+    const x0=Math.max(0,CX-R-2), y0=Math.max(0,CY-R-2);
+    return [x0, y0, Math.min(this.W,CX+R+2)-x0, Math.min(this.H,CY+R+2)-y0];
+  },
+  shadeDay(v,z){
+    const s=sunVec();
+    const day=clamp((v.x*s.x+v.y*s.y+v.z*s.z+.12)/(.30+SOFT*.20),0,1);
+    return day*(z>=0 ? (.42+.58*Math.sqrt(z)) : .13);
+  },
+  shadeNight(v,z){
+    const s=sunVec();
+    const night=clamp((-(v.x*s.x+v.y*s.y+v.z*s.z)+.10)/(.30+SOFT*.20),0,1);
+    return night*(z>=0 ? (.42+.58*Math.sqrt(z)) : .13);
+  },
+  /* วาดหลายเส้นเป็นชุดเดียว จัดกลุ่มตามระดับ alpha → เหลือ stroke ไม่กี่ครั้ง */
+  segs(c,lines,baseA,lw,front,stride,rgb,fn){
+    const B=new Map(); const st=stride||1, M=8;
+    for(let k=0;k<lines.length;k++){
+      const verts=lines[k];
+      let pp=null,pa=0,pz=0;
+      for(let i=0;i<verts.length;i+=st){
+        const v=verts[i], r=this.rotate(v), p=this.project(r);
+        const a=baseA*fn.call(this,v,r.z);
+        if(pp && (((r.z+pz)*.5>=0)===front)){
+          /* ตัดช่วงที่อยู่นอกจอทั้งเส้นออกก่อนจัดกลุ่ม
+             ที่ซูม 1 เท่าแทบไม่ตัดอะไรเลย แต่ที่ซูม 17 เท่า R=4147 เส้นเกือบทั้งหมด
+             อยู่นอกจอ ทั้งที่ยังเสียเวลาแปลงพิกัดและ stroke ให้ canvas ไปตัดทีหลัง */
+          const outside = (pp.x<-M&&p.x<-M)||(pp.x>this.W+M&&p.x>this.W+M)
+                       || (pp.y<-M&&p.y<-M)||(pp.y>this.H+M&&p.y>this.H+M);
+          if(!outside){
+            const m=Math.round((a+pa)*18);
+            if(m>0){ let arr=B.get(m); if(!arr) B.set(m,arr=[]); arr.push(pp.x,pp.y,p.x,p.y); }
+          }
+        }
+        pp=p; pa=a; pz=r.z;
+      }
+    }
+    c.lineWidth=lw;
+    B.forEach((arr,m)=>{
+      c.strokeStyle='rgba('+rgb+','+(m/36).toFixed(3)+')';
+      c.beginPath();
+      for(let i=0;i<arr.length;i+=4){ c.moveTo(arr[i],arr[i+1]); c.lineTo(arr[i+2],arr[i+3]); }
+      c.stroke();
+    });
+  },
+  unrotate(p){
+    const cX=Math.cos(this.rotX), sX=Math.sin(this.rotX);
+    const cY=Math.cos(this.rotY), sY=Math.sin(this.rotY);
+    const y1=p.y*cX+p.z*sX, z1=-p.y*sX+p.z*cX;
+    return {x:p.x*cY+z1*sY, y:y1, z:-p.x*sY+z1*cY};
+  },
+  /* เส้นแบ่งกลางวัน-กลางคืน = วงกลมใหญ่ที่ตั้งฉากกับทิศดวงอาทิตย์
+     คืนส่วนโค้งที่มองเห็น + มุมปลายทั้งสองบนขอบโลก เพื่อปิดเป็นรูปทรงของ "ซีกมืด" */
+  terminator(){
+    const s=sunVec(), {CX,CY,R}=this;
+    const a=Math.abs(s.y)>.9 ? {x:1,y:0,z:0} : {x:0,y:1,z:0};
+    let u={x:a.y*s.z-a.z*s.y, y:a.z*s.x-a.x*s.z, z:a.x*s.y-a.y*s.x};
+    const ul=Math.hypot(u.x,u.y,u.z)||1; u={x:u.x/ul,y:u.y/ul,z:u.z/ul};
+    const w={x:s.y*u.z-s.z*u.y, y:s.z*u.x-s.x*u.z, z:s.x*u.y-s.y*u.x};
+    const N=180, pts=[];
+    for(let i=0;i<N;i++){
+      const t=i/N*Math.PI*2, ct=Math.cos(t), st=Math.sin(t);
+      const v={x:u.x*ct+w.x*st, y:u.y*ct+w.y*st, z:u.z*ct+w.z*st};
+      const r=this.rotate(v);
+      pts.push({p:this.project(r), z:r.z});
+    }
+    let start=-1;
+    for(let i=0;i<N;i++) if(pts[i].z>=0 && pts[(i+N-1)%N].z<0){ start=i; break; }
+    if(start<0){                                   /* ไม่มีรอยต่อในจอ = เห็นซีกเดียวล้วน */
+      const q=this.unrotate({x:0,y:0,z:1});
+      return (q.x*s.x+q.y*s.y+q.z*s.z)<0 ? {all:true} : null;
+    }
+    const arc=[];
+    for(let k=0;k<N;k++){ const it=pts[(start+k)%N]; if(it.z<0) break; arc.push(it.p); }
+    if(arc.length<3) return null;
+    const ang=p=>Math.atan2(p.y-CY,p.x-CX);
+    const a0=ang(arc[0]), a1=ang(arc[arc.length-1]);
+    let d=a0-a1; while(d<0) d+=Math.PI*2;
+    const mid=a1+d/2;
+    const q=this.unrotate({x:Math.cos(mid), y:-Math.sin(mid), z:0});
+    const ccw=!((q.x*s.x+q.y*s.y+q.z*s.z)<0);     /* ฝั่งไหนของขอบโลกคือกลางคืน */
+    return {arc,a0,a1,ccw};
+  },
+  /* ของเดิมตัดที่ dot > -0.02 แบบคม ไฟจึง "ผุด" ขึ้นพร้อมกันทั้งแถบตอนข้ามเส้นแบ่ง
+     เปลี่ยนเป็นค่อย ๆ ติดตั้งแต่ก่อนพระอาทิตย์ตก เหมือนเมืองจริงที่ทยอยเปิดไฟ */
+  cities(c,fast){
+    const s=sunVec(), band=this.band();
+    for(let i=0;i<CITY.length;i++){
+      const v=CITY[i].v, m=CITY[i].m;
+      const d=v.x*s.x+v.y*s.y+v.z*s.z;
+      if(d>band*.55) continue;
+      const r=this.rotate(v); if(r.z<.03) continue;
+      const p=this.project(r);
+      const night=clamp((band*.55-d)/(band*1.15),0,1);
+      /* ไฟเมืองคือสัญญาณ "มีคนอยู่ข้างล่าง" — เป็นสิ่งเดียวที่บอกว่ากลางคืนนี้ไม่ว่างเปล่า
+         จึงต้องสว่างพอ และกะพริบช้า ๆ ให้อ่านเป็นไฟ ไม่ใช่จุด */
+      const tw=1+Math.sin(T*(.6+m*.5)+i*2.399)*.16;
+      const a=(.20+.66*m)*night*(.4+.6*r.z)*tw;
+      if(a<.006) continue;
+      const rad=.65+m*1.5;
+      if(m>.45&&!fast){
+        const g=c.createRadialGradient(p.x,p.y,0,p.x,p.y,rad*4);
+        g.addColorStop(0,'rgba(226,172,88,'+Math.min(.5,a*.55).toFixed(3)+')');
+        g.addColorStop(1,'rgba(226,172,88,0)');
+        c.fillStyle=g; c.beginPath(); c.arc(p.x,p.y,rad*4,0,6.2832); c.fill();
+      }
+      c.fillStyle='rgba(240,206,140,'+Math.min(.85,a).toFixed(3)+')';
+      c.beginPath(); c.arc(p.x,p.y,rad,0,6.2832); c.fill();
+    }
+  },
+  /* ยกความเข้มของซีกมืดขึ้นเล็กน้อยหลัง blit — ทำหน้าที่เหมือนหมอกบาง ๆ ในบรรยากาศ
+     ความตัดจริงคุมด้วยความเข้มของพื้นมืดใน paint() ซึ่งถูก cache ไว้
+     แทนที่จะ paint สองเวอร์ชัน ใช้ชั้นบาง ๆ ทับทีหลังแทน */
+  liftNight(c){
+    const lift=SOFT*0.10;      /* เบา เพราะความนุ่มหลักมาจากการเบลอขอบเงาแล้ว */
+    if(lift<=0.004) return;
+    const s=this.project(this.rotate(sunVec()));
+    const ax=this.CX-(s.x-this.CX), ay=this.CY-(s.y-this.CY);
+    const g=c.createRadialGradient(ax,ay,0,ax,ay,this.R*1.25);
+    g.addColorStop(0,'rgba(238,235,227,'+lift.toFixed(3)+')');
+    g.addColorStop(.55,'rgba(238,235,227,'+(lift*.62).toFixed(3)+')');
+    g.addColorStop(1,'rgba(238,235,227,0)');
+    c.save();
+    c.beginPath(); c.arc(this.CX,this.CY,this.R,0,6.2832); c.clip();
+    c.fillStyle=g; c.fillRect(this.CX-this.R,this.CY-this.R,this.R*2,this.R*2);
+    c.restore();
+  },
+  paint(c,fast){
+    const {CX,CY,R}=this;
+    const s3=sunVec(), s=this.project(this.rotate(s3));
+    const stride=fast?2:1;
+    const term=this.terminator();
+    /* 1. ซีกหลัง — วาดก่อนเนื้อทรงกลม จะได้ถูกกลบให้จางลงเองตามจริง */
+    if(!fast){
+      this.segs(c,GRID,.20,.7,false,1,'84,90,104',this.shadeDay);
+      for(const cs of this.coastSets()) this.segs(c,cs[0],.30*cs[1],.8,false,1,'84,90,104',this.shadeDay);
+    }
+    /* 2. เนื้อทรงกลมฝั่งกลางวัน — จุดสว่างอยู่ทางดวงอาทิตย์จริง */
+    const lit=s.z>=0;
+    const hx=lit?CX+(s.x-CX)*.6:CX, hy=lit?CY+(s.y-CY)*.6:CY;
+    const g=c.createRadialGradient(hx,hy,R*.04,CX,CY,R*1.06);
+    g.addColorStop(0,'rgba(255,253,246,'+(lit?.5:.22)+')');
+    g.addColorStop(.55,'rgba(240,238,232,0.15)');
+    g.addColorStop(1,'rgba(196,193,186,0.06)');
+    c.fillStyle=g; c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.fill();
+    /* 3. ซีกกลางคืน = พื้นมืดจริง
+       ของเดิมขอบคมเป๊ะเหมือนตัดกระดาษ เพราะซีกมืดถูก clip ด้วยรูปทรงเส้นแบ่งจริง
+       ทั้งที่สนธยาของจริงเป็นแถบกว้างเกือบ 20 องศา
+
+       ทางที่ผิด (เคยลองแล้วพัง): ข้ามการ clip ไปเลย — term.all แปลว่า "ทั้งซีกที่เห็นคือกลางคืน"
+       ผลคือลบกลางวันทิ้งทั้งใบ ไม่ใช่การทำขอบให้นุ่ม
+       ทางที่ถูก: เก็บรูปทรงเงาไว้ครบ แต่วาดลง canvas ซ่อนแล้วเบลอตอนเอามาทับ */
+    if(term){
+      const ax=CX-(s.x-CX), ay=CY-(s.y-CY);
+      const blur=this.blurPx();
+      const useBlur=blur>0.5 && ('filter' in c) && !term.all;
+      let tgt=c;
+      if(useBlur){
+        if(!this._ncv) this._ncv=document.createElement('canvas');
+        const dpr=Math.min(devicePixelRatio||1,2);
+        if(this._ncv.width!==this.W*dpr||this._ncv.height!==this.H*dpr){
+          this._ncv.width=this.W*dpr; this._ncv.height=this.H*dpr;
+        }
+        tgt=this._ncv.getContext('2d');
+        tgt.setTransform(dpr,0,0,dpr,0,0);
+        tgt.clearRect(0,0,this.W,this.H);
+      }
+      tgt.save();
+      if(!useBlur){ tgt.beginPath(); tgt.arc(CX,CY,R,0,Math.PI*2); tgt.clip(); }
+      if(!term.all){
+        tgt.beginPath();
+        tgt.moveTo(term.arc[0].x,term.arc[0].y);
+        for(let i=1;i<term.arc.length;i++) tgt.lineTo(term.arc[i].x,term.arc[i].y);
+        tgt.arc(CX,CY,R,term.a1,term.a0,term.ccw);
+        tgt.closePath(); tgt.clip();
+      }
+      /* พื้นกลางคืนต้องเข้มสม่ำเสมอทั้งซีก ไม่ใช่ไล่ระดับจากจุดตรงข้ามดวงอาทิตย์
+         ของเดิมถ้าจุดนั้นอยู่นอกจอ ซีกมืดที่เห็นจะได้แต่หางของไล่ระดับ (alpha ~0.10)
+         จนแทบไม่ต่างจากกลางวัน — วัดได้ว่าต่างกันแค่ 20 หน่วยความสว่าง
+         แก้เป็น: พื้นทึบสม่ำเสมอ + ไล่ระดับลึกขึ้นอีกนิดตรงกลางดึก */
+      /* ถูก clip ด้วยรูปทรงเงาอยู่แล้ว เติมเต็มจอจึงพอ — ที่ซูมสูง R*2 ใหญ่กว่าจอหลายเท่า */
+      const box=this.fillBox();
+      tgt.fillStyle='rgba(34,40,60,0.34)';
+      tgt.fillRect(box[0],box[1],box[2],box[3]);
+      const n=tgt.createRadialGradient(ax,ay,0,ax,ay,R*0.95);
+      n.addColorStop(0,'rgba(28,34,54,0.22)');
+      n.addColorStop(.6,'rgba(32,38,58,0.10)');
+      n.addColorStop(1,'rgba(36,42,62,0)');
+      tgt.fillStyle=n; tgt.fillRect(box[0],box[1],box[2],box[3]);
+      tgt.restore();
+      if(useBlur){
+        c.save();
+        c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.clip();
+        c.filter='blur('+blur.toFixed(1)+'px)';
+        c.drawImage(this._ncv,0,0,this.W,this.H);
+        c.filter='none';
+        c.restore();
+      }
+    }
+    /* 4. เส้นซีกหน้า — หมึกเข้มฝั่งกลางวัน / สีอ่อนฝั่งกลางคืน ไล่ข้ามกันตรงสนธยา */
+    this.segs(c,GRID,.26,.75,true,1,'84,90,104',this.shadeDay);
+    for(const cs of this.coastSets()) this.segs(c,cs[0],.46*cs[1],.9,true,stride,'84,90,104',this.shadeDay);
+    if(term){
+      /* กลางคืนอ่านออกได้จาก "การกลับขั้ว" — เส้นสว่างบนพื้นมืด ตรงข้ามกับกลางวัน
+         จึงต้องเข้มพอจะเห็นชัด ไม่งั้นซีกมืดจะเป็นแค่พื้นที่เทา ๆ ที่ไม่มีอะไร
+         (ไฟเมืองย้ายไปวาดสดใน sphere() เพราะต้องกะพริบ ซึ่งชั้นที่ cache ไว้ทำไม่ได้) */
+      this.segs(c,GRID,.28,.75,true,1,'204,220,244',this.shadeNight);
+      for(const cs of this.coastSets()) this.segs(c,cs[0],.60*cs[1],.95,true,stride,'222,232,248',this.shadeNight);
+    }
+    /* 5. เส้นขอบแสง — บาง จาง ให้รอยต่อมีรูปทรง
+       จางลงตามความนุ่ม ที่นุ่มสุดหายไปเลย ไม่มีอะไรย้ำรอยตัด */
+    const lineA=0.45*(1-SOFT);
+    if(term&&!term.all&&lineA>0.02){
+      c.strokeStyle='rgba(228,214,186,'+lineA.toFixed(3)+')'; c.lineWidth=.9;
+      c.beginPath();
+      c.moveTo(term.arc[0].x,term.arc[0].y);
+      for(let i=1;i<term.arc.length;i++) c.lineTo(term.arc[i].x,term.arc[i].y);
+      c.stroke();
+    }
+    /* 6. ขอบโลก + ชั้นบรรยากาศ: ทองด้านโดนแดด น้ำเงินด้านมืด */
+    c.strokeStyle='rgba(70,76,86,0.45)'; c.lineWidth=1.1;
+    c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.stroke();
+    if(term&&!term.all&&!fast){
+      [[R*.06,.045],[R*.032,.075],[R*.013,.12]].forEach(pair=>{
+        const w=pair[0], al=pair[1];
+        c.lineWidth=w*2;
+        c.strokeStyle='rgba(198,154,84,'+al+')';
+        c.beginPath(); c.arc(CX,CY,R-w*.5,term.a1,term.a0,!term.ccw); c.stroke();
+        c.strokeStyle='rgba(120,146,200,'+(al*1.5).toFixed(3)+')';
+        c.beginPath(); c.arc(CX,CY,R-w*.5,term.a1,term.a0,term.ccw); c.stroke();
+      });
+    }
+  },
+  /* โลกนิ่งเกือบตลอดเวลา → วาดลง canvas ซ่อนแล้ว blit
+     วาดใหม่เฉพาะตอนหมุน/เปลี่ยนขนาด/ดวงอาทิตย์ขยับ (ทุก 5 นาที) */
+  sphere(ctx){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    /* "กำลังเคลื่อน" ต้องวัดจากการหมุนที่เกิดขึ้นจริง ไม่ใช่จากนิ้วที่แตะอยู่
+       ของเดิมอ่าน this.drag ตรง ๆ แค่ "จิ้มค้าง" ไม่ได้ลาก รายละเอียดก็หายแล้ว */
+    const moved=Math.abs(this.rotY-this._pY)+Math.abs(this.rotX-this._pX)+Math.abs(this.zoom-this._pZ)*.5;
+    this._pY=this.rotY; this._pX=this.rotX; this._pZ=this.zoom;
+    const moving=moved>1.5e-4;
+    /* ลดรายละเอียดเฉพาะตอนเครื่องตามไม่ทันจริง ไม่ใช่เดาไว้ก่อนว่าจะไม่ทัน
+       สิ่งที่ LOD ตัดทิ้งคือของที่ "หายไปทั้งชิ้น" (เส้นซีกหลัง ขอบบรรยากาศ แสงรอบไฟเมือง)
+       รวมกันซื้อเวลาได้แค่ 0.8ms แต่แลกด้วยรายละเอียดวูบหายทุกครั้งที่ขยับ — ไม่คุ้ม
+       บนเครื่องที่ไหว โลกจึงนิ่งเสมอ ส่วนเครื่องช้าค่อยได้ LOD อัตโนมัติ */
+    const fast=moving && this._cost>PAINT_BUDGET;
+    /* บักเก็ตต้องมาจาก sunKey() ไม่ใช่ Date.now() ไม่งั้นตอนย่อเวลา (หน้าโชว์)
+       ดวงอาทิตย์ขยับแต่ภาพที่ cache ไว้ไม่ยอมวาดใหม่ */
+    const key=[Math.round(this.rotY*260),Math.round(this.rotX*260),Math.round(this.zoom*120),this.W,this.H,fast?1:0,sunKey()].join(',');
+    if(!this._cv){ this._cv=document.createElement('canvas'); this._cx=this._cv.getContext('2d'); }
+    if(this._key!==key){
+      this._key=key;
+      if(this._cv.width!==this.W*dpr||this._cv.height!==this.H*dpr){ this._cv.width=this.W*dpr; this._cv.height=this.H*dpr; }
+      this._cx.setTransform(dpr,0,0,dpr,0,0);
+      this._cx.clearRect(0,0,this.W,this.H);
+      const t0=performance.now();
+      this.paint(this._cx,fast);
+      /* ค่าเฉลี่ยเคลื่อนที่ กันไม่ให้เฟรมสะดุดเฟรมเดียวสั่งลดรายละเอียดทั้งชุด */
+      this._cost=this._cost*.7+(performance.now()-t0)*.3;
+    }
+    ctx.drawImage(this._cv,0,0,this.W,this.H);
+    /* สองชั้นนี้วาดสดทุกเฟรม: ชั้นยกความมืดถูกเพราะไม่มีเส้น ส่วนไฟเมืองต้องกะพริบ
+       ถ้าอบไว้ในชั้นที่ cache ไฟจะค้างนิ่งตอนโลกหยุดหมุน */
+    this.liftNight(ctx);
+    if(this.terminator()) this.cities(ctx,fast);
+  },
+  /* ---------- หมอก (ข้อ 1, 6, 8) ----------
+     วาดโลกเต็มคุณภาพตามปกติ แล้วลบความทึบทั้งใบด้วย destination-out
+     โดยเจาะรูไว้ตรงจดหมายที่เลือก — ไม่ต้องวาดโลกสองรอบ
+     ข้อ 6: เปิดวงเดียว เฉพาะฉบับที่เลือกอยู่ · ไม่เลือกฉบับไหน = ไม่มีรู */
+  fog(ctx,hole){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    if(!this._fcv) this._fcv=document.createElement('canvas');
+    const cv=this._fcv;
+    if(cv.width!==this.W*dpr||cv.height!==this.H*dpr){ cv.width=this.W*dpr; cv.height=this.H*dpr; }
+    const m=cv.getContext('2d');
+    m.setTransform(dpr,0,0,dpr,0,0);
+    m.globalCompositeOperation='source-over';
+    m.clearRect(0,0,this.W,this.H);
+    m.fillStyle='rgba(0,0,0,'+CFG.FOG+')';
+    m.fillRect(0,0,this.W,this.H);
+    if(hole){
+      m.globalCompositeOperation='destination-out';
+      const g=m.createRadialGradient(hole.x,hole.y,0,hole.x,hole.y,hole.r);
+      g.addColorStop(0,'rgba(0,0,0,1)');
+      g.addColorStop(Math.max(0,1-CFG.FOG_SOFT),'rgba(0,0,0,1)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      m.fillStyle=g; m.beginPath(); m.arc(hole.x,hole.y,hole.r,0,6.2832); m.fill();
+    }
+    ctx.save();
+    ctx.globalCompositeOperation='destination-out';
+    ctx.drawImage(cv,0,0,this.W,this.H);
+    ctx.restore();
+  },
+  /* ริ้วลม — จางไปตามปลายริ้ว บอกทิศในตัวโดยไม่ต้องมีหัวลูกศร
+     ภาษาเดียวกับชุดอากาศ "ลม" ที่ออกแบบไว้แล้ว (เข้มด้านต้นลม จางด้านปลายลม)
+     จัดกลุ่มตามความเข้มก่อน stroke เหมือน segs() ไม่งั้นจะยิง stroke หลายร้อยครั้งต่อเฟรม */
+  streams(ctx,lines,alpha){
+    if(!lines||!lines.length) return;
+    const B=new Map();
+    for(let l=0;l<lines.length;l++){
+      const ln=lines[l], last=ln.length-1;
+      const inten=clamp((ln.spd||10)/70,.12,1);
+      /* หัวใจของความมีชีวิต: คลื่นสว่างวิ่งไปตามริ้ว แต่ละริ้วเหลื่อมเฟสกัน
+         ริ้วรุ่นแรกของแกนไม่มี T อยู่ในสูตรเลยสักตัว จึงเป็นเส้นนิ่งสนิท
+         ลมแรงกว่า คลื่นวิ่งเร็วกว่า — สื่อความเร็วด้วยจังหวะ ไม่ใช่ด้วยรูปทรง */
+      const head=((T*(0.17+inten*0.30))+l*0.137)%1.35;
+      /* หมุนและฉายจุดละครั้งเดียว แล้วใช้ซ้ำ — ช่วงที่ติดกันใช้จุดร่วมกัน
+         ของเดิมหมุนทุกจุดสองรอบ = งานเกินเท่าตัวที่ 5,300 ช่วงต่อเฟรม */
+      if(!ln._p || ln._p.length!==ln.length) ln._p=new Array(ln.length);
+      for(let i=0;i<=last;i++){ const r=this.rotate(ln[i]); ln._p[i]= r.z<0.02 ? null : this.project(r); }
+      for(let i=1;i<=last;i++){
+        const p0=ln._p[i-1], p1=ln._p[i];
+        if(!p0||!p1) continue;
+        const r0=p0, r1=p1;
+        if((p0.x<-8&&p1.x<-8)||(p0.x>this.W+8&&p1.x>this.W+8)) continue;
+        if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
+        const f=i/last;
+        const along=Math.pow(1-f,.75);                     /* เข้มต้นลม จางปลายลม — บอกทิศในตัว */
+        const near=Math.max(0,1-Math.abs(f-head)*4.5);     /* ช่วงที่คลื่นกำลังไหลผ่าน */
+        const depth=.35+.65*Math.sqrt(Math.max(0,(r0.z+r1.z)*.5));
+        const w=(ln.w===undefined?1:ln.w);
+        let a=alpha*w*depth*((.20+inten*.42)*along + near*(.30+inten*.55)*along);
+        if(a<=.006) continue;
+        if(a>.55) a=.55;
+        const ai=Math.min(17,Math.round(a*32));
+        const wi=Math.min(3,Math.round(((.8+inten*.8)*(1+near*.6)-.7)*1.6));
+        const key=ai*4+wi;
+        let arr=B.get(key); if(!arr) B.set(key,arr=[]);
+        arr.push(p0.x,p0.y,p1.x,p1.y);
+      }
+    }
+    ctx.lineCap='round';
+    B.forEach((arr,key)=>{
+      ctx.strokeStyle='rgba(84,90,104,'+((key>>2)/32).toFixed(3)+')';
+      ctx.lineWidth=.7+(key&3)/1.6;
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
+      ctx.stroke();
+    });
+  },
+  /* ---------- คืนสภาพแสงหลังหมอก (ข้อ 41) ----------
+     หมอกลบความทึบ 72% ทุกอย่างนอกวงจึงจางเข้าหาสีกระดาษที่สว่าง
+     ความมืดของกลางคืนก็ถูกลบไปด้วย → นอกวงมองไม่ออกว่าเป็นกลางคืน
+     และวงเปิดกลายเป็นหลุมมืด (เคยวัดได้ว่ามืดกว่ารอบนอก 42 หน่วย)
+     แก้: เทสีกลางคืนกลับลงไปเฉพาะนอกวง ให้เท่ากับที่หมอกลบไป
+     ชั้นนี้เบลออยู่แล้วจึงวาดที่ครึ่งความละเอียดพอ — ลดงานลง 4 เท่าโดยตาไม่เห็นความต่าง */
+  restoreNight(ctx,hole){
+    const term=this.terminator();
+    if(!term) return;
+    const {CX,CY,R}=this;
+    const dpr=Math.min(devicePixelRatio||1,2), SC=dpr*0.5;
+    if(!this._rcv) this._rcv=document.createElement('canvas');
+    const cv=this._rcv;
+    const w=Math.ceil(this.W*SC), h=Math.ceil(this.H*SC);
+    if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+    const r=cv.getContext('2d');
+    r.setTransform(SC,0,0,SC,0,0);
+    r.globalCompositeOperation='source-over';
+    r.clearRect(0,0,this.W,this.H);
+    r.save();
+    r.beginPath(); r.arc(CX,CY,R,0,6.2832); r.clip();
+    if(!term.all){
+      r.beginPath();
+      r.moveTo(term.arc[0].x,term.arc[0].y);
+      for(let i=1;i<term.arc.length;i++) r.lineTo(term.arc[i].x,term.arc[i].y);
+      r.arc(CX,CY,R,term.a1,term.a0,term.ccw);
+      r.closePath(); r.clip();
+    }
+    const box=this.fillBox();
+    r.fillStyle='rgba(34,40,60,0.34)';
+    r.fillRect(box[0],box[1],box[2],box[3]);
+    r.restore();
+    /* เจาะรูตรงวงเปิด — ในวงไม่ต้องเติมอะไร เพราะความมืดจริงแสดงอยู่แล้ว */
+    if(hole){
+      r.globalCompositeOperation='destination-out';
+      const g=r.createRadialGradient(hole.x,hole.y,0,hole.x,hole.y,hole.r);
+      g.addColorStop(0,'rgba(0,0,0,1)');
+      g.addColorStop(Math.max(0,1-CFG.FOG_SOFT),'rgba(0,0,0,1)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      r.fillStyle=g; r.beginPath(); r.arc(hole.x,hole.y,hole.r,0,6.2832); r.fill();
+    }
+    /* ชั้นนี้ต้องเบลอ *น้อยกว่า* เงาหลัก (ทางแก้ที่จดไว้ในข้อ 39)
+       ถ้าเบลอเท่ากัน ความมืดจะลามเข้าไปในวงเปิด ทำให้วงกลายเป็นรอยคล้ำ
+       เห็นชัดที่สุดตอนซูมเข้าเส้นทางในประเทศ ซึ่งสนามแสงเกือบสม่ำเสมอทั้งจอ */
+    const blur=this.blurPx()*0.42;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(CX,CY,R,0,6.2832); ctx.clip();
+    ctx.globalAlpha=CFG.FOG;                      /* เติมกลับเท่าที่หมอกลบไปพอดี */
+    if(blur>0.5 && ('filter' in ctx)) ctx.filter='blur('+blur.toFixed(1)+'px)';
+    ctx.drawImage(cv,0,0,this.W,this.H);
+    ctx.filter='none'; ctx.globalAlpha=1;
+    ctx.restore();
+  },
+  /* เส้นทางต้องอ่านออกทั้งบนพื้นกระดาษและบนซีกกลางคืนที่มืด
+     → วาดสองชั้น: ชั้นรองสีอ่อนกว้างกว่า (casing) แล้วทับด้วยเส้นจริง */
+  path(ctx,from,to,alpha){
+    const list=[];
+    for(let i=0;i<=60;i++) list.push(slerpLL(from,to,i/60));
+    this.poly(ctx,list,alpha);
+  },
+  /* เส้นทางที่ลมพัดพา — รับรายการจุดจริง ไม่ใช่แค่ต้นทางกับปลายทาง
+     ตัดเป็นช่วง ๆ ตรงที่ลอดหลังโลก จะได้ไม่ลากเส้นพาดผ่านทรงกลม */
+  poly(ctx,list,alpha){
+    const runs=[]; let cur=null;
+    for(let i=0;i<list.length;i++){
+      const pr=this.pipe(list[i].lat,list[i].lng);
+      if(pr.z>=0){ if(!cur) runs.push(cur=[]); cur.push(pr.x,pr.y); }
+      else cur=null;
+    }
+    const trace=()=>{
+      ctx.beginPath();
+      for(const r of runs){
+        ctx.moveTo(r[0],r[1]);
+        for(let i=2;i<r.length;i+=2) ctx.lineTo(r[i],r[i+1]);
+      }
+    };
+    ctx.lineWidth=3.2; ctx.strokeStyle='rgba(246,243,235,'+(alpha*.45).toFixed(3)+')';
+    trace(); ctx.stroke();
+    ctx.lineWidth=1.4; ctx.strokeStyle='rgba(126,114,88,'+alpha+')';
+    trace(); ctx.stroke();
+  },
+  node(ctx,p,hollow){
+    if(p.z<-.1) return;
+    const a=p.z<0?.25:.9;
+    if(hollow){
+      ctx.strokeStyle='rgba(60,60,66,'+a+')';ctx.lineWidth=1.3;
+      ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.stroke();
+    }else{
+      ctx.fillStyle='rgba(60,60,66,'+a+')';
+      ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill();
+    }
+  },
+  dot(ctx,p,pulse,sel){
+    if(p.z<-.05) return;
+    const a=p.z<0?.3:1;
+    const r=9*(sel?1.35:1);
+    const halo=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+    halo.addColorStop(0,'rgba(198,154,84,'+(.45*a*pulse)+')');
+    halo.addColorStop(1,'rgba(198,154,84,0)');
+    ctx.fillStyle=halo;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(210,168,96,'+a+')';
+    ctx.beginPath();ctx.arc(p.x,p.y,sel?3.4:2.8,0,Math.PI*2);ctx.fill();
+  },
+  ghost(ctx,p){    /* จดหมายที่หายไปกับลม — จางค้างไว้ */
+    if(p.z<0) return;
+    ctx.strokeStyle=col(.22);ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,Math.PI*2);ctx.stroke();
+  }
+};
+
+/* ---------- จดหมาย = กระดาษคลี่ (mesh warp จาก letter-flutter) ---------- */
+function meshPoints(W,H,t,wind,cols,rows){
+  const sway=8+wind*46, freq=1.2+wind*3.2, speed=.6+wind*2.6, flap=wind*wind;
+  const pts=[];
+  for(let r=0;r<=rows;r++){
+    const row=[], v=r/rows;
+    for(let c=0;c<=cols;c++){
+      const u=c/cols;
+      let x=(u-.5)*W, y=(v-.5)*H;
+      const ripple=Math.sin(u*freq*Math.PI*2+v*1.5-t*speed);
+      const edge=Math.pow(u,1.6);
+      const cornerBoost=1+flap*edge*Math.abs(v-.5)*2.4;
+      x+=ripple*sway*.25*(.4+edge);
+      const z=ripple*(sway*.5)*edge*cornerBoost;
+      y+=z*.35;
+      x+=Math.sin(v*Math.PI)*-sway*.15;
+      row.push({x,y,z,u,v});
+    }
+    pts.push(row);
+  }
+  return {pts,sway};
+}
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const c255=v=>Math.max(0,Math.min(255,v))|0;
+
+/* จดหมายปลิว (ใช้ตอนพยากรณ์/ส่ง) — LOD ใกล้: mesh เต็ม ฉบับเดียวเท่านั้น */
+function drawFlutter(ctx,cx,cy,W,H,t,wind,age,traces){
+  const cols=12, rows=15;
+  const {pts,sway}=meshPoints(W,H,t,wind,cols,rows);
+  const tilt=(wind-.35)*.5;
+  const base=mix([236,234,225],[206,190,150],age*.85);
+  ctx.save();
+  ctx.translate(cx+Math.sin(t*.4)*(4+wind*16), cy+Math.sin(t*.33+9.1)*(3+wind*9));
+  ctx.rotate(tilt*.4+Math.sin(t*.5+3)*.03);
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const p00=pts[r][c],p10=pts[r][c+1],p11=pts[r+1][c+1],p01=pts[r+1][c];
+    const zAvg=(p00.z+p10.z+p11.z+p01.z)/4;
+    const shade=clamp(zAvg/(sway*.6+.001),-1,1), lift=shade*22;
+    ctx.beginPath();ctx.moveTo(p00.x,p00.y);ctx.lineTo(p10.x,p10.y);ctx.lineTo(p11.x,p11.y);ctx.lineTo(p01.x,p01.y);ctx.closePath();
+    ctx.fillStyle='rgba('+c255(base[0]+lift)+','+c255(base[1]+lift)+','+c255(base[2]+lift)+','+(.9-Math.max(0,shade)*.18)+')';
+    ctx.fill();
+  }
+  ctx.strokeStyle='rgba(43,43,47,'+(.32-age*.12)+')';ctx.lineWidth=1;
+  for(let r=3;r<rows-2;r+=2){
+    if(r%6===5) continue;
+    ctx.beginPath();
+    const cEnd=cols-1-(r%3);
+    for(let c=1;c<=cEnd;c++){ const p=pts[r][c]; c===1?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
+    ctx.stroke();
+  }
+  if(traces&&traces.rain>0.02) rainBlooms(ctx,traces.rain,(u,v)=>pts[Math.round(v*rows)][Math.round(u*cols)],1);
+  if(wind>.5){
+    ctx.strokeStyle='rgba(80,72,58,'+((wind-.5)*.5)+')';ctx.lineWidth=1.2;
+    ctx.beginPath();
+    for(let r=0;r<=rows;r++){ const p=pts[r][cols]; r===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ร่องรอยฝน — วางที่ขอบ/มุมเท่านั้น ห้ามทับตัวอักษร */
+function rainBlooms(ctx,rain,at,sizeK){
+  const n=Math.floor(clamp(rain,0,1)*14);
+  for(let i=0;i<n;i++){
+    let u=Math.sin(i*12.9)*.5+.5, v=Math.sin(i*7.7+2.1)*.5+.5;
+    u = u<.5 ? u*.30 : 1-(1-u)*.30;            /* ดันเข้าขอบซ้าย/ขวา */
+    if(v>.22&&v<.80) v = (i%2) ? v*.24 : 1-(1-v)*.22;
+    const p=at(clamp(u,0,1),clamp(v,0,1));
+    const rad=(6+(Math.sin(i*3.3)*.5+.5)*20)*(0.5+rain)*sizeK;
+    const a=(.10+rain*.14);
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+    g.addColorStop(0,'rgba(90,84,70,'+a+')');
+    g.addColorStop(.6,'rgba(90,84,70,'+(a*.4)+')');
+    g.addColorStop(1,'rgba(90,84,70,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);ctx.fill();
+  }
+}
+
+/* กระดาษตอนเปิดอ่าน — นิ่ง อ่านง่าย ร่องรอยอยู่ขอบ */
+function drawPaper(cv,traces){
+  const ctx=cv.getContext('2d');
+  const DPR=Math.min(devicePixelRatio||1,2);
+  const W=cv.clientWidth, H=cv.clientHeight;
+  if(!W||!H) return;
+  cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,W,H);
+  /* เพดานร่องรอย: ต้องยังอ่านว่า "ผ่านการเดินทางมา" ไม่ใช่ "เสียหาย" */
+  const age=clamp(traces.days/7,0,1), storm=clamp(traces.storm/3,0,1), rain=clamp(traces.rain,0,1);
+  const base=mix([243,239,230],[216,203,171],age*.72);
+  /* เนื้อกระดาษ */
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'rgb('+c255(base[0]+4)+','+c255(base[1]+4)+','+c255(base[2]+4)+')');
+  g.addColorStop(1,'rgb('+c255(base[0]-6)+','+c255(base[1]-7)+','+c255(base[2]-8)+')');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  /* เส้นใยกระดาษ — ต้องจางจนแทบไม่เห็น ไม่ใช่เส้นบรรทัด */
+  ctx.lineWidth=1;
+  for(let i=0;i<9;i++){
+    const y=((Math.sin(i*23.7)*.5+.5)*H);
+    ctx.strokeStyle='rgba(120,110,90,'+(.018+(i%3)*.006)+')';
+    ctx.beginPath();ctx.moveTo(-4,y);
+    ctx.bezierCurveTo(W*.3,y+Math.sin(i*2.1)*6,W*.7,y-Math.sin(i*1.7)*7,W+4,y+Math.sin(i)*3);
+    ctx.stroke();
+  }
+  for(let i=0;i<3;i++){
+    const x=((Math.sin(i*11.3+1)*.5+.5)*W);
+    ctx.strokeStyle='rgba(120,110,90,.016)';
+    ctx.beginPath();ctx.moveTo(x,-4);
+    ctx.bezierCurveTo(x+5,H*.35,x-6,H*.7,x+2,H+4);
+    ctx.stroke();
+  }
+  /* คราบฝนที่ขอบ */
+  if(rain>.02) rainBlooms(ctx,rain,(u,v)=>({x:u*W,y:v*H}),0.9);
+  /* รอยยับจากพายุ — เส้นเฉียงที่ขอบ + ขอบช้ำ */
+  if(storm>.02){
+    ctx.lineCap='round';
+    const n=Math.round(2+storm*5);
+    for(let i=0;i<n;i++){
+      const side=i%2, y0=(Math.sin(i*4.1)*.5+.5)*H;
+      const len=(20+storm*70);
+      ctx.strokeStyle='rgba(96,86,66,'+(.06+storm*.12)+')';
+      ctx.lineWidth=1+storm*1.2;
+      ctx.beginPath();
+      if(side){ ctx.moveTo(W,y0); ctx.quadraticCurveTo(W-len*.6,y0+len*.3,W-len,y0+len*.7); }
+      else    { ctx.moveTo(0,y0); ctx.quadraticCurveTo(len*.6,y0-len*.3,len,y0-len*.7); }
+      ctx.stroke();
+    }
+    const e=ctx.createLinearGradient(0,0,0,H);
+    e.addColorStop(0,'rgba(92,80,58,'+(storm*.16)+')');
+    e.addColorStop(.12,'rgba(92,80,58,0)');
+    e.addColorStop(.88,'rgba(92,80,58,0)');
+    e.addColorStop(1,'rgba(92,80,58,'+(storm*.16)+')');
+    ctx.fillStyle=e;ctx.fillRect(0,0,W,H);
+  }
+  /* ขอบเก่า */
+  const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.72);
+  v.addColorStop(0,'rgba(120,105,75,0)');
+  v.addColorStop(1,'rgba(120,105,75,'+(.05+age*.14)+')');
+  ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(120,105,75,'+(.12+age*.18)+')';ctx.lineWidth=1;
+  ctx.strokeRect(.5,.5,W-1,H-1);
+}
+
+/* ============================================================
+   APP — หน้าจอ, การส่ง, การรับ, คลัง
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const stage = $('#stage'), sctx = stage.getContext('2d');
+let W=0,H=0,DPR=1,T=0,lastFrame=performance.now();
+let sheetOpen=null, selected=null, pending=null, current=null, logOpen=false;
+/* ---------- โหมดจำลอง ----------
+   จดหมายจริงเดินตามเวลาจริง (ชั่วโมงถึงวัน) จะดูการเดินทางทั้งเส้นจึงต้องย่อเวลา
+   ไม่แตะข้อมูลอะไรเลย — แค่ป้อน "เวลาปลอม" ให้ letterState() กับนาฬิกาแสงเท่านั้น
+   ปิดโหมดเมื่อไหร่ทุกอย่างกลับไปเดินตามเวลาจริงทันที */
+let PREVIEW=null;                 /* {id, h, play} */
+/* ระยะของฉบับที่เลือก — ใช้คิดเพดานซูมและระยะพอดี */
+function selKm(){
+  const L=selected?store.letters().find(x=>x.id===selected):null;
+  return L?fitKm(L):0;
+}
+const PLAY_SEC=40;                /* เล่นทั้งการเดินทางจบใน 40 วินาที */
+function nowFor(L){
+  return (PREVIEW && PREVIEW.id===L.id) ? L.s + PREVIEW.h*3600000 : Date.now();
+}
+function previewOn(L){
+  PREVIEW={id:L.id, h:0, play:true};
+  SUN_BUCKET=9e5;                 /* ย่อเวลาแล้วต้องขยายบักเก็ต ไม่งั้นวาดโลกใหม่ถี่เกิน */
+  syncPlay();
+}
+function previewOff(){
+  PREVIEW=null; SUN_MS=null; SUN_BUCKET=3e5; syncPlay();
+}
+/* ฉบับที่ย้อนดูการเดินทางได้ — ล่าสุดก่อน
+   เงื่อนไขคือ "มีข้อมูลการเดินทาง" ไม่ใช่ "ยังบินอยู่"
+   ของเดิมจำกัดไว้แค่ฉบับที่ยังบิน ทำให้พอจดหมายถึงหมดแล้วปุ่มหายไปเฉย ๆ
+   ทั้งที่การย้อนดูฉบับที่ถึงแล้วคือกรณีที่อยากดูที่สุด */
+function previewable(){
+  return store.letters().filter(L=>L.lg&&L.lg.length&&L.th>0).sort((a,b)=>b.s-a.s);
+}
+function syncPlay(){
+  const bar=$('#play');
+  const L=selected?store.letters().find(x=>x.id===selected):null;
+  const st=L?letterState(L,Date.now()):null;
+  const on = !!L && !!st && !!(L.lg&&L.lg.length&&L.th>0);
+  if(!on && PREVIEW) previewOff();
+  /* ยังไม่ได้เลือกฉบับ แต่มีจดหมายให้ย้อนดู = โชว์ปุ่มไว้ให้เห็นว่ามีทางเข้า
+     กดแล้วค่อยเลือกให้ ไม่ใช่เลือกให้ตั้งแต่เปิดแอป (ข้อ 7) */
+  const solo = !on && previewable().length>0;
+  bar.hidden = !on && !solo;
+  bar.classList.toggle('solo', solo);
+  if(bar.hidden) return;
+  if(solo){ $('#pPlay').textContent='ดูการเดินทาง'; return; }
+  $('#pPlay').textContent = PREVIEW ? (PREVIEW.play?'หยุด':'เล่นต่อ') : 'ดูการเดินทาง';
+  const h = PREVIEW ? PREVIEW.h : st.elapsed;
+  $('#pScrub').value = Math.round(clamp(h/L.th,0,1)*1000);
+  const done=letterState(L,Date.now());
+  $('#pTime').textContent = PREVIEW ? fmtDur(Math.max(0,L.th-h))+' เหลือ'
+    : (done.arrived||done.gone ? 'ย้อนดูได้' : 'ตามเวลาจริง');
+}
+
+function sizeStage(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  W=stage.clientWidth; H=stage.clientHeight;
+  stage.width=W*DPR; stage.height=H*DPR;
+  sctx.setTransform(DPR,0,0,DPR,0,0);
+  G.W=W; G.H=H; G.R0=Math.min(W,H)*0.32; G.R=G.R0*G.zoom; G.CX=W/2; G.CY=H*0.46;
+}
+function sizeCanvas(cv,h){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const w=cv.clientWidth, hh=h||cv.clientHeight;
+  cv.width=w*dpr; cv.height=hh*dpr;
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:c,w,h:hh};
+}
+addEventListener('resize',()=>{ sizeStage(); if(current) paintPaper(); });
+
+function toast(msg){
+  const el=$('#toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200);
+}
+function openSheet(id){ closeSheet(); sheetOpen=id; $('#'+id).classList.add('on'); }
+function closeSheet(){ if(sheetOpen){ $('#'+sheetOpen).classList.remove('on'); sheetOpen=null; } }
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheet);
+
+/* ---------- ปัดหมุนโลก ---------- */
+let tapX=0, tapY=0, tapT=0;
+/* ข้อ 26 — ปัดนิ้วเดียวหมุนโลกเหมือนเดิมทุกระดับซูม · หุบสองนิ้ว/ล้อเมาส์ = ซูม ไม่ชนกัน */
+const PTR=new Map(); let pinchD=0, pinchZ=1;
+const pinchDist=()=>{ const a=[...PTR.values()]; return Math.hypot(a[0].x-a[1].x, a[0].y-a[1].y); };
+stage.addEventListener('pointerdown',e=>{
+  PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(PTR.size===2){ G.drag=false; pinchD=pinchDist(); pinchZ=G.zoom; return; }
+  G.drag=true; G.target=null; G.lastX=e.clientX; G.lastY=e.clientY; G.vY=G.vX=0;
+  tapX=e.clientX; tapY=e.clientY; tapT=performance.now();
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('wheel',e=>{
+  e.preventDefault();
+  G.zTarget=clamp(G.zTarget*Math.pow(0.9985,e.deltaY),1,G.zoomMax(selKm()));
+},{passive:false});
+/* ต้องมีทางกลับจากที่ซูมเข้าไปแล้ว — แตะเบา ๆ ที่โลกโดยไม่ลาก = เลิกเลือก
+   เกณฑ์เข้มพอจะไม่ชนกับการปัดหมุนโลก (ข้อ 26 ปัดนิ้วเดียวยังหมุนเหมือนเดิม) */
+stage.addEventListener('pointerup',e=>{
+  if(PTR.size>1) return;
+  if(Math.hypot(e.clientX-tapX,e.clientY-tapY)<6 && performance.now()-tapT<320 && selected){
+    selected=null; G.zTarget=1; G.target=null; previewOff(); refreshDock();
+  }
+});
+stage.addEventListener('pointermove',e=>{
+  if(PTR.has(e.pointerId)) PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(PTR.size===2){
+    if(pinchD>8){ G.zoom=G.zTarget=clamp(pinchZ*(pinchDist()/pinchD),1,G.zoomMax(selKm())); G.R=G.R0*G.zoom; }
+    return;
+  }
+  if(!G.drag) return;
+  const dx=(e.clientX-G.lastX)/G.R, dy=(e.clientY-G.lastY)/G.R;
+  G.rotY-=dx; G.rotX=clamp(G.rotX+dy,-1.3,1.3);
+  G.vY=-dx; G.vX=dy; G.lastX=e.clientX; G.lastY=e.clientY;
+});
+addEventListener('pointerup',e=>{ G.drag=false; PTR.delete(e.pointerId); });
+addEventListener('pointercancel',e=>{ G.drag=false; PTR.delete(e.pointerId); });
+
+/* ---------- ข้อมูลย่อย ---------- */
+function tracesOf(L,upto){
+  let pre=0, st=0;
+  const n = upto===undefined ? L.lg.length : upto+1;
+  for(let i=0;i<Math.min(n,L.lg.length);i++){ const l=L.lg[i]; pre+=l[4]*l[0]; if(l[6]>0) st++; }
+  return { rain: clamp(pre/40,0,1), storm: Math.min(3,st), days: L.th/24 };
+}
+const llOf = p => ({lat:p.la, lng:p.lo});
+
+/* ---------- โลก ---------- */
+function renderGlobe(){
+  sctx.clearRect(0,0,W,H);
+  G.step();
+  const list=store.letters();
+  /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
+  if(PREVIEW){
+    const P=list.find(x=>x.id===PREVIEW.id);
+    SUN_MS = P ? P.s+PREVIEW.h*3600000 : null;
+    if(!P) previewOff();
+  }
+  const all=[], flying=[];
+  list.forEach(L=>{
+    const st=letterState(L,nowFor(L));
+    const rec={L,st,A:llOf(L.f),B:llOf(L.t)};
+    all.push(rec);
+    if(!st.arrived&&!st.gone) flying.push(rec);
+  });
+  const sel = selected ? all.find(x=>x.L.id===selected) : null;
+
+  /* ---------- ชั้นที่หมอกบังได้: โลก + อากาศบนผิวโลก ---------- */
+  G.sphere(sctx);
+  flying.slice(0,CFG.MAX_ANIM).forEach(({L})=>{
+    if(!L.lg) return;
+    /* พายุอยู่บนผิวโลก จึงต้องถูกหมอกบังเหมือนแผ่นดิน — ข้อ 5 บอกว่าอากาศเห็นได้ "ในวง" */
+    L.lg.forEach((l,i)=>{
+      if(l[6]<=0) return;
+      const p=G.pipeV(posVAt(L,(i+.5)/L.lg.length));
+      /* LOD: บน globe วาดหยาบ — รายละเอียดเต็มเก็บไว้ตอนดูใกล้ (ART §5)
+         จางลงตามความลึกเหมือนเส้นอื่นบนทรงกลม ไม่งั้นพายุริมขอบโลกจะเด่นเกินจริง */
+      if(p.z>=0){
+        sctx.save(); sctx.globalAlpha=.45+.55*Math.sqrt(p.z);
+        /* ข้อ 29 — ซูมเข้าแล้วต้องเพิ่มความหนาแน่น ไม่ใช่แค่ขยายเส้น
+           rich = วาดละเอียดขึ้น · scale โตตามซูมแต่ไม่เต็มสัดส่วน (พายุยังไม่มีโหมด "อยู่ข้างใน") */
+        const zs=clamp(1+Math.log2(Math.max(1,G.zoom))*0.42, 1, 3.2);
+        wxStorm(sctx,p.x,p.y,T,stormIntensity(l[2]),G.zoom>4,zs);
+        sctx.restore();
+      }
+    });
+  });
+
+  /* ---------- หมอก (ข้อ 6 · วงเดียว เฉพาะฉบับที่เลือก · ข้อ 8 · วิ่งตามจดหมาย) ---------- */
+  let hole=null;
+  /* ตอนย้อนดู ฉบับที่ถึงแล้วต้องมีวงเปิดเหมือนกำลังบินจริง — st มาจากเวลาที่กำลังดูอยู่แล้ว */
+  if(sel && !sel.st.arrived && !sel.st.gone){
+    const p=G.pipeV(posVAt(sel.L,sel.st.prog));
+    if(p.z>=-0.05) hole={x:p.x, y:p.y, r:G.R*Math.sin(revealKm(sel.L)/ER)};
+  }
+  G.fog(sctx,hole);
+  G.restoreNight(sctx,hole);
+  /* ข้อ 31 — ลมทะลุหมอกเสมอ จึงต้องวาดหลังลบความทึบ
+     เฉพาะฉบับที่เลือก ไม่งั้นหลายเส้นทางจะทับกันจนอ่านไม่ออกว่าลมไปทางไหน */
+  if(sel && !sel.st.arrived && !sel.st.gone) G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
+
+  /* ---------- ชั้นจดหมาย: อยู่เหนือหมอกเสมอ ----------
+     หมอกปิดโลก ไม่ได้ปิดจดหมาย · ข้อ 7 หน้าเริ่มต้น = หมอก + จุดทอง + จุดปลายทาง */
+  all.forEach(({L,st,A,B})=>{
+    const alpha = (st.arrived||st.gone) ? .28 : (selected===L.id ? .92 : .48);
+    /* ข้อ 3 — ถึงแล้วรอยหายไป เหลือแค่จุดปลายทาง */
+    if(!st.arrived){
+      const tr=trailUpto(L,st.prog);
+      if(tr) G.poly(sctx,tr,alpha);
+      G.node(sctx,G.pipe(A.lat,A.lng),false);
+    }
+    G.node(sctx,G.pipe(B.lat,B.lng),true);
+    if(st.gone) G.ghost(sctx,G.pipeV(posVAt(L,st.prog)));
+  });
+  flying.slice(0,CFG.MAX_ANIM).forEach(({L,st})=>{
+    const p=G.pipeV(posVAt(L,st.prog));
+    const pulse = st.parked ? .55+Math.sin(T*2.2)*.25 : 1;
+    /* ข้อ 24-25 — ซูมเข้าพอ จุดทองค่อย ๆ กลายเป็นแผ่นกระดาษจริง
+       เกณฑ์ผูกกับ "วงเปิดกว้างกี่พิกเซล" ไม่ใช่ระดับซูมตรง ๆ เพราะซูมที่พอดี
+       ของเส้นในจังหวัดกับของเส้นข้ามทวีปห่างกัน 17 เท่า */
+    /* ข้อ 25 บอกว่าจุดทองกลายเป็นกระดาษราว "2-3 เท่า" — ต้องอ่านว่า
+       2-3 เท่าของ*ภาพตั้งต้นของฉบับนั้น* ไม่ใช่ 2-3 เท่าสัมบูรณ์
+       ไม่งั้นเส้นในจังหวัดจะไม่มีวันเห็นกระดาษ เพราะซูมพอดีของมันอยู่ที่ 16 เท่าแล้ว */
+    const fitz = selected===L.id ? G.fitZoom(fitKm(L)) : 0;
+    const paper = fitz ? clamp(G.zoom/fitz-1.3, 0, 1) : 0;
+    if(paper<1) G.dot(sctx,p,pulse*(1-paper), selected===L.id);
+    if(paper>0 && p.z>=0){
+      const wnd=(L.lg&&L.lg[st.legIdx]) ? clamp(L.lg[st.legIdx][2]/90,.1,1) : .3;
+      const ps=26+40*paper;
+      sctx.save(); sctx.globalAlpha=paper;
+      drawFlutter(sctx,p.x,p.y,ps*.72,ps,T,wnd,0,null);
+      sctx.restore();
+    }
+  });
+  flying.slice(CFG.MAX_ANIM).forEach(({L,st})=>{
+    G.dot(sctx,G.pipeV(posVAt(L,st.prog)),1,selected===L.id);
+  });
+}
+
+/* ---------- ท้องฟ้าในหน้าพยากรณ์ ---------- */
+function renderSky(){
+  const cv=$('#fcSky'); if(!cv.clientWidth) return;
+  const {ctx,w,h}=sizeCanvas(cv);
+  ctx.clearRect(0,0,w,h);
+  if(!pending||!pending.sim) return;
+  const sim=pending.sim;
+  let worst=0, spd=0;
+  sim.legs.forEach(l=>{ if(l[5]>worst) worst=l[5]; spd+=l[2]; });
+  spd/=sim.legs.length;
+  /* ทิศ+ความแรงของ "ลมก้อนเดียวกัน" → องศาเอียงของฝนแปรตามลมจริง ไม่ fix ที่ 30° */
+  const dir = clamp(sim.boost/CFG.WIND_CAP, -1, 1);
+  const intensity = clamp(spd/85,.15,1);
+  drawWx(ctx,w*.5,h*.46,T,worst,intensity,dir,Math.min(1,w/300));
+  drawFlutter(ctx,w*.5,h*.5,42,58,T,clamp(spd/90,.1,1),0,null);
+}
+
+/* ---------- loop ---------- */
+function frame(now){
+  const dt=Math.min(.05,(now-lastFrame)/1000); lastFrame=now;
+  if(!document.hidden){
+    T += REDUCED ? dt*0.25 : dt;
+    if(PREVIEW && PREVIEW.play){
+      const L=store.letters().find(x=>x.id===PREVIEW.id);
+      if(L){
+        PREVIEW.h += L.th/PLAY_SEC*dt;
+        if(PREVIEW.h>=L.th){ PREVIEW.h=L.th; PREVIEW.play=false; }
+        syncPlay();
+      }else previewOff();
+    }
+    if(sheetOpen==='forecast'||sheetOpen==='sent') renderSky();
+    else if(!sheetOpen) renderGlobe();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- แถบจดหมายด้านล่าง ---------- */
+function refreshDock(){
+  const dock=$('#dock'), now=Date.now();
+  const list=store.letters().sort((a,b)=>b.s-a.s);
+  dock.innerHTML='';
+  $('#hint').style.opacity = list.length ? 0 : 1;
+  list.forEach(L=>{
+    const st=letterState(L,now);
+    const b=document.createElement('button');
+    b.className='chip'+(selected===L.id?' sel':'')+(L.dir==='in'&&st.arrived?' here':'')+(st.gone?' gone':'');
+    let eta;
+    if(st.gone) eta='สายลมพัดหลง';
+    else if(st.arrived) eta = L.dir==='in' ? 'ถึงแล้ว · เปิดอ่าน' : 'ถึงปลายทางแล้ว';
+    else if(st.parked) eta='จอดรอพายุสงบ';
+    else eta='อีก '+fmtDur(st.remain);
+    b.innerHTML='<span class="who">'+esc(L.dir==='in'?'จาก '+L.f.n:'ถึง '+L.t.n)+'</span><span class="eta">'+eta+'</span>';
+    b.onclick=()=>{
+      if(selected===L.id){ openRead(L); return; }
+      selected=L.id;
+      previewOff();
+      G.focus(posAt(L,st.prog), G.fitZoom(fitKm(L)));
+      refreshDock();
+    };
+    dock.appendChild(b);
+  });
+  syncPlay();
+}
+$('#pPlay').onclick=()=>{
+  let L=store.letters().find(x=>x.id===selected);
+  if(!L){
+    /* ยังไม่ได้เลือกฉบับ — หยิบฉบับที่ยังบินอยู่ล่าสุดให้ แล้วหมุนกล้องไปหา */
+    L=previewable()[0]; if(!L) return;
+    selected=L.id;
+    G.focus(posAt(L,0), G.fitZoom(fitKm(L)));
+    refreshDock();
+  }
+  if(!PREVIEW) previewOn(L);
+  else { PREVIEW.play=!PREVIEW.play; if(PREVIEW.play&&PREVIEW.h>=L.th) PREVIEW.h=0; syncPlay(); }
+};
+$('#pScrub').oninput=e=>{
+  const L=store.letters().find(x=>x.id===selected); if(!L) return;
+  if(!PREVIEW){ previewOn(L); }
+  PREVIEW.play=false;
+  PREVIEW.h = (+e.target.value/1000)*L.th;
+  syncPlay();
+};
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- ค้นหาสถานที่ ---------- */
+function wireSearch(inputSel,hitsSel,onPick){
+  const inp=$(inputSel), hits=$(hitsSel);
+  let timer=null;
+  inp.addEventListener('input',()=>{
+    clearTimeout(timer); const q=inp.value.trim();
+    if(q.length<2){ hits.innerHTML=''; return; }
+    timer=setTimeout(async()=>{
+      try{
+        const rs=await geocode(q);
+        hits.innerHTML='';
+        rs.forEach(r=>{
+          const b=document.createElement('button');
+          b.className='hit'; b.type='button';
+          b.innerHTML=esc(r.name)+' <small>'+esc(r.place)+'</small>';
+          b.onclick=()=>{ inp.value=r.place; hits.innerHTML=''; onPick(r); };
+          hits.appendChild(b);
+        });
+        if(!rs.length) hits.innerHTML='<div class="hit"><small>ไม่พบสถานที่นี้</small></div>';
+      }catch(e){ hits.innerHTML='<div class="hit"><small>ค้นหาไม่ได้ — ตรวจอินเทอร์เน็ต</small></div>'; }
+    },450);
+  });
+}
+
+/* ---------- คลัง / ตัวตน ---------- */
+let meDraft=null;
+function showMe(){
+  const me=store.me();
+  $('#vName').value = me?me.name||'':'';
+  $('#vPlace').value = me?me.place||'':'';
+  $('#vOrigin').textContent = me&&me.lat!=null ? 'ต้นทาง: '+me.place : 'ยังไม่ได้ตั้งต้นทาง — จำเป็นก่อนส่งจดหมาย';
+  const list=store.letters();
+  $('#vStat').textContent='เก็บอยู่ '+list.length+' ฉบับ · ส่งออก '+list.filter(l=>l.dir==='out').length+' · รับเข้า '+list.filter(l=>l.dir==='in').length;
+}
+function saveMe(){
+  const me=store.me()||{};
+  me.name=$('#vName').value.trim();
+  if(meDraft){ me.lat=meDraft.lat; me.lng=meDraft.lng; me.place=meDraft.place; }
+  store.setMe(me); showMe(); syncOriginNote();
+}
+function syncOriginNote(){
+  const me=store.me();
+  $('#cOrigin').innerHTML = me&&me.lat!=null
+    ? 'ต้นทาง: '+esc(me.place)
+    : '<span style="color:#a8574a">ยังไม่ได้ตั้งต้นทาง</span> — ไปที่ “คลัง” เพื่อตั้งก่อน';
+}
+
+/* ---------- เขียน / ส่ง ---------- */
+let pendTo=null;
+function openCompose(){
+  const me=store.me();
+  if(me) $('#cFrom').value=me.name||'';
+  syncOriginNote(); openSheet('compose');
+}
+$('#cBody').addEventListener('input',()=>{
+  const n=$('#cBody').value.length;
+  const c=$('#cCount'); c.textContent=n+' / '+CFG.MAX_BODY;
+  c.classList.toggle('over',n>CFG.MAX_BODY);
+});
+
+async function doSend(){
+  const me=store.me();
+  const to=$('#cTo').value.trim(), body=$('#cBody').value.trim(), from=$('#cFrom').value.trim();
+  if(!me||me.lat==null) return toast('ตั้งต้นทางในคลังก่อน');
+  if(!to) return toast('ยังไม่ได้ใส่ชื่อผู้รับ');
+  if(!pendTo) return toast('เลือกสถานที่ปลายทางจากรายการ');
+  if(!body) return toast('ยังไม่ได้เขียนอะไรเลย');
+  if(body.length>CFG.MAX_BODY) return toast('ข้อความยาวเกิน '+CFG.MAX_BODY+' ตัวอักษร');
+  if(!from) return toast('ยังไม่ได้ลงชื่อ');
+
+  const btn=$('#btnSend'); btn.disabled=true; btn.textContent='กำลังถามสายลม…';
+  try{
+    const A={lat:me.lat,lng:me.lng}, B={lat:pendTo.lat,lng:pendTo.lng};
+    const dist=gcDist(A,B);
+    /* ดึงทางเดินลม 13×5 = 65 จุดในคำขอเดียว — แนวกลางคือชุด 13 จุดเดิม
+       Open-Meteo รับได้ถึง 400 พิกัดต่อคำขอ (ตรวจแล้ว) จึงไม่ต้องยิงสองรอบ */
+    const pts=wfPoints(A,B);
+    const wx=await fetchWx(pts);
+    const id=uid();
+    const simX=simulate(pts,wx,dist,'x',id);
+    pending={ id, dist, pts, wx, A, B, me, to, from, body,
+              place:pendTo.place, sim:simX, simX, simD:null, mode:'x' };
+    showForecast();
+    openSheet('forecast');
+  }catch(e){
+    /* 429 = ยิงถี่เกินโควตาของ Open-Meteo ไม่ใช่เน็ตเสีย — บอกผิดแล้วผู้ใช้ไปงมผิดที่ */
+    const m=String(e&&e.message||'');
+    if(m.indexOf('429')>=0) toast('สายลมกำลังยุ่ง — รอสักครู่แล้วลองใหม่');
+    else if(m.indexOf('timeout')>=0) toast('ถามสายลมนานเกินไป — ลองใหม่อีกครั้ง');
+    else toast('ถามสายลมไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
+  }finally{ btn.disabled=false; btn.textContent='ปล่อยให้ลมพา'; }
+}
+
+function showForecast(){
+  const p=pending, sim=p.sim;
+  /* ระยะที่แสดงคือระยะที่ลมพาไปจริง ไม่ใช่เส้นตรง — เป็นที่เดียวที่ drift อ่านออกก่อนกดส่ง */
+  const extra = sim.ratio ? Math.round((sim.ratio-1)*100) : 0;
+  $('#fcRoute').textContent = p.me.place+' → '+p.place+' · '
+    + Math.round(sim.travelled||p.dist).toLocaleString()+' กม.'
+    + (extra>=3 ? ' · ลมพาอ้อมกว่าเส้นตรง '+extra+'%' : '');
+  $('#fcTime').textContent  = 'ถึงในราว '+fmtDur(sim.total);
+  $('#fcPoem').textContent  = poemFor(sim);
+  const holds=sim.legs.filter(l=>l[1]>0.01).length;
+  $('#fcMeta').textContent  = 'ถึงประมาณ '+new Date(Date.now()+sim.total*3600000).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})
+    + (holds?' · จอดรอ '+holds+' ครั้ง':'');
+
+  const box=$('#fcChoice'); box.innerHTML='';
+  if(sim.worst===2 || (p.simD&&p.simX.worst===2)){
+    /* เจอพายุหนัก → ทางเลือกเดียวของทั้งเส้นทาง (0–1 ครั้งเท่านั้น) */
+    if(!p.simD) p.simD=simulate(p.pts,p.wx,p.dist,'d',p.id);
+    const wrap=document.createElement('div');
+    wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามีพายุใหญ่ · สั่งเสียให้สายลมได้ว่าจะข้ามไปเลย หรืออ้อม</div>';
+    const mk=(mode,title,desc)=>{
+      const b=document.createElement('button');
+      b.className='pick'+(p.mode===mode?' on':'');
+      b.innerHTML='<b>'+title+'</b><small>'+desc+'</small>';
+      b.onclick=()=>{ p.mode=mode; p.sim = mode==='x'?p.simX:p.simD; showForecast(); };
+      return b;
+    };
+    wrap.appendChild(mk('x','ข้ามไปเลย','ถึงใน '+fmtDur(p.simX.total)+' · แต่กลางพายุมีโอกาสที่ลมจะพัดจดหมายหลงทาง'));
+    wrap.appendChild(mk('d','อ้อมไปทางอื่น','ถึงใน '+fmtDur(p.simD.total)+' · ช้ากว่าแต่แทบไม่มีโอกาสหาย'));
+    box.appendChild(wrap);
+  }
+}
+
+async function confirmSend(){
+  const p=pending; if(!p) return;
+  const sim=p.sim;
+  const rec={
+    id:p.id,
+    f:{n:p.from, la:+p.me.lat.toFixed(4), lo:+p.me.lng.toFixed(4), p:p.me.place},
+    t:{n:p.to,   la:+p.B.lat.toFixed(4),  lo:+p.B.lng.toFixed(4),  p:p.place},
+    s:Date.now(), th:sim.total, rt:p.mode, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
+  };
+  store.put(Object.assign({dir:'out'},rec));
+  const payload=await packPayload(rec);
+  const base=location.href.split('#')[0];
+  const url=base+'#'+payload;
+  $('#sentSub').textContent='ถึง '+p.to+' · '+fmtDur(sim.total);
+  $('#sentLink').textContent=url;
+  $('#btnCopy').onclick=async()=>{
+    try{ await navigator.clipboard.writeText(url); toast('คัดลอกแล้ว'); }
+    catch(e){ toast('คัดลอกไม่ได้ — กดค้างที่ลิงก์เพื่อคัดลอกเอง'); }
+  };
+  $('#btnFile').onclick=()=>exportOne(rec);
+  $('#btnShare').onclick=async()=>{
+    if(navigator.share){ try{ await navigator.share({title:'จดหมายสายลม',text:'มีจดหมายกำลังไปหาคุณ',url}); }catch(e){} }
+    else toast('เบราว์เซอร์นี้ไม่รองรับการส่งต่อ — ใช้คัดลอกลิงก์แทน');
+  };
+  /* เปิดจากไฟล์ในเครื่อง = ลิงก์นี้คนอื่นเปิดไม่ได้ ต้องบอกก่อนที่เขาจะส่งไปแล้วงง */
+  if(location.protocol==='file:'){
+    $('#sentWarn').innerHTML='<b style="font-weight:normal;color:#a8574a">ลิงก์นี้เปิดได้เฉพาะเครื่องคุณ</b> '
+      +'เพราะแอปกำลังรันจากไฟล์ในเครื่อง (file://) — ส่งเป็น <b style="font-weight:normal">ไฟล์จดหมาย</b> แทน '
+      +'แล้วให้ผู้รับกด “คลัง → Import” หรือเอาแอปขึ้น host ก่อนแล้วค่อยส่งลิงก์';
+  }
+  if(url.length>CFG.URL_WARN) toast('ลิงก์ยาวผิดปกติ — บางแอปแชทอาจตัดสั้น');
+  $('#cTo').value=''; $('#cBody').value=''; $('#cHits').innerHTML=''; $('#cPlace').value='';
+  $('#cCount').textContent='0'; pendTo=null;
+  selected=rec.id; refreshDock();
+  openSheet('sent');
+}
+
+/* ---------- อ่านจดหมาย ---------- */
+function openRead(L){
+  current=L; logOpen=false;
+  const st=letterState(L,Date.now());
+  const stage=$('#rStage'), log=$('#rLog');
+  log.classList.remove('on');
+  $('#rMeta').textContent = (L.dir==='in' ? 'จาก '+L.f.n+' · '+L.f.p : 'สำเนาของคุณ · ถึง '+L.t.n+' · '+L.t.p);
+
+  if(st.gone){
+    stage.innerHTML='<div class="waiting"><b>สายลมพัดหลงทาง</b>จดหมายฉบับนี้ไม่ถึงปลายทาง<br>'
+      +'มันหายไปกลางพายุเมื่อ '+fmtDur(st.elapsed)+'หลังออกเดินทาง<br><br>'
+      +'<span style="opacity:.7">ข้อความยังอยู่กับคุณ — คัดลอกไปเขียนใหม่ได้</span></div>'
+      +(L.dir==='out'?'<div class="ptext" style="min-height:0;padding:0 4px">'+esc(L.bd)+'</div>':'');
+  }else if(L.dir==='in' && !st.arrived){
+    const pct=Math.round(st.prog*100);
+    stage.innerHTML='<div class="waiting"><b>ยังอยู่กลางลม</b>'
+      +(st.parked?'ตอนนี้จอดรอให้พายุสงบ':'ตอนนี้กำลังผ่านช่วง'+kindWord(st.kind))
+      +'<br>อีกราว '+fmtDur(st.remain)+'จะถึงมือคุณ<br><br>'
+      +'<span style="opacity:.7">'+(pct<2?'เพิ่งออกเดินทาง':'เดินทางมาแล้ว '+pct+'% ของทาง')+'</span></div>'
+      +'<div class="row"><button class="btn" id="btnCal">เตือนด้วยปฏิทิน</button>'
+      +'<button class="btn" id="btnNoti">เตือนในเบราว์เซอร์</button></div>';
+    $('#btnCal').onclick=()=>calendarFor(L);
+    $('#btnNoti').onclick=askNotify;
+  }else{
+    const tr=tracesOf(L);
+    stage.innerHTML='<div class="paperwrap" id="rPaper"><canvas id="rCanvas"></canvas>'
+      +'<div class="ptext"><div>'+esc(L.bd)+'</div><div class="sig">— '+esc(L.f.n)+'</div></div></div>';
+    requestAnimationFrame(paintPaper);
+    if(L.dir==='in'&&!L.read){ L.read=true; store.put(L); }
+  }
+  buildLog(L,st);
+  openSheet('read');
+  refreshDock();
+}
+function paintPaper(){
+  const cv=$('#rCanvas'); if(!cv||!current) return;
+  const box=$('#rPaper'); if(!box) return;
+  cv.style.width=box.clientWidth+'px'; cv.style.height=box.clientHeight+'px';
+  drawPaper(cv,tracesOf(current));
+}
+function buildLog(L,st){
+  const log=$('#rLog'); let h='';
+  let acc=0;
+  L.lg.forEach((l,i)=>{
+    const [dur,hold,spd,,pre,kind,sev]=l;
+    let txt=kindWord(kind);
+    /* spd มาจากลิงก์ของผู้ส่ง = ข้อมูลของคนอื่น ต้อง esc ก่อนต่อเข้า innerHTML เสมอ (ข้อ 57.1) */
+    if(sev>0) txt='พายุ ลม '+esc(spd)+' กม./ชม. — จอดรอ '+fmtDur(hold);
+    else if(kind>=2) txt=(kind===3?'ฝนหนัก':'ฝนปรอย');
+    else if(kind===1) txt='ลมพัด '+esc(spd)+' กม./ชม.';
+    else txt='ฟ้าเปิด';
+    const reached = st.elapsed>=acc;
+    const when = acc<0.05 ? 'ออกเดินทาง' : '+'+fmtDur(acc);
+    h+='<div class="li" style="opacity:'+(reached?1:.4)+'"><i>'+when+'</i><span>'+txt+'</span></div>';
+    acc+=dur+hold;
+  });
+  if(L.lo>=0) h+='<div class="li"><i>+'+fmtDur(acc)+'</i><span>สายลมพัดจดหมายหลงทาง</span></div>';
+  log.innerHTML=h;
+}
+$('#btnLog').onclick=()=>{ logOpen=!logOpen; $('#rLog').classList.toggle('on',logOpen); };
+
+/* ---------- รับจดหมาย (ลิงก์ / รหัสที่วางเอง / ไฟล์) ---------- */
+async function ingest(payload){
+  const rec=sanitizeRec(await unpackPayload(payload));
+  if(!rec) throw new Error('bad payload');
+  const exist=store.letters().find(l=>l.id===rec.id);
+  if(exist){ selected=exist.id; openRead(exist); return exist; }
+  const mine=store.me();
+  const dir = (mine&&mine.name&&rec.f.n===mine.name) ? 'out' : 'in';
+  const L=Object.assign({dir},rec);
+  const st=letterState(L,Date.now());
+  if(st.arrived||st.gone) L.nf=1;          /* ถึงก่อนเปิดแล้ว ไม่ต้องเด้งเตือนซ้ำ */
+  store.put(L); refreshDock(); selected=L.id;
+  G.focus(llOf(L.t));
+  openRead(L);
+  return L;
+}
+async function receiveFromHash(){
+  const h=location.hash.slice(1);
+  if(h.length<10) return;
+  try{ await ingest(h); }
+  catch(e){ toast('ลิงก์จดหมายเสียหาย อ่านไม่ได้'); }
+}
+async function receiveFromCode(){
+  let s=$('#vCode').value.trim();
+  if(!s) return toast('ยังไม่ได้วางรหัส');
+  const i=s.indexOf('#'); if(i>=0) s=s.slice(i+1);
+  s=s.replace(/\s+/g,'');
+  try{ await ingest(s); $('#vCode').value=''; toast('รับจดหมายแล้ว'); }
+  catch(e){ toast('รหัสไม่ถูกต้องหรือขาดหาย'); }
+}
+
+/* ---------- แจ้งเตือนตอนถึง (เท่าที่ทำได้โดยไม่มี backend) ---------- */
+function notifyArrivals(){
+  let changed=false;
+  store.letters().forEach(L=>{
+    if(L.dir!=='in'||L.nf) return;
+    const st=letterState(L,Date.now());
+    if(!st.arrived&&!st.gone) return;
+    L.nf=1; store.put(L); changed=true;
+    const msg = st.gone ? 'จดหมายจาก '+L.f.n+' หลงทางไปกับลม' : 'จดหมายจาก '+L.f.n+' ถึงแล้ว';
+    try{ if(window.Notification && Notification.permission==='granted') new Notification('จดหมายสายลม',{body:msg}); }catch(e){}
+    toast(msg);
+  });
+  if(changed) refreshDock();
+}
+function askNotify(){
+  if(!window.Notification) return toast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+  if(Notification.permission==='granted') return toast('เปิดแจ้งเตือนไว้แล้ว');
+  Notification.requestPermission().then(p=>toast(p==='granted'?'จะเตือนให้ตอนจดหมายถึง (ถ้าเปิดแอปค้างไว้)':'ไม่ได้รับอนุญาต'));
+}
+/* .ics = ให้ปฏิทินในเครื่องเตือนแทน — ไม่ต้องเปิดแอปค้าง */
+function calendarFor(L){
+  const at=new Date(L.s+L.th*3600000);
+  const z=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const title='จดหมายจาก '+L.f.n+' ถึงแล้ว';
+  /* RFC 5545: escape ตัวคั่น + fold บรรทัดที่ยาวเกิน 75 ไบต์ (ไทย 1 ตัว = 3 ไบต์ เกินง่าย) */
+  const enc=new TextEncoder();
+  const icsLine=(k,v)=>{
+    /* CR ต้องกันด้วย ไม่ใช่แค่ LF — ชื่อที่มี CR แทรกบรรทัด ICS เพิ่มได้ */
+    const s=k+':'+String(v).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r\n?|\n/g,'\\n');
+    let out='', line='';
+    for(const ch of s){
+      if(enc.encode(line+ch).length>73){ out+=line+'\r\n '; line=ch; }
+      else line+=ch;
+    }
+    return out+line;
+  };
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//letter-wind//TH','CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT', icsLine('UID',L.id+'@letter-wind'),'DTSTAMP:'+z(new Date()),
+    'DTSTART:'+z(at),'DTEND:'+z(new Date(at.getTime()+15*60000)),
+    icsLine('SUMMARY',title), icsLine('DESCRIPTION','เปิดอ่านได้ที่ '+location.href.split('#')[0]),
+    'BEGIN:VALARM','TRIGGER:PT0M','ACTION:DISPLAY', icsLine('DESCRIPTION',title),'END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  download(new Blob([ics],{type:'text/calendar'}),'letter-wind-'+L.id+'.ics');
+  toast('เพิ่มลงปฏิทินแล้ว');
+}
+
+/* ---------- export / import ---------- */
+function download(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function exportJSON(auto){
+  const data={ app:'letter-wind', v:1, at:new Date().toISOString(), me:store.me(), letters:store.letters() };
+  download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),
+           'letter-wind-'+new Date().toISOString().slice(0,10)+'.json');
+  if(!auto) toast('บันทึกไฟล์แล้ว');
+}
+/* จดหมายฉบับเดียวเป็นไฟล์ — ทางสำรองเมื่อลิงก์ใช้ไม่ได้ (แชทตัด / คนละ host) */
+function exportOne(rec){
+  const L=Object.assign({},rec); delete L.dir; delete L.read; delete L.nf;
+  download(new Blob([JSON.stringify({app:'letter-wind',v:1,letters:[L]},null,2)],{type:'application/json'}),
+           'จดหมายถึง-'+(rec.t.n||'')+'.json');
+  toast('บันทึกไฟล์จดหมายแล้ว');
+}
+$('#btnExport').onclick=()=>exportJSON(false);
+$('#btnImport').onclick=()=>$('#fileIn').click();
+$('#btnCode').onclick=receiveFromCode;
+$('#fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d.letters) throw 0;
+      const cur=store.letters(), ids=new Set(cur.map(l=>l.id));
+      const mine=store.me();
+      let n=0;
+      d.letters.forEach(raw=>{
+        /* ไฟล์ก็เป็นข้อมูลจากภายนอกเหมือนลิงก์ ต้องผ่านตัวตรวจตัวเดียวกัน (ข้อ 57.1) */
+        const l=sanitizeRec(raw); if(!l) return;
+        if(ids.has(l.id)) return;
+        ids.add(l.id);
+        /* ไฟล์จดหมายฉบับเดียวไม่มี dir → ต้องตัดสินจากชื่อผู้ส่ง ไม่งั้นจะอ่านได้ก่อนถึง */
+        l.dir = (raw.dir==='out'||raw.dir==='in') ? raw.dir
+              : ((mine&&mine.name&&l.f.n===mine.name) ? 'out' : 'in');
+        const st=letterState(l,Date.now());
+        if(st.arrived||st.gone) l.nf=1;
+        cur.push(l); n++;
+      });
+      store.saveAll(cur);
+      if(d.me&&!store.me()) store.setMe(d.me);
+      showMe(); refreshDock(); toast('นำเข้า '+n+' ฉบับ');
+    }catch(err){ toast('ไฟล์ไม่ถูกต้อง'); }
+    e.target.value='';
+  };
+  r.readAsText(f);
+};
+$('#btnWipe').onclick=()=>{
+  if(!confirm('ล้างข้อมูลทั้งหมด? ระบบจะบันทึกไฟล์สำรองให้ก่อน')) return;
+  exportJSON(true);
+  LS.del(K.LETTERS); LS.del(K.ME);
+  selected=null; current=null; showMe(); refreshDock(); toast('ล้างแล้ว (มีไฟล์สำรอง)');
+};
+$('#btnHere').onclick=()=>{
+  if(!navigator.geolocation) return toast('เครื่องนี้ไม่รองรับ');
+  toast('กำลังหาตำแหน่ง…');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude:lat,longitude:lng}=pos.coords;
+    const name=await reverseName(lat,lng);
+    meDraft={lat,lng,place:name};
+    $('#vPlace').value=name; saveMe(); toast('ตั้งต้นทางเป็น '+name);
+  },()=>toast('ขอตำแหน่งไม่สำเร็จ'),{timeout:8000});
+};
+
+/* ---------- wiring ---------- */
+$('#btnWrite').onclick=openCompose;
+$('#btnVault').onclick=()=>{ showMe(); openSheet('vault'); };
+$('#btnSend').onclick=doSend;
+$('#btnConfirm').onclick=confirmSend;
+$('#vName').addEventListener('change',saveMe);
+wireSearch('#cPlace','#cHits',r=>{ pendTo=r; });
+wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต้นทางแล้ว'); });
+
+/* PWA: manifest ฝังในไฟล์เดียว + service worker เมื่อถูก host (สะพานสู่แอปตาม §8.6)
+   เปิดจากไฟล์ในเครื่อง (file://) ก็ยังใช้ได้ครบ แค่ไม่มี offline cache */
+(function(){
+  const m={ name:'จดหมายสายลม', short_name:'สายลม', display:'standalone',
+    background_color:'#e4e3e0', theme_color:'#e4e3e0', start_url:'.', icons:[] };
+  const l=document.createElement('link');
+  l.rel='manifest'; l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
+  document.head.appendChild(l);
+  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+})();
+
+sizeStage();
+refreshDock();
+syncOriginNote();
+LS.set('lw.probe','1');
+if(!LS_OK) setTimeout(()=>toast('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ — ปิดแล้วประวัติจะหาย'),800);
+requestAnimationFrame(frame);
+receiveFromHash();
+addEventListener('hashchange',receiveFromHash);   /* วางลิงก์ในแท็บที่เปิดอยู่แล้วก็ต้องรับได้ */
+notifyArrivals();
+setInterval(()=>{ if(document.hidden) return; notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
+
+</script>
+</body>
+</html>

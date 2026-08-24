@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จดหมายสายลม — flutter study</title>
+<style>
+  :root {
+    --ink: #2b2b2f;
+    --paper-bg: #e8e4da;
+    --dusk-top: #d6d9dd;
+    --dusk-bot: #ece7dc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: linear-gradient(170deg, var(--dusk-top) 0%, var(--dusk-bot) 100%);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  #stage { flex: 1; position: relative; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .panel {
+    position: absolute;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(43,43,47,0.12);
+    border-radius: 14px;
+    padding: 14px 20px;
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 92vw;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 5px; min-width: 120px; }
+  .ctrl label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    font-family: 'Georgia', serif;
+  }
+  .ctrl .val { font-size: 11px; opacity: 0.45; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 140px; accent-color: #6b7078; }
+  .title {
+    position: absolute;
+    top: 26px; left: 0; right: 0;
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 0.35em;
+    opacity: 0.4;
+    font-weight: normal;
+  }
+  .hint {
+    position: absolute;
+    top: 50px; left: 0; right: 0;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    opacity: 0.3;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title">จดหมายสายลม</div>
+  <div class="hint">— แบบร่างการไหว · ลากสไลเดอร์เพื่อเปลี่ยนลมและสภาพอากาศ —</div>
+  <canvas id="c"></canvas>
+  <div class="panel">
+    <div class="ctrl">
+      <label>ลม · wind</label>
+      <input type="range" id="wind" min="0" max="100" value="35">
+      <span class="val" id="windVal"></span>
+    </div>
+    <div class="ctrl">
+      <label>ฝน · weather trace</label>
+      <input type="range" id="rain" min="0" max="100" value="15">
+      <span class="val" id="rainVal"></span>
+    </div>
+    <div class="ctrl">
+      <label>อายุการเดินทาง · age</label>
+      <input type="range" id="age" min="0" max="100" value="20">
+      <span class="val" id="ageVal"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, DPR;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.clientWidth;
+  H = canvas.clientHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+const controls = {
+  wind: document.getElementById('wind'),
+  rain: document.getElementById('rain'),
+  age: document.getElementById('age'),
+};
+const vals = {
+  wind: document.getElementById('windVal'),
+  rain: document.getElementById('rainVal'),
+  age: document.getElementById('ageVal'),
+};
+function windLabel(v){ return v<25?'สงบ':v<55?'พัดเบา':v<80?'แรง':'พายุ'; }
+function rainLabel(v){ return v<20?'แห้ง':v<55?'ฝนปรอย':v<80?'ฝนหนัก':'เปียกโชก'; }
+function ageLabel(v){ return v<25?'เพิ่งออกเดินทาง':v<60?'ระหว่างทาง':'เดินทางมานาน'; }
+function updateLabels(){
+  vals.wind.textContent = windLabel(+controls.wind.value);
+  vals.rain.textContent = rainLabel(+controls.rain.value);
+  vals.age.textContent = ageLabel(+controls.age.value);
+}
+Object.values(controls).forEach(c => c.addEventListener('input', updateLabels));
+updateLabels();
+
+// ---- letter as a flexible sheet: grid of points warped by a travelling wave ----
+// procedurally drawn, no raster. paper is a rounded quad rendered via bezier-ish mesh.
+
+const COLS = 14;   // resolution across
+const ROWS = 18;   // resolution down (letter is portrait)
+
+function noise(x){ // cheap smooth pseudo-noise
+  return Math.sin(x)*0.5 + Math.sin(x*2.3+1.7)*0.3 + Math.sin(x*4.1+0.6)*0.2;
+}
+
+let t = 0;
+
+function draw(){
+  t += 0.016;
+  ctx.clearRect(0,0,W,H);
+
+  const wind = +controls.wind.value / 100;   // 0..1
+  const rain = +controls.rain.value / 100;
+  const age  = +controls.age.value / 100;
+
+  // letter base size (portrait sheet)
+  const sheetW = Math.min(W, H) * 0.34;
+  const sheetH = sheetW * 1.4;
+  const cx = W/2, cy = H/2;
+
+  // wind drives: sway amplitude, flutter frequency, tilt, drift
+  const sway = 8 + wind*46;                // px lateral warp
+  const freq = 1.2 + wind*3.2;             // wave frequency across sheet
+  const speed = 0.6 + wind*2.6;            // wave travel speed
+  const tilt = (wind-0.35) * 0.5;          // whole-sheet rotation, headwind lean
+  const flap = wind*wind;                  // corner flap intensity
+
+  // gentle floating drift of the whole sheet
+  const driftX = noise(t*0.4)*(6+wind*30);
+  const driftY = noise(t*0.33+9.1)*(5+wind*16);
+
+  // build warped grid
+  const pts = [];
+  for(let r=0;r<=ROWS;r++){
+    const row=[];
+    const v = r/ROWS;                       // 0 top .. 1 bottom
+    for(let c=0;c<=COLS;c++){
+      const u = c/COLS;                     // 0 left .. 1 right
+      // base position centered
+      let x = (u-0.5)*sheetW;
+      let y = (v-0.5)*sheetH;
+
+      // travelling wave along the sheet (paper rippling in wind)
+      const phase = u*freq*Math.PI*2 + v*1.5 - t*speed;
+      const ripple = Math.sin(phase);
+      // amplitude grows toward the trailing edge (right side flaps more) and corners
+      const edge = Math.pow(u,1.6);         // right edge flaps
+      const cornerBoost = 1 + flap*edge*Math.abs(v-0.5)*2.4;
+
+      x += ripple * sway * 0.25 * (0.4+edge);
+      // z-ish vertical bob from ripple -> fake depth via y offset + shading later
+      const z = ripple * (sway*0.5) * edge * cornerBoost;
+      y += z * 0.35;
+
+      // subtle whole-sheet curl
+      x += Math.sin(v*Math.PI)* -sway*0.15;
+
+      row.push({x, y, z, u, v});
+    }
+    pts.push(row);
+  }
+
+  ctx.save();
+  ctx.translate(cx+driftX, cy+driftY);
+  ctx.rotate(tilt*0.4 + noise(t*0.5+3)*0.03);
+
+  // paper color shifts with age (fresh cool-white -> aged warm)
+  const base = mix([236,234,225], [206,190,150], age*0.85); // aged toward parchment
+  const shadowCol = mix([120,116,104],[90,80,60], age);
+
+  // draw mesh quads with shading from z (ripple depth)
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const p00=pts[r][c], p10=pts[r][c+1], p11=pts[r+1][c+1], p01=pts[r+1][c];
+      const zAvg=(p00.z+p10.z+p11.z+p01.z)/4;
+      // shade: raised toward light gets lighter, troughs darker
+      const shade = Math.max(-1,Math.min(1, zAvg/ (sway*0.6+0.001)));
+      const lift = shade*22;
+      const col = [
+        clamp(base[0]+lift), clamp(base[1]+lift), clamp(base[2]+lift)
+      ];
+      // translucency: thin paper -> slight alpha, more translucent when backlit (raised)
+      const alpha = 0.9 - Math.max(0,shade)*0.18;
+      ctx.beginPath();
+      ctx.moveTo(p00.x,p00.y);
+      ctx.lineTo(p10.x,p10.y);
+      ctx.lineTo(p11.x,p11.y);
+      ctx.lineTo(p01.x,p01.y);
+      ctx.closePath();
+      ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // ---- ink text lines (suggested, not real text) warped with the sheet ----
+  ctx.strokeStyle = `rgba(43,43,47,${0.32 - age*0.12})`;
+  ctx.lineWidth = 1;
+  for(let r=3;r<ROWS-2;r+=2){
+    // skip a couple to feel like paragraphs
+    if(r%6===5) continue;
+    ctx.beginPath();
+    const rowY=r;
+    for(let c=1;c<=COLS-1;c++){
+      const p=pts[rowY][c];
+      if(c===1) ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    }
+    // ragged right (line length varies)
+    ctx.stroke();
+  }
+
+  // ---- weather trace: rain blooms on the paper ----
+  if(rain>0.02){
+    const blooms = Math.floor(rain*18);
+    for(let i=0;i<blooms;i++){
+      // deterministic-ish placement by index
+      const u = (Math.sin(i*12.9)*0.5+0.5);
+      const v = (Math.sin(i*7.7+2.1)*0.5+0.5);
+      // sample nearest grid point for warp
+      const gc = Math.min(COLS, Math.max(0, Math.round(u*COLS)));
+      const gr = Math.min(ROWS, Math.max(0, Math.round(v*ROWS)));
+      const p = pts[gr][gc];
+      const rad = (6 + (Math.sin(i*3.3)*0.5+0.5)*22) * (0.5+rain);
+      const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+      const a = 0.10+rain*0.14;
+      g.addColorStop(0, `rgba(90,84,70,${a})`);
+      g.addColorStop(0.6, `rgba(90,84,70,${a*0.4})`);
+      g.addColorStop(1, `rgba(90,84,70,0)`);
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,rad,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // ---- edge / crease darkening when windy (paper stressed) ----
+  if(wind>0.5){
+    ctx.strokeStyle=`rgba(80,72,58,${(wind-0.5)*0.5})`;
+    ctx.lineWidth=1.2;
+    // trailing edge crease
+    ctx.beginPath();
+    for(let r=0;r<=ROWS;r++){
+      const p=pts[r][COLS];
+      if(r===0)ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+    ctx.stroke();
+  }
+
+  // soft drop shadow beneath (ground far below, faint)
+  ctx.restore();
+
+  requestAnimationFrame(draw);
+}
+
+function mix(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+function clamp(v){ return Math.max(0,Math.min(255,v)); }
+
+resize();
+draw();
+</script>
+</body>
+</html>

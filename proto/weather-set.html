@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>จดหมายสายลม — weather set</title>
+<style>
+  :root{ --bg-top:#dfe2e6; --bg-bot:#eee9de; --ink:#33333a; --gold:#c69a54; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:linear-gradient(165deg,var(--bg-top),var(--bg-bot));
+    font-family:'Georgia',serif;color:var(--ink);height:100vh;
+    display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;}
+  #stage{flex:1;position:relative;}
+  canvas{display:block;width:100%;height:100%;}
+  .title{position:absolute;top:20px;left:0;right:0;text-align:center;
+    font-size:12px;letter-spacing:0.4em;opacity:0.4;pointer-events:none;}
+  .hint{position:absolute;top:42px;left:0;right:0;text-align:center;
+    font-size:10.5px;letter-spacing:0.05em;opacity:0.3;font-style:italic;pointer-events:none;}
+  .panel{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,0.5);backdrop-filter:blur(8px);
+    border:1px solid rgba(90,96,110,0.15);border-radius:14px;
+    padding:12px 22px;display:flex;flex-direction:column;gap:5px;align-items:center;}
+  .panel label{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.55;}
+  input[type=range]{width:210px;accent-color:#6b7078;}
+  .val{font-size:11px;opacity:0.45;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title">จดหมายสายลม</div>
+  <div class="hint">— ชุดสภาพอากาศบนเส้นทาง · เบา → รุนแรง —</div>
+  <canvas id="c"></canvas>
+  <div class="panel">
+    <label>ความแรง · intensity</label>
+    <input type="range" id="intensity" min="0" max="100" value="60">
+    <span class="val" id="val"></span>
+    <label style="margin-top:6px">ทิศลม · wind ← →</label>
+    <input type="range" id="wind" min="-100" max="100" value="40">
+    <span class="val" id="windval"></span>
+  </div>
+</div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+let W,H,DPR;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=canvas.clientWidth;H=canvas.clientHeight;
+  canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);
+const slider=document.getElementById('intensity'), valEl=document.getElementById('val');
+const windSlider=document.getElementById('wind'), windValEl=document.getElementById('windval');
+function label(v){return v<25?'เบา':v<55?'ปานกลาง':v<80?'แรง':'พายุ';}
+function windLabel(v){const a=Math.abs(v);const dir=v<-8?'ไปซ้าย':v>8?'ไปขวา':'เกือบนิ่ง';const s=a<30?'เบา':a<70?'กลาง':'แรง';return(v>-8&&v<8)?dir:dir+' · '+s;}
+slider.addEventListener('input',()=>valEl.textContent=label(+slider.value));
+windSlider.addEventListener('input',()=>windValEl.textContent=windLabel(+windSlider.value));
+valEl.textContent=label(+slider.value);windValEl.textContent=windLabel(+windSlider.value);
+
+const col=(a)=>`rgba(84,90,104,${a})`;
+let t=0;
+function frac(v){return v-Math.floor(v);}
+
+// ---------- CLEAR: calm, near-empty, soft warm light ----------
+function clear(cx,cy,intensity){
+  // "intensity" here reads as how fair — but keep it always gentle
+  ctx.save();ctx.translate(cx,cy);
+  // soft warm glow (sun-ish) — very subtle
+  const r=40;
+  const g=ctx.createRadialGradient(0,-4,0,0,-4,r);
+  g.addColorStop(0,'rgba(198,154,84,0.14)');
+  g.addColorStop(0.5,'rgba(198,154,84,0.05)');
+  g.addColorStop(1,'rgba(198,154,84,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,-4,r,0,Math.PI*2);ctx.fill();
+  // a couple of very faint drifting calm lines (still air breathing)
+  ctx.strokeStyle=col(0.10);
+  ctx.lineWidth=1;ctx.lineCap='round';
+  for(let i=0;i<2;i++){
+    const yy=-6+i*12 + Math.sin(t*0.6+i)*1.5;
+    ctx.beginPath();
+    ctx.moveTo(-16,yy);
+    ctx.quadraticCurveTo(0,yy-2,16,yy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------- WIND: flowing streamlines along a direction ----------
+function wind(cx,cy,intensity,dir){
+  // dir: -1..1 (left..right). draw flowing horizontal-ish streaks with moving dashes
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const zoneW=52, zoneH=44;
+  const lanes=Math.round(3+intensity*4);
+  const flowDir=dir>=0?1:-1;
+  const strength=0.3+Math.abs(dir)*0.7+intensity*0.4;
+  for(let l=0;l<lanes;l++){
+    const yy=(-zoneH/2)+(l/(lanes-1||1))*zoneH + Math.sin(t*0.8+l*1.3)*2;
+    // a gentle wave path across the zone
+    const amp=3+Math.sin(l*2.1)*2;
+    // draw as a series of short moving segments (dashes) to show flow
+    const segN=7;
+    for(let s=0;s<segN;s++){
+      // animated phase makes dashes travel in flow direction
+      const p=frac(s/segN + t*(0.15+intensity*0.25)*flowDir);
+      const x0=(-zoneW/2)+p*zoneW;
+      const len=6+intensity*6;
+      const x1=x0+len*flowDir;
+      const cxx=(x0+x1)/2;
+      const y0=yy+Math.sin((x0/zoneW)*Math.PI*2+t*0.8+l)*amp;
+      const y1=yy+Math.sin((x1/zoneW)*Math.PI*2+t*0.8+l)*amp;
+      // fade at zone edges
+      const edgeFade=Math.min(1,(1-Math.abs(x0)/(zoneW/2))*2.2);
+      ctx.strokeStyle=col(Math.max(0,(0.14+intensity*0.22)*strength*edgeFade));
+      ctx.lineWidth=0.8+intensity*0.8;
+      ctx.beginPath();
+      ctx.moveTo(x0,y0);
+      ctx.quadraticCurveTo(cxx,(y0+y1)/2,x1,y1);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ---------- RAIN A ----------
+function rainA(cx,cy,intensity,lean){
+  const zoneW=52,zoneH=52;
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const n=Math.round(13+intensity*15);
+  for(let i=0;i<n;i++){
+    const bx=(frac(Math.sin(i*12.9)*0.5+0.5)-0.5)*zoneW*2;
+    const speed=0.8+frac(Math.sin(i*5.1)*0.5+0.5)*0.5;
+    let by=(frac(Math.sin(i*7.7)*0.5+0.5)+t*speed);by=(by%1)*zoneH*2-zoneH;
+    const len=7+frac(Math.sin(i*3.1)*0.5+0.5)*5;
+    const depth=frac(Math.sin(i*9.3)*0.5+0.5);
+    ctx.strokeStyle=col((0.22+intensity*0.35)*(0.5+depth*0.5));
+    ctx.lineWidth=0.8+depth*0.8;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+lean*len,by+len);ctx.stroke();
+  }
+  ctx.restore();
+}
+// ---------- RAIN C ----------
+function rainC(cx,cy,intensity,lean){
+  const zoneW=48,zoneH=48;
+  ctx.save();ctx.translate(cx,cy);ctx.lineCap='round';
+  const g=ctx.createRadialGradient(0,0,0,0,0,zoneW);
+  g.addColorStop(0,col(0.05));g.addColorStop(1,col(0));
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,zoneW,0,Math.PI*2);ctx.fill();
+  const n=Math.round(30+intensity*26);
+  for(let i=0;i<n;i++){
+    const bx=(frac(Math.sin(i*12.9)*0.5+0.5)-0.5)*zoneW*2;
+    const speed=0.5+frac(Math.sin(i*5.1)*0.5+0.5)*0.4;
+    let by=(frac(Math.sin(i*7.7)*0.5+0.5)+t*speed);by=(by%1)*zoneH*2-zoneH;
+    const depth=frac(Math.sin(i*9.3)*0.5+0.5);
+    const len=2+depth*4;
+    ctx.strokeStyle=col((0.12+intensity*0.28)*(0.4+depth*0.6));
+    ctx.lineWidth=0.6+depth*0.7;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+lean*len,by+len);ctx.stroke();
+  }
+  ctx.restore();
+}
+// ---------- STORM ----------
+function spiralArm(offset,turns,size,breathe,baseAlpha){
+  const steps=46;
+  for(let i=0;i<steps;i++){
+    const f0=i/steps,f1=(i+1)/steps;
+    const a0=offset+f0*turns*Math.PI*2,a1=offset+f1*turns*Math.PI*2;
+    const r0=size*breathe*Math.pow(f0,0.62),r1=size*breathe*Math.pow(f1,0.62);
+    const fade=Math.pow(1-f0,0.7);
+    ctx.strokeStyle=`rgba(84,90,104,${baseAlpha*fade})`;
+    ctx.beginPath();ctx.moveTo(Math.cos(a0)*r0,Math.sin(a0)*r0);
+    ctx.lineTo(Math.cos(a1)*r1,Math.sin(a1)*r1);ctx.stroke();
+  }
+}
+function storm(x,y,intensity){
+  const size=9+intensity*14,breathe=1+Math.sin(t*1.8)*0.06,spin=t*(0.35+intensity*0.6);
+  ctx.save();ctx.translate(x,y);ctx.rotate(spin);ctx.lineCap='round';
+  const arms=3,turns=0.72+intensity*0.28;
+  for(let a=0;a<arms;a++){const off=a*Math.PI*2/arms;
+    ctx.lineWidth=5;spiralArm(off,turns,size,breathe,0.12+intensity*0.10);
+    ctx.lineWidth=1.4;spiralArm(off,turns,size,breathe,0.42+intensity*0.40);}
+  for(let a=0;a<arms;a++){const off=a*Math.PI*2/arms+Math.PI/arms;
+    ctx.lineWidth=0.9;spiralArm(off,turns*0.6,size*0.55,breathe,0.18+intensity*0.12);}
+  ctx.restore();
+  const eyeR=size*0.16;
+  const glow=ctx.createRadialGradient(x,y,0,x,y,eyeR*2.6);
+  glow.addColorStop(0,col(0.30+intensity*0.22));glow.addColorStop(1,col(0));
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,eyeR*2.6,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath();ctx.arc(x,y,eyeR,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.strokeStyle=col(0.45+intensity*0.3);ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(x,y,eyeR,0,Math.PI*2);ctx.stroke();
+}
+
+function lbl(x,y,txt){ctx.fillStyle=col(0.5);ctx.font='11.5px sans-serif';ctx.textAlign='center';ctx.fillText(txt,x,y);}
+
+function frame(){
+  t+=0.016;
+  ctx.clearRect(0,0,W,H);
+  const intensity=+slider.value/100;
+  const dir=+windSlider.value/100;
+  const lean=dir*0.55;
+  const cy=H*0.40;
+  const xs=[0.12,0.31,0.5,0.69,0.88].map(f=>W*f);
+  clear(xs[0],cy,intensity);           lbl(xs[0],H*0.62,'แจ่มใส');
+  wind (xs[1],cy,intensity,dir);        lbl(xs[1],H*0.62,'ลม');
+  rainC(xs[2],cy,intensity,lean);       lbl(xs[2],H*0.62,'ฝนปรอย');
+  rainA(xs[3],cy,intensity,lean);       lbl(xs[3],H*0.62,'ฝนหนัก');
+  storm(xs[4],cy,intensity);            lbl(xs[4],H*0.62,'พายุ');
+  requestAnimationFrame(frame);
+}
+resize();frame();
+</script>
+</body>
+</html>

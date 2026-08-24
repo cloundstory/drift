@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>จดหมายสายลม — globe study</title>
+<style>
+  :root{
+    --bg-top:#dfe2e6;
+    --bg-bot:#eee9de;
+    --ink:#33333a;
+    --globe-line:rgba(90,96,105,0.28);
+    --globe-rim:rgba(70,76,86,0.55);
+    --route:rgba(120,110,88,0.9);
+    --gold:#c69a54;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    background:linear-gradient(165deg,var(--bg-top),var(--bg-bot));
+    font-family:'Georgia',serif;color:var(--ink);
+    height:100vh;display:flex;flex-direction:column;
+    -webkit-user-select:none;user-select:none;
+    touch-action:none;
+  }
+  #stage{flex:1;position:relative;}
+  canvas{display:block;width:100%;height:100%;}
+  .title{
+    position:absolute;top:24px;left:0;right:0;text-align:center;
+    font-size:12px;letter-spacing:0.4em;opacity:0.4;pointer-events:none;
+  }
+  .hint{
+    position:absolute;top:46px;left:0;right:0;text-align:center;
+    font-size:10.5px;letter-spacing:0.05em;opacity:0.3;font-style:italic;pointer-events:none;
+  }
+  .legend{
+    position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;gap:18px;font-size:10.5px;opacity:0.5;
+    background:rgba(255,255,255,0.4);backdrop-filter:blur(6px);
+    padding:8px 16px;border-radius:10px;letter-spacing:0.03em;
+    pointer-events:none;white-space:nowrap;
+  }
+  .legend b{font-weight:normal;color:var(--gold);}
+  .stormtoggle{
+    position:absolute;top:72px;left:50%;transform:translateX(-50%);
+    font-size:11px;letter-spacing:0.05em;opacity:0.6;
+    background:rgba(255,255,255,0.5);backdrop-filter:blur(6px);
+    padding:6px 14px;border-radius:20px;cursor:pointer;
+    border:1px solid rgba(90,96,110,0.2);
+  }
+  .stormtoggle:active{opacity:0.9;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title">จดหมายสายลม</div>
+  <div class="hint">— แบบร่างโลก · ปัดเพื่อหมุน · แตะพายุเพื่อดูใกล้ —</div>
+  <canvas id="c"></canvas>
+  <div class="legend">
+    <span><b>●</b> จดหมายของคุณ</span>
+    <span><b>◉</b> พายุ</span>
+    <span><b>○</b> ปลายทาง</span>
+  </div>
+  <div class="stormtoggle" id="stormtoggle">พายุ: รายละเอียดเยอะ ▾</div>
+</div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let W,H,DPR,R,CX,CY;
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=canvas.clientWidth;H=canvas.clientHeight;
+  canvas.width=W*DPR;canvas.height=H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  R=Math.min(W,H)*0.32;
+  CX=W/2;CY=H*0.46;
+}
+window.addEventListener('resize',resize);
+
+// ---- rotation state (user-driven only; globe is still) ----
+let rotY=0.3, rotX=-0.25;      // yaw, pitch
+let vY=0, vX=0;                // inertia
+let dragging=false, lastX=0, lastY=0;
+
+const stage=document.getElementById('stage');
+function pt(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};}
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.stormtoggle'))return;
+  dragging=true;const p=pt(e);lastX=p.x;lastY=p.y;vY=vX=0;
+});
+stage.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  const p=pt(e);
+  const dx=(p.x-lastX)/R, dy=(p.y-lastY)/R;
+  rotY-=dx; rotX+=dy;
+  rotX=Math.max(-1.3,Math.min(1.3,rotX));
+  vY=-dx; vX=dy;
+  lastX=p.x;lastY=p.y;
+});
+window.addEventListener('pointerup',()=>{dragging=false;});
+
+// ---- 3D helpers: lat/lng -> sphere -> rotate -> project ----
+function toXYZ(latDeg,lngDeg){
+  const lat=latDeg*Math.PI/180, lng=lngDeg*Math.PI/180;
+  return {
+    x:Math.cos(lat)*Math.sin(lng),
+    y:Math.sin(lat),
+    z:Math.cos(lat)*Math.cos(lng)
+  };
+}
+function rotate(p){
+  // yaw around Y
+  let x=p.x*Math.cos(rotY)-p.z*Math.sin(rotY);
+  let z=p.x*Math.sin(rotY)+p.z*Math.cos(rotY);
+  let y=p.y;
+  // pitch around X
+  let y2=y*Math.cos(rotX)-z*Math.sin(rotX);
+  let z2=y*Math.sin(rotX)+z*Math.cos(rotX);
+  return {x, y:y2, z:z2};
+}
+function project(p){ return {x:CX+p.x*R, y:CY-p.y*R, z:p.z}; }
+function pipeline(lat,lng){ return project(rotate(toXYZ(lat,lng))); }
+
+// great-circle interpolation between two lat/lng (slerp on sphere)
+function slerp(a,b,t){
+  const pa=toXYZ(a.lat,a.lng), pb=toXYZ(b.lat,b.lng);
+  let dot=pa.x*pb.x+pa.y*pb.y+pa.z*pb.z;
+  dot=Math.max(-1,Math.min(1,dot));
+  const om=Math.acos(dot);
+  if(om<1e-4) return pa;
+  const s0=Math.sin((1-t)*om)/Math.sin(om);
+  const s1=Math.sin(t*om)/Math.sin(om);
+  return {x:pa.x*s0+pb.x*s1, y:pa.y*s0+pb.y*s1, z:pa.z*s0+pb.z*s1};
+}
+
+// ---- scene data ----
+const HOME={lat:13.7,lng:101.1,name:'ฉะเชิงเทรา'}; // near Bangkok
+const routes=[
+  {to:{lat:35.6,lng:139.7,name:'โตเกียว'}, prog:0.62, storm:0.55, stormAt:0.5},
+  {to:{lat:48.85,lng:2.35,name:'ปารีส'},   prog:0.30, storm:0.2,  stormAt:0.45},
+  {to:{lat:37.77,lng:-122.4,name:'ซานฟรานซิสโก'}, prog:0.45, storm:0.85, stormAt:0.55},
+  {to:{lat:-33.86,lng:151.2,name:'ซิดนีย์'}, prog:0.15, storm:0, stormAt:0},
+];
+
+let t=0;
+
+function drawGlobe(){
+  // faint filled disc for the sphere body (very subtle)
+  const g=ctx.createRadialGradient(CX-R*0.3,CY-R*0.35,R*0.2, CX,CY,R*1.05);
+  g.addColorStop(0,'rgba(255,255,255,0.35)');
+  g.addColorStop(1,'rgba(200,196,186,0.05)');
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fill();
+
+  // rim
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--globe-rim');
+  ctx.lineWidth=1.1;
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.stroke();
+
+  ctx.lineWidth=0.8;
+  const lineCol=getComputedStyle(document.documentElement).getPropertyValue('--globe-line');
+
+  // latitude lines (few, clean)
+  for(let lat=-60;lat<=60;lat+=30){
+    drawParallel(lat,lineCol);
+  }
+  // longitude lines
+  for(let lng=0;lng<360;lng+=30){
+    drawMeridian(lng,lineCol);
+  }
+}
+
+function drawParallel(lat,col){
+  ctx.strokeStyle=col;
+  let started=false;
+  ctx.beginPath();
+  for(let lng=0;lng<=360;lng+=6){
+    const p=pipeline(lat,lng);
+    const front=p.z>=0;
+    if(front){
+      if(!started){ctx.moveTo(p.x,p.y);started=true;}
+      else ctx.lineTo(p.x,p.y);
+    } else {
+      started=false;
+    }
+  }
+  ctx.stroke();
+}
+function drawMeridian(lng,col){
+  ctx.strokeStyle=col;
+  let started=false;
+  ctx.beginPath();
+  for(let lat=-90;lat<=90;lat+=6){
+    const p=pipeline(lat,lng);
+    const front=p.z>=0;
+    if(front){
+      if(!started){ctx.moveTo(p.x,p.y);started=true;}
+      else ctx.lineTo(p.x,p.y);
+    } else started=false;
+  }
+  ctx.stroke();
+}
+
+function drawRoute(r){
+  // path (great circle) with occlusion behind sphere
+  ctx.lineWidth=1.4;
+  let started=false;
+  for(let i=0;i<=60;i++){
+    const t01=i/60;
+    const sp=slerp(HOME,r.to,t01);
+    const pr=project(rotate(sp));
+    const front=pr.z>=0;
+    if(front){
+      ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--route');
+      if(!started){ctx.beginPath();ctx.moveTo(pr.x,pr.y);started=true;}
+      else ctx.lineTo(pr.x,pr.y);
+    } else {
+      if(started){ctx.stroke();started=false;}
+    }
+  }
+  if(started)ctx.stroke();
+
+  // endpoints
+  const home=project(rotate(toXYZ(HOME.lat,HOME.lng)));
+  const dest=project(rotate(toXYZ(r.to.lat,r.to.lng)));
+  drawNode(home,r,'home');
+  drawNode(dest,r,'dest');
+
+  // storm marker on route
+  if(r.storm>0.05){
+    const sp=slerp(HOME,r.to,r.stormAt);
+    const ps=project(rotate(sp));
+    if(ps.z>=0) drawStorm(ps.x,ps.y,r.storm);
+  }
+
+  // travelling letter dot
+  const lp=slerp(HOME,r.to,r.prog);
+  const pl=project(rotate(lp));
+  if(pl.z>=-0.05) drawLetter(pl.x,pl.y,pl.z);
+}
+
+function drawNode(p,r,kind){
+  if(p.z<-0.1)return;
+  const a=p.z<0?0.25:0.9;
+  if(kind==='home'){
+    ctx.fillStyle=`rgba(60,60,66,${a})`;
+    ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill();
+  } else {
+    ctx.strokeStyle=`rgba(60,60,66,${a})`;
+    ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.stroke();
+  }
+}
+
+function drawLetter(x,y,z){
+  const a=z<0?0.3:1;
+  // gold dot with soft halo + tiny trailing shimmer
+  const halo=ctx.createRadialGradient(x,y,0,x,y,9);
+  halo.addColorStop(0,`rgba(198,154,84,${0.45*a})`);
+  halo.addColorStop(1,'rgba(198,154,84,0)');
+  ctx.fillStyle=halo;
+  ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=`rgba(210,168,96,${a})`;
+  ctx.beginPath();ctx.arc(x,y,2.8,0,Math.PI*2);ctx.fill();
+}
+
+let stormDetail=1; // 0 = medium, 1 = rich
+
+// logarithmic spiral arm — sweeping curves that open outward like cyclone bands
+// fades toward the tail so arms dissolve like cloud, not a tight coil
+function spiralArm(offset,turns,size,breathe,baseAlpha){
+  const steps=48;
+  for(let i=0;i<steps;i++){
+    const f0=i/steps, f1=(i+1)/steps;
+    const a0=offset+f0*turns*Math.PI*2, a1=offset+f1*turns*Math.PI*2;
+    // wider opening: radius grows faster near tail (pow<1 pushes mass outward)
+    const r0=size*breathe*Math.pow(f0,0.62), r1=size*breathe*Math.pow(f1,0.62);
+    // fade tail out
+    const fade=Math.pow(1-f0,0.7);
+    ctx.strokeStyle=`rgba(84,90,104,${baseAlpha*fade})`;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a0)*r0,Math.sin(a0)*r0);
+    ctx.lineTo(Math.cos(a1)*r1,Math.sin(a1)*r1);
+    ctx.stroke();
+  }
+}
+
+function drawStorm(x,y,intensity){
+  const size=9+intensity*15;
+  const breathe=1+Math.sin(t*1.8)*0.06;
+  const spin=t*(0.35+intensity*0.6);
+
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(spin);
+  ctx.lineCap='round';
+
+  const arms = stormDetail===1 ? 3 : 2;
+  const turns = 0.72 + intensity*0.28;   // fewer turns -> open sweeping bands
+
+  for(let a=0;a<arms;a++){
+    const off=a*Math.PI*2/arms;
+    // soft wide cloud band underneath
+    ctx.lineWidth=5;
+    spiralArm(off,turns,size,breathe,0.12+intensity*0.10);
+    // crisp core on top
+    ctx.lineWidth=1.4;
+    spiralArm(off,turns,size,breathe,0.42+intensity*0.40);
+  }
+
+  if(stormDetail===1){
+    // inner short wisps between arms — subtle, deepen the swirl
+    for(let a=0;a<arms;a++){
+      const off=a*Math.PI*2/arms + Math.PI/arms;
+      ctx.lineWidth=0.9;
+      spiralArm(off,turns*0.6,size*0.55,breathe,0.18+intensity*0.12);
+    }
+  }
+
+  ctx.restore();
+
+  // ---- eye: calm still center ----
+  const eyeR=size*0.16;
+  const glow=ctx.createRadialGradient(x,y,0,x,y,eyeR*2.6);
+  glow.addColorStop(0,`rgba(84,90,104,${0.30+intensity*0.22})`);
+  glow.addColorStop(1,'rgba(84,90,104,0)');
+  ctx.fillStyle=glow;
+  ctx.beginPath();ctx.arc(x,y,eyeR*2.6,0,Math.PI*2);ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath();ctx.arc(x,y,eyeR,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle=`rgba(84,90,104,${0.45+intensity*0.3})`;
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(x,y,eyeR,0,Math.PI*2);ctx.stroke();
+}
+
+function frame(){
+  t+=0.016;
+  // inertia when not dragging
+  if(!dragging){
+    rotY+=vY; rotX+=vX;
+    rotX=Math.max(-1.3,Math.min(1.3,rotX));
+    vY*=0.94; vX*=0.94;
+    if(Math.abs(vY)<0.0002)vY=0;
+    if(Math.abs(vX)<0.0002)vX=0;
+  }
+  ctx.clearRect(0,0,W,H);
+  drawGlobe();
+  // draw routes: sort so front letters render last
+  routes.forEach(drawRoute);
+  requestAnimationFrame(frame);
+}
+
+const toggle=document.getElementById('stormtoggle');
+toggle.addEventListener('click',()=>{
+  stormDetail=stormDetail===1?0:1;
+  toggle.textContent=stormDetail===1?'พายุ: รายละเอียดเยอะ ▾':'พายุ: ปานกลาง ▾';
+});
+toggle.addEventListener('pointerdown',e=>e.stopPropagation());
+
+resize();
+frame();
+</script>
+</body>
+</html>

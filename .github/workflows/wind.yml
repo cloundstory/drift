@@ -1,0 +1,43 @@
+name: drift wind cache
+
+# ทุก 6 ชั่วโมง — ไม่ถี่กว่านี้เพราะแบบจำลองต้นทางอัปเดตทุก 3-6 ชม.
+# และหนึ่งคำขอได้พยากรณ์ล่วงหน้า 96 ชม. อยู่แล้ว (ข้อ 58)
+# 1,480 คำขอ/รอบ × 4 รอบ/วัน = 5,920 จากเพดานฟรี 10,000 → เหลือ 41% ให้เส้นทางนอกภูมิภาค
+on:
+  schedule:
+    - cron: '10 0,6,12,18 * * *'
+  workflow_dispatch:        # กดรันเองได้ ใช้ตอนทดสอบหรือตอน cron หลุด
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wind-cache
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # สคริปต์ใช้ไลบรารีมาตรฐานล้วน ไม่มีอะไรต้องติดตั้ง
+      - name: ดึงลม
+        run: python tools/fetch_wind.py
+
+      - name: commit ถ้าข้อมูลเปลี่ยน
+        run: |
+          git config user.name  "drift wind bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add wind/
+          if git diff --staged --quiet; then
+            echo "ลมเหมือนเดิม ไม่ต้อง commit"
+          else
+            git commit -m "wind cache $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
