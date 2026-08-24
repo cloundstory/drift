@@ -280,7 +280,7 @@ function stormStrands(L,tf){
           spdAcc+=sp;
           p=APP.destPoint(p.lat,p.lng, Math.atan2(w.e,w.n)*180/Math.PI, stepKm);
           pts.push(APP.toXYZ(p.lat,p.lng));
-          if(APP.gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.055) break;   /* ถึงกำแพงตา */
+          if(APP.gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.085) break;   /* ถึงกำแพงตา */
         }
         if(ok&&pts.length>2){ pts.spd=spdAcc/LY.steps; pts.w=LY.w; out.push(pts); }
       }
@@ -299,10 +299,14 @@ function vortexAt(dx,dy,R,spin,inflow){
   const WALL=0.16;
   const v = rn<WALL ? (rn/WALL) : Math.pow(WALL/rn, 0.5);
   const tx=-dy/r*spin, ty=dx/r*spin;
-  /* มุมไหลเข้าเกือบคงที่ ไม่ใช่จางหายที่ขอบ — ของจริงลมพัดเฉียงเข้าหาตาราว 20-30° ตลอด
+  /* มุมไหลเข้าเกือบคงที่ในอากาศเปิด — ของจริงลมพัดเฉียงเข้าหาตาราว 20-30° ตลอด
      ถ้าให้แรงไหลเข้าตกเป็นศูนย์ที่ขอบ อนุภาคจะ *โคจรเป็นวงกลม* ไม่ใช่พันเข้าหาตา
-     ซึ่งคือสิ่งที่ทำให้ภาพออกมาเป็นเรขาคณิต */
-  const q=inflow*(0.75+0.45*Math.min(1,rn));
+
+     แต่ *ข้างใน* กำแพงตาต้องกลับกัน — ลมที่นั่นเกือบหมุนเป็นวงล้วน แทบไม่ไหลเข้าแล้ว
+     ถ้าปล่อยให้ไหลเข้าเท่าเดิม ทุกริ้วจะวิ่งไปกองที่จุดเดียวกันจนเป็นปมเส้นพันกัน
+     ซึ่งคือสิ่งที่เห็นตอนซูมลึก — พอลดมุมลงตามจริง ตาพายุจะเกิดเป็นวงว่างขึ้นมาเอง */
+  const wall=Math.min(1,Math.max(0,(rn-0.07)/0.26));
+  const q=inflow*(0.75+0.45*Math.min(1,rn))*(wall*wall*(3-2*wall));
   return { x:(tx - dx/r*q), y:(ty - dy/r*q), v };
 }
 /* แฮชคงที่ ห้ามใช้ Math.random — ผู้ส่งกับผู้รับต้องได้ภาพเดียวกัน */

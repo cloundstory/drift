@@ -2924,7 +2924,12 @@ function vortexEN(lat,lng,S){
   const WALL=0.16;
   const v = rn<WALL ? rn/WALL : Math.pow(WALL/rn,0.5);
   const brg = bearing({lat:S.lat,lng:S.lng},{lat,lng});
-  const wb  = (brg - (90+VORTEX.INFLOW_DEG)*S.spin) * Math.PI/180;
+  /* ข้างในกำแพงตา ลมเกือบหมุนเป็นวงล้วน แทบไม่ไหลเข้าแล้ว
+     ถ้าปล่อยให้ไหลเข้าเท่าเดิม ทุกริ้วจะวิ่งไปกองที่จุดเดียวจนเป็นปมเส้นพันกัน
+     พอลดมุมลงตามจริง ตาพายุจะเกิดเป็นวงว่างขึ้นมาเอง */
+  const wl = cl((rn-0.07)/0.26, 0, 1);
+  const inflow = VORTEX.INFLOW_DEG * (wl*wl*(3-2*wl));
+  const wb  = (brg - (90+inflow)*S.spin) * Math.PI/180;
   const k = 1 - cl((rn-VORTEX.NEAR)/(VORTEX.FAR-VORTEX.NEAR), 0, 1);
   return { e:Math.sin(wb)*v, n:Math.cos(wb)*v, blend:k*k*(3-2*k), rn };
 }
@@ -2984,7 +2989,7 @@ function stormStrands(L,tf){
           acc+=sp;
           p = destPoint(p.lat,p.lng, Math.atan2(w.e,w.n)*180/Math.PI, stepKm);
           pts.push(toXYZ(p.lat,p.lng));
-          if(gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.055) break;
+          if(gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.085) break;
         }
         if(ok && pts.length>2){ pts.spd=acc/LY.steps; pts.w=LY.w; out.push(pts); }
       }
