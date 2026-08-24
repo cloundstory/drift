@@ -248,8 +248,17 @@ const CFG = {
   FLOOR_MIN:  0.5,       // พื้นแข็ง — ต่อให้ลมส่งท้ายแรงแค่ไหนก็ต้องไม่เร็วกว่าครึ่งชั่วโมง
   WIND_CAP:   0.28,      // เพดานผลของลมส่งท้าย/ปะทะ ±28%
   WIND_REF:   150,       // ตัวหาร: ลม 42 กม./ชม. ตรงทิศ = เร็วขึ้นเต็มเพดาน
-  HOLD_KMH:   50,        // พายุปานกลาง — จอดรอ
-  LOST_KMH:   88,        // พายุรุนแรง — เสี่ยงหาย
+  /* ---------- เกณฑ์พายุ อ่านจาก "ลมกระโชก" ไม่ใช่ลมต่อเนื่อง (ข้อ 62) ----------
+     ลมต่อเนื่องบอกว่าอากาศเคลื่อนที่เฉลี่ยเท่าไหร่ · กระโชกบอกว่ามันกระชากแรงสุดเท่าไหร่
+     สิ่งที่ฉีกกระดาษคืออย่างหลัง — วัดแล้วว่าตอนกระโชกแตะ 50 ลมต่อเนื่องอยู่แค่ 25.9 เฉลี่ย
+     ข้อมูลนั้นไม่มีอยู่ในค่าเฉลี่ย เค้นออกมาไม่ได้ (ดูตารางความแม่นในข้อ 62)
+
+     50/95 เป็น "เกณฑ์กระดาษ" ไม่ใช่เกณฑ์โบฟอร์ต — โบฟอร์ตนิยามจากต้นไม้และเรือ
+     แต่ drift ส่งกระดาษ A4 หนึ่งแผ่น ซึ่งหลุดมือตั้งแต่กระโชก 50
+     ถ้าแปลเกณฑ์เดิมตามความหมายอุตุฯ จะได้ 66/125 (อัตราส่วนที่วัดได้ 1.32-1.40)
+     ซึ่งทั้งประเทศไทยแทบไม่ยิงเลย — เป็นการตัดสินใจเชิงออกแบบ ไม่ใช่ค่าอุตุฯ */
+  GUST_HOLD:  50,        // กระโชกปานกลาง — จอดรอ
+  GUST_LOST:  95,        // กระโชกรุนแรง — เสี่ยงหาย
   HOLD_MAX:   6,         // ชม. จอดสูงสุด (ปานกลาง)
   HOLD_MAX_S: 12,        // ชม. จอดสูงสุด (รุนแรง)
   LOSS_CROSS: 0.14,      // โอกาสหายเมื่อเจอพายุรุนแรง
@@ -382,9 +391,13 @@ function sanitizeRec(r){
                  la:_num(q&&q.la,-90,90,0), lo:_num(q&&q.lo,-180,180,0) });
   const lg=r.lg.map(l=>{
     const a=Array.isArray(l)?l:[];
-    return [ _num(a[0],0,240,0.1), _num(a[1],0,48,0), Math.round(_num(a[2],0,400,12)),
+    const spd=Math.round(_num(a[2],0,400,12));
+    /* ช่องที่ 8 = ลมกระโชก (ข้อ 62) · ลิงก์เก่าไม่มีช่องนี้ → ถอยไปใช้ลมต่อเนื่อง
+       ระดับพายุ (ช่องที่ 7) ถูกคิดและเก็บไว้ตั้งแต่ตอนส่งแล้ว จดหมายเก่าจึงไม่เปลี่ยนพฤติกรรม */
+    return [ _num(a[0],0,240,0.1), _num(a[1],0,48,0), spd,
              Math.round(_num(a[3],0,360,180)), _num(a[4],0,500,0),
-             Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,2,0)) ];
+             Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,2,0)),
+             Math.round(_num(a[7],0,400,spd)) ];
   });
   /* wf ต้องเป็นตัวอักษรในชุด base64 เท่านั้น — ตัวแปลกทำให้ถอดออกมาเป็น NaN แล้วลมหายทั้งสนาม */
   const wfOk = typeof r.wf==='string' && r.wf.length<=8000 && /^[A-Za-z0-9+/]*$/.test(r.wf);
@@ -444,7 +457,8 @@ function wcManifest(){
       const r=await fetch(WCACHE.DIR+'index.json',{cache:'no-cache'});
       if(!r.ok) return null;
       const m=await r.json();
-      return (m&&m.v===1&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
+      /* v2 = มีชั้นลมกระโชกแล้ว (ข้อ 62) · แคชรุ่นเก่าไม่มีชั้นนี้ ใช้ต่อไม่ได้ ปล่อยให้ถอยไปยิงตรง */
+      return (m&&m.v===2&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
     }catch(e){ return null; }     /* ไม่มีแคชก็ไม่ใช่ความผิดพลาด แค่ถอยไปทางเดิม */
   })();
   return _wcMan;
@@ -474,7 +488,7 @@ async function wcLoad(man,t){
   /* zlib.compress ของ python มีหัว zlib จึงเป็น 'deflate' ไม่ใช่ 'deflate-raw' */
   const ds=new DecompressionStream('deflate');
   const out=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer());
-  if(out.length!==3*t.slices*t.nx*t.ny) throw new Error('tile size');
+  if(out.length!==4*t.slices*t.nx*t.ny) throw new Error('tile size');
   t._d=out; return out;
 }
 /* อ่านลมของพิกัดหนึ่งออกมาในรูปเดียวกับที่ Open-Meteo คืนมา
@@ -487,22 +501,24 @@ function wcSeries(t,d,lat,lng){
   const w=[[x0,y0,(1-fx)*(1-fy)],[x1,y0,fx*(1-fy)],[x0,y1,(1-fx)*fy],[x1,y1,fx*fy]];
   const at=(v,sl,ix,iy)=>d[(v*t.slices+sl)*n + iy*t.nx + ix];
   const t0=Date.parse(t.t0+':00Z');
-  const time=[],spd=[],dir=[],pre=[];
+  const time=[],spd=[],dir=[],pre=[],gst=[];
   for(let sl=0;sl<t.slices;sl++){
     time.push(new Date(t0+sl*t.stepH*3600000).toISOString().slice(0,16));
-    let sp=0, pr=0, ex=0, nn=0;
+    let sp=0, pr=0, ex=0, nn=0, gu=0;
     for(const [ix,iy,k] of w){
       sp += at(0,sl,ix,iy)*2*k;                    /* 1 หน่วย = 2 กม./ชม. */
       pr += at(2,sl,ix,iy)*0.1*k;                  /* 1 หน่วย = 0.1 มม. */
+      gu += at(3,sl,ix,iy)*2*k;                    /* ชั้นที่ 4 = กระโชก หน่วยเดียวกับลม (ข้อ 62) */
       /* ทิศเป็นมุม เฉลี่ยตรง ๆ ไม่ได้ — 350° กับ 10° จะได้ 180° ซึ่งตรงข้ามกับความจริง
          ต้องแตกเป็นเวกเตอร์ก่อนแล้วค่อยรวม */
       const a=at(1,sl,ix,iy)*5.625*RAD;
       ex+=Math.sin(a)*k; nn+=Math.cos(a)*k;
     }
-    spd.push(sp); pre.push(pr);
+    spd.push(sp); pre.push(pr); gst.push(gu);
     dir.push((Math.atan2(ex,nn)*DEG+360)%360);
   }
-  return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre}};
+  return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre,
+                  wind_gusts_10m:gst}};
 }
 /* ดึงพยากรณ์ทุกจุดบนเส้นทางในคำขอเดียว (Open-Meteo รับหลายพิกัดได้)
    ลองแคชภูมิภาคก่อนเสมอ ไม่ได้ค่อยยิงตรง */
@@ -527,7 +543,7 @@ async function fetchWxLive(pts){
   const lo=pts.map(p=>p.lng.toFixed(3)).join(',');
   const u='https://api.open-meteo.com/v1/forecast'
     +'?latitude='+la+'&longitude='+lo
-    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation'
+    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m'
     +'&wind_speed_unit=kmh&forecast_days=4&timezone=UTC';
   /* คำขอที่ค้างจะค้างตลอดไป ผู้ใช้เห็นแค่ปุ่มกดไม่ได้ — ต้องมีเพดานเวลาเสมอ */
   const ac=new AbortController();
@@ -542,25 +558,39 @@ async function fetchWxLive(pts){
 }
 function sampleWx(loc,hoursFromNow){
   const h=loc&&loc.hourly;
-  if(!h||!h.time) return {spd:12,dir:180,pre:0};
+  if(!h||!h.time) return {spd:12,dir:180,pre:0,gst:18};
   /* หา offset ของ "ตอนนี้" จากเวลาแรกในชุด
      ชุดจาก API ห่างกัน 1 ชม. · ชุดจากแคชภูมิภาคห่างกัน 3 ชม. → ต้องอ่านระยะห่างจากข้อมูลเอง
      ไม่ใช่สมมติว่าเป็นราย 1 ชม. (ข้อ 58) */
   const t0=Date.parse(h.time[0]+':00Z');
   const stepH = h.time.length>1 ? Math.max(1,(Date.parse(h.time[1]+':00Z')-t0)/3600000) : 1;
   const idx=clamp(Math.round(((Date.now()-t0)/3600000 + hoursFromNow)/stepH), 0, h.time.length-1);
+  const spd = h.wind_speed_10m[idx] ?? 12;
   return {
-    spd: h.wind_speed_10m[idx] ?? 12,
+    spd,
     dir: h.wind_direction_10m[idx] ?? 180,
-    pre: h.precipitation[idx] ?? 0
+    pre: h.precipitation[idx] ?? 0,
+    /* ไม่มีชั้นกระโชก (แคชรุ่นเก่า/แหล่งอื่น) = ถอยไปใช้ลมต่อเนื่องตรง ๆ
+       ห้ามเดาด้วยตัวคูณ — วัดแล้วว่าอัตราส่วนกระจายตั้งแต่ 1.5 ถึง 8 (ข้อ 62) */
+    gst: h.wind_gusts_10m ? (h.wind_gusts_10m[idx] ?? spd) : spd
   };
 }
 
-/* เวลาจอดรอพายุ — แยกออกมาเพราะต้องใช้ตอนประเมินเวลาสุ่มลมด้วย */
-function holdOf(spd){
-  const raw = spd>=CFG.LOST_KMH ? 2 : (spd>=CFG.HOLD_KMH ? 1 : 0);
-  if(raw===1) return clamp((spd-CFG.HOLD_KMH)/9+0.5, 0.5, CFG.HOLD_MAX);
-  if(raw===2) return clamp((spd-CFG.LOST_KMH)/9+2,   2,   CFG.HOLD_MAX_S);
+/* ระดับพายุจากลมกระโชก (ข้อ 62) — ที่เดียวที่ตัดสินเรื่องนี้ ห้ามเทียบเกณฑ์เองที่อื่น */
+function sevOf(gst){ return gst>=CFG.GUST_LOST ? 2 : (gst>=CFG.GUST_HOLD ? 1 : 0); }
+/* เวลาจอดรอพายุ — แยกออกมาเพราะต้องใช้ตอนประเมินเวลาสุ่มลมด้วย
+   ความชัน /9 คงไว้จากเกณฑ์เดิม เพราะช่วง 50→95 พอดีกับ 0.5→5.5 ชม. ก่อนชนเพดาน 6
+
+   ขั้นรุนแรงต้องเริ่มจากค่าที่ขั้นปานกลางจบพอดี ห้ามตั้งค่าเริ่มต้นเอง
+   ของเดิมตั้งไว้ 2 ชม. ตรง ๆ ทำให้ข้ามเกณฑ์แล้วเวลาจอด *ลดลง* (87→4.6 ชม. แต่ 88→2 ชม.)
+   คือพายุแรงขึ้นแล้วรอสั้นลง — เป็นบั๊กที่ติดมาแต่เดิม เพิ่งเห็นตอนย้ายมาสเกลกระโชก */
+const HOLD_STEP = 9;
+function holdOf(gst){
+  const raw = sevOf(gst);
+  const mod = g => clamp((g-CFG.GUST_HOLD)/HOLD_STEP+0.5, 0.5, CFG.HOLD_MAX);
+  if(raw===1) return mod(gst);
+  if(raw===2) return clamp((gst-CFG.GUST_LOST)/HOLD_STEP + mod(CFG.GUST_LOST),
+                           mod(CFG.GUST_LOST), CFG.HOLD_MAX_S);
   return 0;
 }
 /* ---------- จำลองการเดินทาง ----------
@@ -584,13 +614,14 @@ function simulate(cpts, cwx, dist, ct, seedId){
     for(let i=0;i<CFG.SEGS;i++){
       at.push(acc);
       acc += legT ? legT[i] : (dist/CFG.SEGS)/CFG.SPEED;
-      if(W) acc += holdOf(W[i].spd);
+      if(W) acc += holdOf(W[i].gst);
     }
     W=[];
     for(let i=0;i<CFG.SEGS;i++){
       const w=sampleWx(cwx[wfMid(i)], at[i]);
       /* ปัดก่อนใช้ ไม่ใช่ปัดตอนเก็บ — ผู้รับมีแต่ค่าที่ปัดแล้ว ต้องคำนวณจากค่าเดียวกัน */
-      W.push({spd:Math.round(w.spd), dir:Math.round(w.dir), pre:r2(w.pre)});
+      W.push({spd:Math.round(w.spd), dir:Math.round(w.dir), pre:r2(w.pre),
+              gst:Math.round(w.gst)});
     }
     /* สนามลมเต็ม 4 ช่วงเวลา วางตามสัดส่วนของการเดินทาง (0, 1/3, 2/3, 1)
        ต้องเข้ารหัสแล้วถอดกลับก่อนใช้เสมอ ผู้ส่งจึงคำนวณจากค่าชุดเดียวกับผู้รับ */
@@ -622,9 +653,9 @@ function simulate(cpts, cwx, dist, ct, seedId){
     /* boost ไม่ได้คุมเวลาแล้ว เหลือไว้บอกว่า "ลมไปทางเดียวกับจดหมายไหม" ในคำบรรยาย */
     boostSum+=clamp(align*w.spd/CFG.WIND_REF, -CFG.WIND_CAP, CFG.WIND_CAP);
 
-    const raw = w.spd>=CFG.LOST_KMH ? 2 : (w.spd>=CFG.HOLD_KMH ? 1 : 0);
+    const raw = sevOf(w.gst);
     const sev = raw;
-    const hold = holdOf(w.spd);
+    const hold = holdOf(w.gst);
     if(sev>worstSeverity) worstSeverity=sev;
     if(raw>rawWorst) rawWorst=raw;
     if(raw===2) severeIdx.push(i);
@@ -639,7 +670,7 @@ function simulate(cpts, cwx, dist, ct, seedId){
     /* เก็บค่าเต็มไว้ก่อน ยังไม่ปัด — ต้องยืดด้วยตัวคูณเวลาฐานให้เสร็จก่อน
        ไม่งั้นเส้นทางสั้นมาก ๆ จะถูกปัดเป็น 0 ตั้งแต่ยังไม่ได้ยืด แล้วคูณเท่าไหร่ก็ยังเป็น 0
        (เจอจริงกับกรุงเทพ-นนทบุรี 12 กม. ได้เวลารวม 0 ชั่วโมง) */
-    legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev]);
+    legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev, w.gst]);
     t+=legT[i]+hold;
   }
   /* ---------- พื้นเวลา (ข้อ 45.1) ----------
@@ -669,10 +700,11 @@ function simulate(cpts, cwx, dist, ct, seedId){
   let k = (straightH>0 && baseH>straightH) ? baseH/straightH : 1;
   /* พื้นแข็ง: ลมส่งท้ายแรงผิดปกติต้องไม่ทำให้จดหมายถึงเร็วจนไม่รู้สึกว่าเดินทาง */
   if(t*k>0 && t*k<CFG.FLOOR_MIN) k *= CFG.FLOOR_MIN/(t*k);
-  /* การเคลือบเพิ่มเวลา — คูณเข้ากับตัวคูณเดียวกับพื้นเวลา ไม่ใช่บวกทีหลัง
-     ผลของลมจึงยังอยู่ครบ แค่ทั้งเที่ยวช้าลงตามสัดส่วน */
-  if(ct>0) k *= (1+CFG.CT_TIME);
-  legs.forEach(l=>{ l[0]=r2(l[0]*k); l[1]=r2(l[1]*k); });
+  /* การเคลือบเพิ่มเวลา — คูณเป็นสัดส่วน ไม่ใช่บวกทีหลัง ผลของลมจึงยังอยู่ครบ
+     แต่ยืดเฉพาะ "เวลาเดินทาง" ห้ามยืดเวลาจอดรอ — จดหมายที่เคลือบไม่ได้ทำให้พายุสงบช้าลง
+     (บั๊กเดิม: คูณ k ทับทั้งสองช่อง จดหมายเคลือบเลยรอพายุนานกว่า 12% โดยไม่มีเหตุผล) */
+  const kt = k * (ct>0 ? 1+CFG.CT_TIME : 1);
+  legs.forEach(l=>{ l[0]=r2(l[0]*kt); l[1]=r2(l[1]*k); });
   /* total ต้องเท่าผลรวมของ legs เป๊ะ — letterState() เดินตาม legs แต่ตัดสินว่าถึงจาก th */
   t = r2(legs.reduce((a,l)=>a+l[0]+l[1], 0));
   /* โอกาสหาย — roll ครั้งเดียวตอนส่ง (deterministic ฝังใน URL) */
@@ -1267,8 +1299,10 @@ function wxStorm(ctx,x,y,t,intensity,rich,scale){
   ctx.lineWidth=.9; ctx.strokeStyle=col((.26+intensity*.22).toFixed(3));
   ctx.beginPath(); ctx.arc(x,y,size*.20,0,Math.PI*2); ctx.stroke();
 }
-/* ลมจริง (กม./ชม.) → ความเข้มของภาพพายุ */
-function stormIntensity(spd){ return clamp((spd-40)/70,.25,1); }
+/* ลมกระโชก (กม./ชม.) → ความเข้มของภาพพายุ (ข้อ 62)
+   ยึดเกณฑ์จริงเป็นหมุด: เริ่มมีภาพที่ GUST_HOLD · เต็มที่ราวสองเท่าของเกณฑ์นั้น
+   ของเดิมอิงลมต่อเนื่อง (40→110) ซึ่งกับสเกลกระโชกจะอิ่มตัวตั้งแต่พายุอ่อน */
+function stormIntensity(gst){ return clamp((gst-CFG.GUST_HOLD)/60,.25,1); }
 function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale){
   const lean=dir*.55;
   if(kind===0) wxClear(ctx,cx,cy,t,scale);
@@ -2259,7 +2293,7 @@ function renderGlobe(){
         /* ข้อ 29 — ซูมเข้าแล้วต้องเพิ่มความหนาแน่น ไม่ใช่แค่ขยายเส้น
            rich = วาดละเอียดขึ้น · scale โตตามซูมแต่ไม่เต็มสัดส่วน (พายุยังไม่มีโหมด "อยู่ข้างใน") */
         const zs=clamp(1+Math.log2(Math.max(1,G.zoom))*0.42, 1, 3.2);
-        wxStorm(sctx,p.x,p.y,T,stormIntensity(l[2]),G.zoom>4,zs);
+        wxStorm(sctx,p.x,p.y,T,stormIntensity(l[7]??l[2]),G.zoom>4,zs);
         sctx.restore();
       }
     });
@@ -2633,10 +2667,12 @@ function buildLog(L,st){
   const log=$('#rLog'); let h='';
   let acc=0;
   L.lg.forEach((l,i)=>{
-    const [dur,hold,spd,,pre,kind,sev]=l;
+    const [dur,hold,spd,,pre,kind,sev,gst]=l;
     let txt=kindWord(kind);
-    /* spd มาจากลิงก์ของผู้ส่ง = ข้อมูลของคนอื่น ต้อง esc ก่อนต่อเข้า innerHTML เสมอ (ข้อ 57.1) */
-    if(sev>0) txt='พายุ ลม '+esc(spd)+' กม./ชม. — จอดรอ '+fmtDur(hold);
+    /* spd/gst มาจากลิงก์ของผู้ส่ง = ข้อมูลของคนอื่น ต้อง esc ก่อนต่อเข้า innerHTML เสมอ (ข้อ 57.1)
+       ตอนพายุต้องรายงาน "กระโชก" เพราะนั่นคือค่าที่ตัดสินว่าเป็นพายุ (ข้อ 62)
+       รายงานลมต่อเนื่องตรงนี้จะกลายเป็นตัวเลขที่ขัดกับคำว่าพายุที่อยู่ข้าง ๆ */
+    if(sev>0) txt='พายุ ลมกระโชก '+esc(gst??spd)+' กม./ชม. — จอดรอ '+fmtDur(hold);
     else if(kind>=2) txt=(kind===3?'ฝนหนัก':'ฝนปรอย');
     else if(kind===1) txt='ลมพัด '+esc(spd)+' กม./ชม.';
     else txt='ฟ้าเปิด';

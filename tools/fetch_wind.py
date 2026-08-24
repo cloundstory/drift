@@ -62,7 +62,7 @@ def fetch(chunk):
     lo = ','.join('%.4f' % p[1] for p in chunk)
     url = ('https://api.open-meteo.com/v1/forecast'
            '?latitude=' + la + '&longitude=' + lo +
-           '&hourly=wind_speed_10m,wind_direction_10m,precipitation'
+           '&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m'
            '&wind_speed_unit=kmh&forecast_days=%d&timezone=UTC' % FORECAST_DAYS)
     req = urllib.request.Request(url, headers={'User-Agent': 'drift-wind-cache/1'})
     for attempt in range(4):
@@ -114,13 +114,16 @@ def build(t):
     # จึงไม่เสียความละเอียดเพิ่มแม้แต่นิดเดียว — วัดแล้วช่วยให้ไฟล์เล็กลงจาก 81 KB เหลือ 54 KB
     # เรียงแบบแยกชั้น (ตัวแปร → ช่วงเวลา → พื้นที่) เพื่อให้เพื่อนบ้านอยู่ติดกัน บีบอัดได้ดีกว่า
     buf = bytearray()
-    for var in ('wind_speed_10m', 'wind_direction_10m', 'precipitation'):
+    # ชั้นที่ 4 = ลมกระโชก ซึ่งเป็นตัวตัดสินว่าเป็นพายุหรือไม่ (ข้อ 62)
+    # ควอนไทซ์เท่าลมต่อเนื่อง (2 กม./ชม.) เพราะใช้เทียบเกณฑ์หยาบ ๆ ไม่ได้ใช้คำนวณเส้นทาง
+    for var in ('wind_speed_10m', 'wind_direction_10m', 'precipitation',
+                'wind_gusts_10m'):
         for s in range(SLICES):
             idx = off + s * STEP_H
             for r in rows:
                 v = r['hourly'][var][idx]
                 v = 0.0 if v is None else float(v)
-                if var == 'wind_speed_10m':
+                if var in ('wind_speed_10m', 'wind_gusts_10m'):
                     b = min(255, int(round(v / 2.0)))
                 elif var == 'wind_direction_10m':
                     b = int(round(v / 5.625)) % 64
@@ -145,7 +148,7 @@ def build(t):
 
 def main():
     made = [build(t) for t in TILES]
-    man = dict(v=1,
+    man = dict(v=2,
                issued=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M'),
                tiles=made)
     os.makedirs(OUT, exist_ok=True)
