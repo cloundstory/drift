@@ -278,6 +278,7 @@ const CFG = {
   REVEAL_FRAC:0.22,      // รัศมีวงเปิด = สัดส่วนของความยาวเส้นทาง (หลัก 46.2)
   REVEAL_MIN: 120,       // กม. — วงเล็กสุด
   REVEAL_MAX: 2400,      // กม. — วงใหญ่สุด
+  REVEAL_STORM:0.62,     // วงหดเหลือเท่านี้เมื่ออยู่ในพายุ — พายุบังตา (ข้อ 35)
   /* ---------- กล้อง (ข้อ 27 · ส่วนหนึ่งของ 24-29) ---------- */
   ZOOM_MAX:   60,        // เพดานแข็ง — เพดานจริงคิดจากระยะพอดีของฉบับที่เลือก (G.zoomMax)
   ZOOM_PAST:  3,         // ซูมเข้าได้ลึกสุดกี่เท่าของระยะพอดี
@@ -856,7 +857,9 @@ function wfAt(field, lat, lng, tf){
     const q00=at(i0,j0,k), q10=at(i1,j0,k), q01=at(i0,j1,k), q11=at(i1,j1,k);
     return (q00*(1-fi)+q10*fi)*(1-fj) + (q01*(1-fi)+q11*fi)*fj;
   };
-  return {e:bl(0), n:bl(1), spd:bl(2)};
+  /* พายุถูกยุบเข้ามาเป็นส่วนหนึ่งของสนาม (ข้อ 62.7) — มีผลเฉพาะตอนสร้างริ้วลม
+     ตอน driftRun ที่คำนวณเส้นทางจริง CUR_STORMS เป็น null เสมอ สนามจึงเป็นพยากรณ์ล้วน */
+  return blendStorms({e:bl(0), n:bl(1), spd:bl(2)}, lat, lng);
 }
 const DRIFT={
   GAIN:  10,     /* ข้อ 30 — คูณแรงลม ให้เส้นโค้งพอจะเห็นด้วยตา */
@@ -1011,9 +1014,13 @@ function fitKm(L){
 }
 /* รัศมีวงเปิด วัดเป็นระยะจริงบนผิวโลก (ข้อ 28) และแปรตามความยาวเส้นทาง (หลัก 46.2)
    ค่าคงที่ 2,400 กม. ใหญ่กว่าเส้นกรุงเทพ-เชียงใหม่ทั้งเส้น 4 เท่า — เปิดหมดจนหมอกไม่เหลือความหมาย */
-function revealKm(L){
+/* วงเปิดหมอก — แปรตามระยะทาง และ *หดลงเมื่อจดหมายอยู่ในพายุ* (ข้อ 35)
+   ข้อ 35 ตกลงกันไว้ตั้งแต่รอบวาดพายุใหม่ แต่อยู่แค่หน้าโชว์ ไม่เคยเข้าแอปจริง
+   เหตุผลของมันเข้ากับสิ่งที่กอล์ฟขอพอดี: พายุบังตา มองเห็นแคบลง = ลุ้นขึ้น */
+function revealKm(L, sev){
   const d=gcDist({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo});
-  return clamp(d*CFG.REVEAL_FRAC, CFG.REVEAL_MIN, CFG.REVEAL_MAX);
+  const base=clamp(d*CFG.REVEAL_FRAC, CFG.REVEAL_MIN, CFG.REVEAL_MAX);
+  return sev>0 ? base*CFG.REVEAL_STORM : base;
 }
 /* ---------- ริ้วลม (ข้อ 31) ----------
    หมอกปิดแผ่นดิน แต่ห้ามปิดลม — ถ้าหมอกกลบลมด้วย พระเอกของเรื่องจะเห็นได้แค่ในรูส่องรูเดียว
@@ -1041,7 +1048,124 @@ const STREAM={ ROWS:13, COLS:11, STEPS:45, SPREAD:0.16, STEP_FRAC:1/70 };
 const _streamCache=new Map();
 /* ริ้วลมสร้างใหม่เมื่อ "ช่วงเวลา" เปลี่ยน — สนามลมเต็มมี 4 ช่วง ลมจึงเปลี่ยนหน้าตาระหว่างการเดินทาง
    นี่คือสิ่งที่ทำให้ลมเป็นกระแสที่มีชีวิต ไม่ใช่ภาพนิ่งที่มีคลื่นวิ่งผ่าน */
+/* ---------- พายุ = กระแสวนในสนามลม ไม่ใช่ภาพที่วาดทับ (ข้อ 62.7) ----------
+   ของเดิมวาดพายุด้วย wxStorm() ในพิกัดหน้าจอ ขณะที่ริ้วลมมีชีวิตอยู่บนผิวทรงกลม
+   หมุนลูกโลกแล้วริ้วลมหมุนตามโลก ส่วนพายุยังหันหน้าเข้ากล้องเสมอ = คนละมิติกัน
+   ต่อให้ทำสีและจังหวะให้เหมือนกันแค่ไหน มันก็ยังเป็นสองสิ่งที่ซ้อนกันอยู่
+
+   ยุบพายุลงไปในสนามลมเอง ริ้วลมรอบพายุจึงโค้งเข้าหามันเพราะ *สนามบอกให้โค้ง*
+   และริ้วของตัวพายุก็เดินบนผิวโลกผ่านสนามเดียวกัน ถูกวาดด้วย G.streams ตัวเดียวกัน
+
+   ⚠️ ห้ามให้กระแสวนนี้แตะการคำนวณเส้นทาง — รัศมีพายุเป็นสมมติฐาน ไม่ใช่ข้อมูลจริง
+   ถ้าเอาไปกำหนดเส้นทาง = ให้ของที่แต่งขึ้นตัดสินผลลัพธ์ ซึ่งขัดกับทั้งเล่ม
+   CUR_STORMS จึงเป็น null เสมอตอน driftRun และตั้งค่าเฉพาะตอนสร้างริ้วลม */
+const VORTEX={ INFLOW_DEG:38, NEAR:0.55, FAR:2.40 };
+let CUR_STORMS=null;
+const vhash=n=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+/* รัศมีพายุ — สมมติฐานที่ประกาศไว้ ช่วง 800-1800 กม. มาจากข้อ 46.6
+   พยากรณ์ให้ความเร็วลมต่อจุด ไม่ได้ให้ขอบเขตของพายุ จะวัดจากสนาม 15x15 ก็ไม่ได้
+   เพราะระยะห่างจุดแปรตามความยาวเส้นทาง พายุลูกเดียวกันจะได้ขนาดต่างกันตามเส้นที่มองมัน */
+const stormKm = inten => 800 + (inten-0.25)/0.75*1000;
+function stormsOf(L){
+  const out=[];
+  if(!L.lg) return out;
+  L.lg.forEach((l,i)=>{
+    if(l[6]<=0) return;
+    const p=posAt(L,(i+0.5)/L.lg.length);
+    const g=l[7]??l[2], inten=stormIntensity(g);
+    out.push({ lat:p.lat, lng:p.lng, R:stormKm(inten), inten, gust:g,
+               spin: p.lat>=0 ? 1 : -1 });        /* ซีกเหนือทวนเข็ม ซีกใต้ตามเข็ม — ข้อ 34 */
+  });
+  return out;
+}
+/* ทิศลมของพายุที่จุดหนึ่ง — ตามเส้นสัมผัส แล้วเฉียงเข้าหาตาอีก INFLOW องศา
+   แต่ *ข้างใน* กำแพงตาลมเกือบหมุนเป็นวงล้วน แทบไม่ไหลเข้าแล้ว
+   ถ้าปล่อยให้ไหลเข้าเท่าเดิม ทุกริ้วจะวิ่งไปกองที่จุดเดียวจนเป็นปมเส้นพันกัน
+   ลดมุมลงตามจริงแล้วตาพายุเกิดเป็นวงว่างขึ้นเอง โดยไม่ต้องวาดวงตาสักเส้น */
+function vortexEN(lat,lng,S){
+  const d=gcDist({lat:S.lat,lng:S.lng},{lat,lng}), rn=d/S.R;
+  if(rn>VORTEX.FAR) return null;
+  const WALL=0.16;
+  const v = rn<WALL ? rn/WALL : Math.pow(WALL/rn,0.5);
+  const wl=clamp((rn-0.07)/0.26,0,1);
+  const inflow=VORTEX.INFLOW_DEG*(wl*wl*(3-2*wl));
+  const brg=bearing({lat:S.lat,lng:S.lng},{lat,lng});
+  const wb=(brg-(90+inflow)*S.spin)*RAD;
+  const k=1-clamp((rn-VORTEX.NEAR)/(VORTEX.FAR-VORTEX.NEAR),0,1);
+  return { e:Math.sin(wb)*v, n:Math.cos(wb)*v, blend:k*k*(3-2*k), rn };
+}
+/* สนามรวม = ลมพยากรณ์ที่ถูก *หมุนทิศ* เข้าหาพายุ ไม่ใช่บวกพลังงานเข้าไป
+   ความเร็วลมเป็นข้อมูลจริง ห้ามแตะ · การหมุนวนคือรูปที่ตาราง 15x15 หยาบเกินจะเก็บได้
+   ต้องรวมอิทธิพลของพายุทุกลูกก่อนหมุนครั้งเดียว ไม่งั้นลูกท้ายจะลบผลของลูกแรกทิ้ง
+   (วัดได้: วนหมุนทีละลูกทำให้ทิศเพี้ยนไป 31° ทั้งที่น้ำหนักขึ้นถึง 1.0) */
+function blendStorms(w,lat,lng){
+  if(!CUR_STORMS) return w;
+  let ve=0, vn=0, wt=0, calm=1;
+  for(const S of CUR_STORMS){
+    const v=vortexEN(lat,lng,S);
+    if(!v||v.blend<=0.002) continue;
+    const m=Math.hypot(v.e,v.n)||1;
+    ve+=v.e/m*v.blend; vn+=v.n/m*v.blend;
+    wt=Math.max(wt,v.blend);
+    calm=Math.min(calm, 1-v.blend*Math.max(0,1-v.rn/0.22)*0.8);
+  }
+  if(wt<=0.002) return w;
+  const sp=Math.hypot(w.e,w.n);
+  if(sp<0.01) return w;
+  const a0=Math.atan2(w.e,w.n), a1=Math.atan2(ve,vn);
+  let d=a1-a0; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2;
+  const a=a0+d*wt;
+  w.e=Math.sin(a)*sp*calm; w.n=Math.cos(a)*sp*calm; w.spd=sp*calm;
+  return w;
+}
+/* ริ้วของตัวพายุ — เดินบนผิวโลกผ่านสนามเดียวกัน คืนรูปแบบเดียวกับ driftStreams เป๊ะ
+   G.streams ไล่จางจากต้นเส้นไปปลายเส้นเพื่อบอกทิศลม ถ้าทุกริ้วจบที่ตา ตาจะจางที่สุด
+   จึงแบ่งเป็นริ้วยาวที่วิ่งเข้าไปสร้างกำแพงตา กับริ้วสั้นที่เริ่มตรงกำแพงตาพอดี
+   ความหนาแน่นต้องคงที่ *บนจอ* ไม่ใช่บนพื้นโลก ระดับซูมจึงต้องอยู่ในคีย์แคช */
+const _ssCache=new Map();
+function stormStrands(L,tf){
+  if(!CUR_STORMS||!CUR_STORMS.length) return [];
+  const zb=Math.round(Math.log2(Math.max(1,G.zoom))*2)/2;
+  const key=L.id+':'+Math.round(clamp(tf||0,0,1)*6)+':'+zb;
+  if(_ssCache.has(key)) return _ssCache.get(key);
+  const zdens=clamp(Math.sqrt(G.R*Math.sin(1200/ER)/150),1,2.4);
+  const field=wfOf(L), out=[];
+  CUR_STORMS.forEach((S,si)=>{
+    const layers=[
+      {n:Math.round((14+S.inten*10)*zdens), steps:46, w:1.00, r0:0.10, r1:1.05},
+      {n:Math.round((20+S.inten*18)*zdens), steps:13, w:0.72, r0:0.07, r1:0.42}
+    ];
+    layers.forEach((LY,li)=>{
+      for(let i=0;i<LY.n;i++){
+        const h1=vhash(i*7.3+li*131.7+si*17.9), h2=vhash(i*19.1+li*57.3+si*3.1);
+        let p=destPoint(S.lat,S.lng,h2*360,S.R*(LY.r0+LY.r1*Math.sqrt(h1)));
+        const stepKm=S.R*0.055, pts=[toXYZ(p.lat,p.lng)];
+        let acc=0, ok=true;
+        for(let k=0;k<LY.steps;k++){
+          const w = field ? wfAt(field,p.lat,p.lng,clamp(tf||0,0,1)) : {e:0,n:0};
+          const sp=Math.hypot(w.e,w.n);
+          if(sp<0.5){ ok=false; break; }
+          acc+=sp;
+          p=destPoint(p.lat,p.lng, Math.atan2(w.e,w.n)*DEG, stepKm);
+          pts.push(toXYZ(p.lat,p.lng));
+          if(gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.085) break;   /* ถึงกำแพงตา */
+        }
+        if(ok&&pts.length>2){ pts.spd=acc/LY.steps; pts.w=LY.w; out.push(pts); }
+      }
+    });
+  });
+  if(_ssCache.size>24) _ssCache.clear();
+  _ssCache.set(key,out);
+  return out;
+}
+
 function driftStreams(L,tf){
+  /* พายุของฉบับนี้ต้องอยู่ในสนามตั้งแต่ตอนสร้างริ้ว ไม่ใช่มาวาดทับทีหลัง */
+  CUR_STORMS=stormsOf(L);
+  try{ return baseStreams(L,tf).concat(stormStrands(L,tf)); }
+  finally{ CUR_STORMS=null; }
+}
+function baseStreams(L,tf){
   const field=wfOf(L);
   /* 12 ช่วงหมายถึงสร้างริ้วใหม่ 12 ครั้งต่อการเดินทาง ซึ่งกระตุกทุกครั้งที่ 244 ริ้ว
      6 ช่วงยังเห็นสนามเปลี่ยนชัด แต่สะดุดครึ่งเดียว */
@@ -2280,31 +2404,20 @@ function renderGlobe(){
 
   /* ---------- ชั้นที่หมอกบังได้: โลก + อากาศบนผิวโลก ---------- */
   G.sphere(sctx);
-  flying.slice(0,CFG.MAX_ANIM).forEach(({L})=>{
-    if(!L.lg) return;
-    /* พายุอยู่บนผิวโลก จึงต้องถูกหมอกบังเหมือนแผ่นดิน — ข้อ 5 บอกว่าอากาศเห็นได้ "ในวง" */
-    L.lg.forEach((l,i)=>{
-      if(l[6]<=0) return;
-      const p=G.pipeV(posVAt(L,(i+.5)/L.lg.length));
-      /* LOD: บน globe วาดหยาบ — รายละเอียดเต็มเก็บไว้ตอนดูใกล้ (ART §5)
-         จางลงตามความลึกเหมือนเส้นอื่นบนทรงกลม ไม่งั้นพายุริมขอบโลกจะเด่นเกินจริง */
-      if(p.z>=0){
-        sctx.save(); sctx.globalAlpha=.45+.55*Math.sqrt(p.z);
-        /* ข้อ 29 — ซูมเข้าแล้วต้องเพิ่มความหนาแน่น ไม่ใช่แค่ขยายเส้น
-           rich = วาดละเอียดขึ้น · scale โตตามซูมแต่ไม่เต็มสัดส่วน (พายุยังไม่มีโหมด "อยู่ข้างใน") */
-        const zs=clamp(1+Math.log2(Math.max(1,G.zoom))*0.42, 1, 3.2);
-        wxStorm(sctx,p.x,p.y,T,stormIntensity(l[7]??l[2]),G.zoom>4,zs);
-        sctx.restore();
-      }
-    });
-  });
+  /* พายุไม่ถูกวาดตรงนี้อีกแล้ว (ข้อ 62.7) — มันเป็นกระแสวนในสนามลม
+     จึงถูกวาดพร้อมริ้วลมใน G.streams ซึ่งอยู่ *เหนือ* หมอก
+     ตรงนี้เคยอ้างข้อ 5 ว่าอากาศเห็นได้ "ในวง" แต่ข้อ 33 เขียนไว้ตรงข้ามว่า
+     พายุมองเห็นทะลุหมอกทั้งเส้นทาง และข้อ 31 บอกว่าลมทะลุหมอกเสมอ — พายุก็คือลม
+     ผลที่วัดได้ตอนอยู่ใต้หมอก: พายุจางกว่าริ้วลมที่อยู่รอบตัวมันเอง สู้ไม่ได้เลย
+     wxStorm() ยังอยู่ เพราะการ์ดพยากรณ์ยังใช้ผ่าน drawWx() */
 
   /* ---------- หมอก (ข้อ 6 · วงเดียว เฉพาะฉบับที่เลือก · ข้อ 8 · วิ่งตามจดหมาย) ---------- */
   let hole=null;
   /* ตอนย้อนดู ฉบับที่ถึงแล้วต้องมีวงเปิดเหมือนกำลังบินจริง — st มาจากเวลาที่กำลังดูอยู่แล้ว */
   if(sel && !sel.st.arrived && !sel.st.gone){
     const p=G.pipeV(posVAt(sel.L,sel.st.prog));
-    if(p.z>=-0.05) hole={x:p.x, y:p.y, r:G.R*Math.sin(revealKm(sel.L)/ER)};
+    const lg=sel.L.lg&&sel.L.lg[sel.st.legIdx];
+    if(p.z>=-0.05) hole={x:p.x, y:p.y, r:G.R*Math.sin(revealKm(sel.L, lg?lg[6]:0)/ER)};
   }
   G.fog(sctx,hole);
   G.restoreNight(sctx,hole);
