@@ -217,3 +217,44 @@ python tools/fetch_wind.py
 
 **ยังไม่มี git repo** — ต้อง `git init` + ต่อ GitHub remote ก่อน workflow ถึงจะรันได้จริง
 ระหว่างนี้รันสคริปต์เองแล้วอัปไฟล์ `wind/` ขึ้น host ได้ผลเหมือนกัน
+
+## ต่อ repo เข้า GitHub (24 ส.ค. 2569)
+
+`git init` เรียบร้อยแล้ว มี commit แรกครบ 22 ไฟล์ · ตั้งชื่อ/อีเมลไว้ **เฉพาะ repo นี้** ไม่ได้แตะค่า global
+
+**ไม่เข้า repo (ยังอยู่ในเครื่องเหมือนเดิม):** `index.backup-*.html` · `files.zip` · `.claude/`
+
+**`.gitattributes` มีสองหน้าที่ อย่าลบ**
+1. บังคับไฟล์ข้อความเป็น LF — workflow รันบน Linux ถ้าบล็อก `run: |` เป็น CRLF จะพังที่ `if/then`
+2. `*.bin binary` — แคชลมเป็นไบต์ดิบบีบ zlib ถ้า git แปลงบรรทัดให้ ไฟล์จะเสียเงียบ ๆ
+   แล้วไปโผล่เป็น "ลมเพี้ยน" ซึ่งตามต้นตอยากมาก (ตรวจแล้ว: ไฟล์ในบล็อบตรงกับในเครื่องทุกไบต์)
+
+### ขั้นตอนที่เหลือ (ต้องทำจากเครื่องที่ล็อกอิน GitHub อยู่)
+
+```bash
+git remote add origin https://github.com/<ชื่อผู้ใช้>/drift.git
+git push -u origin main
+```
+
+### ⚠️ ตั้งค่า Pages ให้ถูก ไม่งั้นลมจะไม่อัปเดต
+
+Settings → Pages → Source ต้องเลือก **"Deploy from a branch"** (branch `main`, folder `/`)
+
+**ห้ามเลือก "GitHub Actions"** เป็น source — เพราะ commit ที่ push ด้วย `GITHUB_TOKEN`
+**ไม่ trigger workflow อื่น** ตามกฎของ GitHub เอง ผลคือแคชลมจะถูก commit แต่ไม่เคยถูก deploy
+หน้าเว็บจะค้างอยู่กับลมของรอบแรกตลอดไปโดยไม่มีอะไรฟ้อง
+
+### เรื่องที่ต้องรู้เกี่ยวกับ Actions
+
+- cron **ช้าได้ 5-30 นาที** เป็นเรื่องปกติของ GitHub ไม่ใช่ของเสีย
+- GitHub **ปิด scheduled workflow อัตโนมัติเมื่อ repo เงียบเกิน 60 วัน**
+  [ไม่แน่ใจ] ว่า commit ที่มาจากบอทนับเป็น "ความเคลื่อนไหว" หรือไม่
+  GitHub จะส่งอีเมลเตือนก่อนปิด — ถ้าโดนปิด กดเปิดใหม่ที่แท็บ Actions ได้
+- กดรันเองได้ตลอดที่แท็บ Actions → drift wind cache → Run workflow (`workflow_dispatch`)
+
+### repo สาธารณะหรือส่วนตัว
+
+- **สาธารณะ** — Pages ใช้ได้ฟรี แต่โค้ดและเอกสารทั้งหมดเปิดให้คนอ่าน
+- **ส่วนตัว** — Actions ยังทำงาน แต่ Pages ต้องมี GitHub Pro
+
+ไม่มีข้อมูลส่วนบุคคลอยู่ใน repo (จดหมายทุกฉบับอยู่ใน localStorage ของแต่ละเครื่อง ไม่เคยขึ้น repo)
