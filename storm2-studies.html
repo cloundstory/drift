@@ -97,10 +97,12 @@ const MODES=[
    note:'ขนาดคงที่เป็นพิกเซล คูณด้วย log2(ซูม) แต่ตันที่ 3.2 เท่า — ยิ่งซูมยิ่งหดเทียบของจริง'},
   {id:'geo', name:'B · ก้นหอยเรขาคณิต',
    note:'ขนาดถูกต้องแล้ว แต่กอล์ฟตัดสินว่าเป็นลายวงเวียน ไม่ใช่อากาศ — เก็บไว้เทียบเฉย ๆ'},
-  {id:'in',  name:'C · สนามลม (ที่เลือก)',
-   note:'พายุ = ลมจริงที่หมุนวน เดินอนุภาคผ่านสนาม Rankine แล้ววาดด้วยไวยากรณ์และสีเดียวกับริ้วลมของแอป · ไม่ต้องมีโหมดแยก ตาพายุหลุดนอกเฟรมเองเมื่อเราอยู่ข้างใน'}
+  {id:'in',  name:'C · วาดทับด้วยไวยากรณ์เดียวกัน',
+   note:'ใช้สีและจังหวะเดียวกับริ้วลม แต่ยังวาดในพิกัดหน้าจอ แยกจากสนามลม — กอล์ฟยังเห็นว่าคนละมิติ'},
+  {id:'field', name:'D · พายุอยู่ในสนามลม (ที่เลือก)',
+   note:'พายุไม่ใช่สิ่งที่วาดทับอีกต่อไป แต่เป็นกระแสวนในสนามเอง · ริ้วลมรอบ ๆ โค้งเข้าหามันเพราะสนามบอกให้โค้ง · ริ้วพายุเดินบนผิวโลกและถูกวาดด้วย G.streams ตัวเดียวกัน'}
 ];
-let MODE='in';
+let MODE='field';
 
 const ARCS=[
   {id:'off',  name:'ปกติ',            note:'ไม่เปลี่ยนอะไรตอนจดหมายเข้าพายุ (ของเดิม)'},
@@ -137,6 +139,157 @@ function kmToPx(km){ return G.R*Math.sin(km/ER); }
    ผลพลอยได้: ไม่ต้องมี "โหมดอยู่ในพายุ" แยกอีกต่อไป พอพายุใหญ่เกินจอ
    อนุภาคก็เต็มจอและตาพายุหลุดออกนอกเฟรมไปเอง — โหมดเกิดขึ้นเองจากความจริง
    ================================================================ */
+
+/* ================================================================
+   D · พายุเป็นส่วนหนึ่งของสนามลม ไม่ใช่ภาพที่วาดทับ
+
+   กอล์ฟ 25 ส.ค.: "พายุมีมวลมาก ริ้วลมโดยรอบต้องได้รับอิทธิพลของพายุไปด้วย
+   แต่ในคลิปเราทำสองส่วนแยกออกจากกัน มันเลยไม่อยู่ในมิติเดียวกัน"
+
+   ถูกต้อง และลึกกว่าสามข้อก่อนหน้า — ปัญหาไม่ใช่แค่ *หน้าตา* แต่เป็น *พิกัด*:
+   ริ้วลมมีชีวิตอยู่บนผิวทรงกลม (เป็นจุด XYZ ที่ถูกหมุนและฉายทุกเฟรม)
+   แต่พายุถูกวาดในพิกัดหน้าจอ — หมุนลูกโลกแล้วริ้วลมหมุนตามโลก
+   ส่วนพายุยังเป็นวงแบนหันหน้าเข้ากล้องเสมอ คนละมิติกันจริง ๆ
+
+   แก้โดยยุบพายุเข้าไปใน *สนามลม* เอง:
+   1. `wfAt()` ถูกสวมทับให้บวกกระแสวนของพายุลงไป → ริ้วลมรอบพายุโค้งเข้าหามันเอง
+   2. ริ้วของพายุเองก็เดินผ่านสนามเดียวกันในพิกัดภูมิศาสตร์ แล้วต่อท้ายผลของ driftStreams
+      → ถูกวาดด้วย G.streams ตัวเดียวกัน สีเดียวกัน จางตามความลึกเหมือนกัน
+   3. ไม่มีตัววาดพายุแยกอีกต่อไป — wxStorm ถูกปิด
+
+   ⚠️ กระแสวนนี้ห้ามแตะการคำนวณเส้นทาง — รัศมีพายุเป็นสมมติฐาน ไม่ใช่ข้อมูลจริง
+   ถ้าเอาสมมติฐานไปกำหนดเส้นทางจริง = ให้ของที่แต่งขึ้นตัดสินผลลัพธ์ ซึ่งขัดทั้งเล่มนี้
+   จึงเปิดเฉพาะตอนสร้างริ้วลม ปิดเสมอตอน driftRun
+   ================================================================ */
+/* NEAR/FAR = ช่วงที่กระแสวนกลืนสนามพยากรณ์ วัดเป็นสัดส่วนของรัศมีพายุ
+   ค่าแรก 0.25/1.30 แคบเกินไป — ที่ขอบพายุพอดี กระแสวนมีน้ำหนักแค่ 20%
+   ลมพยากรณ์เลยชนะ ริ้วจึงไหลผ่านไปเฉย ๆ ไม่ถูกดูดเข้าหาตา
+   (วัดได้: ทั้งเส้นเดินเข้าหาตาแค่ 134 กม. จากที่ควรถึงตา)
+   ซึ่งตรงกับที่กอล์ฟบอกว่าพายุมีมวลมาก อิทธิพลต้องแผ่ไปไกลกว่าตัวมันเอง */
+const VORTEX={ INFLOW_DEG:38, NEAR:0.55, FAR:2.40 };
+let CUR_STORMS=null;
+
+/* พายุทุกลูกของจดหมายฉบับนี้ ในพิกัดภูมิศาสตร์ */
+function stormsOf(L){
+  const out=[];
+  L.lg.forEach((l,i)=>{
+    if(l[6]<=0) return;
+    const p=X.posAt(L,(i+0.5)/L.lg.length);
+    const g=l[7]??l[2];
+    const inten=X.stormIntensity(g);
+    out.push({ lat:p.lat, lng:p.lng, R:stormKm(inten), inten, gust:g,
+               peak:Math.max(12,l[2]),                 /* ใช้ลมต่อเนื่อง เพราะสนามเก็บลมต่อเนื่อง */
+               spin: p.lat>=0 ? 1 : -1 });             /* ข้อ 34 */
+  });
+  return out;
+}
+
+/* ลมของพายุที่จุดหนึ่ง คืนเป็น e,n หน่วยเดียวกับ wfAt
+   ทิศ: ลมพัดตามเส้นสัมผัส แล้วเฉียงเข้าหาตาอีก INFLOW องศา
+   ซีกเหนือทวนเข็ม ซีกใต้ตามเข็ม → รวมเป็นสูตรเดียว brg-(90+inflow)*spin */
+function vortexEN(lat,lng,S){
+  const d=APP.gcDist({lat:S.lat,lng:S.lng},{lat,lng});
+  const rn=d/S.R;
+  if(rn>VORTEX.FAR) return null;
+  const WALL=0.16;
+  const v=(rn<WALL ? rn/WALL : Math.pow(WALL/rn,0.5))*S.peak;
+  const brg=APP.bearing({lat:S.lat,lng:S.lng},{lat,lng});
+  const wb=(brg-(90+VORTEX.INFLOW_DEG)*S.spin)*Math.PI/180;
+  /* น้ำหนักการกลืน: ใกล้ตา สนามคือพายุล้วน · ไกลออกไปคืนเป็นลมตามพยากรณ์
+     ไม่ได้ "เติมพลังงาน" เข้าไป แต่ *จัดรูป* สนามตรงที่ตาราง 15x15 หยาบเกินจะเห็นการหมุน */
+  const k=1-Math.min(1,Math.max(0,(rn-VORTEX.NEAR)/(VORTEX.FAR-VORTEX.NEAR)));
+  const blend=k*k*(3-2*k);
+  return { e:Math.sin(wb)*v, n:Math.cos(wb)*v, blend, rn };
+}
+
+/* สนามรวม = ลมพยากรณ์ที่ถูก *หมุนทิศ* เข้าหาพายุ ไม่ใช่บวกพลังงานเข้าไป
+
+   รอบแรกผสมเวกเตอร์ตรง ๆ ซึ่งขัดกับหลักที่เขียนไว้เอง และไม่ได้ผลด้วย:
+   กระแสวนที่ขอบพายุแรงราว 16 กม./ชม. ขณะที่ลมมหาสมุทรใต้แถวนั้นแรง 50
+   ผสมแล้วทิศจึงถูกลมพยากรณ์ดึงกลับ ริ้วไหลผ่านไปเฉย ๆ (วัดได้: เข้าหาตาแค่ 134 กม.)
+
+   หมุนทิศอย่างเดียวถูกต้องกว่าทั้งทางหลักการและทางผล — ความเร็วลมเป็นข้อมูลจริงจากพยากรณ์
+   ห้ามแตะ · ส่วนการหมุนวนคือรูปที่เรารู้ว่ามีอยู่แต่ตาราง 15x15 หยาบเกินจะเก็บได้ */
+function blendStorms(w,lat,lng){
+  if(!CUR_STORMS) return w;
+  /* ⚠️ ต้องรวมอิทธิพลของพายุทุกลูก *ก่อน* แล้วค่อยหมุนครั้งเดียว
+     ของเดิมวนหมุนทีละลูก ลูกท้ายสุดจึงลบผลของลูกแรกทิ้ง
+     (วัดได้: blend ขึ้นถึง 1.0 แต่ทิศที่ได้เพี้ยนจากที่ควรเป็น 31° เพราะโดนลูกถัดไปหมุนต่อ)
+     เส้นทางที่ผ่านพายุหลายลูกติดกันเป็นเรื่องปกติ ไม่ใช่กรณีพิเศษ */
+  let ve=0, vn=0, wt=0, calm=1;
+  for(const S of CUR_STORMS){
+    const v=vortexEN(lat,lng,S);
+    if(!v||v.blend<=0.002) continue;
+    const m=Math.hypot(v.e,v.n)||1;
+    ve+=v.e/m*v.blend; vn+=v.n/m*v.blend;
+    wt=Math.max(wt,v.blend);
+    calm=Math.min(calm, 1-v.blend*Math.max(0,1-v.rn/0.22)*0.8);
+  }
+  if(wt<=0.002) return w;
+  const sp=Math.hypot(w.e,w.n);
+  if(sp<0.01) return w;
+  const a0=Math.atan2(w.e,w.n), a1=Math.atan2(ve,vn);
+  let d=a1-a0; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2;
+  const a=a0+d*wt;
+  w.e=Math.sin(a)*sp*calm; w.n=Math.cos(a)*sp*calm; w.spd=sp*calm;
+  return w;
+}
+
+/* ริ้วของตัวพายุเอง — เดินในพิกัดภูมิศาสตร์ผ่านสนามรวม
+   คืนออกมาในรูปเดียวกับ driftStreams เป๊ะ (อาเรย์ของจุด XYZ + .spd + .w)
+   จึงถูกวาดด้วย G.streams ตัวเดียวกันโดยไม่ต้องมีตัววาดพายุแยก */
+const _ssCache=new Map();
+function stormStrands(L,tf){
+  /* ความหนาแน่นต้องคงที่ *บนจอ* ไม่ใช่บนพื้นโลก
+     ผูกกับขนาดจริงอย่างเดียว → ซูมเข้าแล้วริ้วกระจายออกจนพายุจางหาย (เจอในคลิปรอบแรก)
+     จึงต้องมีระดับซูมอยู่ในคีย์แคชด้วย */
+  const zb=Math.round(Math.log2(Math.max(1,G.zoom))*2)/2;
+  const key=L.id+':'+Math.round(clamp(tf||0,0,1)*6)+':'+zb;
+  if(_ssCache.has(key)) return _ssCache.get(key);
+  const zdens=clamp(Math.sqrt(kmToPx(1200)/150),1,2.4);
+  const field=APP.wfOf(L);
+  const out=[];
+  (CUR_STORMS||[]).forEach((S,si)=>{
+    /* ความหนาแน่นคงที่ต่อพื้นที่ · พายุแรงกว่ามีริ้วแน่นกว่า = ตัวตนของมัน
+
+       ⚠️ จำนวนนี้คุมเฟรมโดยตรง — วัดแล้วว่า 380 ริ้ว x 52 ก้าว ทำให้เฟรมขึ้นเป็น p95 14ms
+       จากเดิม 0.70ms ซึ่งชนงบ 16ms และมือถือยังไม่เคยทดสอบ
+       ครึ่งหนึ่งของจำนวนเดิมยังอ่านออกว่าเป็นพายุ เพราะริ้วรอบข้างช่วยเล่าอยู่แล้ว
+       ถ้าจะเพิ่มกลับ ต้องวัดเฟรมบนมือถือจริงก่อน */
+    /* ⚠️ G.streams ไล่จางจาก *ต้นเส้น* ไป *ปลายเส้น* เพื่อบอกทิศลม (along=pow(1-f,.75))
+       ถ้าปล่อยให้ทุกริ้ววิ่งเข้าไปจบที่ตาพายุ ตาจะกลายเป็นจุดที่จางที่สุดพอดี — ซึ่งเกิดขึ้นจริง
+       จึงแบ่งเป็นสองบทบาท:
+       - ริ้วยาว หว่านทั่วจาน → วิ่งเข้าหาตาแล้วซ้อนกันเป็นกำแพงตา (ให้ความหนาแน่น)
+       - ริ้วสั้น หว่านชิดตา → *เริ่ม* ตรงกำแพงตาพอดี จึงสว่างที่สุดตรงนั้น (ให้ความเข้ม) */
+    const layers=[
+      {n:Math.round((14+S.inten*10)*zdens), steps:46, w:1.00, r0:0.10, r1:1.05},
+      {n:Math.round((20+S.inten*18)*zdens), steps:13, w:0.72, r0:0.07, r1:0.42}
+    ];
+    layers.forEach((LY,li)=>{
+      for(let i=0;i<LY.n;i++){
+        const h1=hsh(i*7.3+li*131.7+si*17.9), h2=hsh(i*19.1+li*57.3+si*3.1);
+        const rad=S.R*(LY.r0+LY.r1*Math.sqrt(h1));
+        let p=APP.destPoint(S.lat,S.lng,h2*360,rad);
+        const stepKm=S.R*0.055;
+        const pts=[APP.toXYZ(p.lat,p.lng)];
+        let spdAcc=0, ok=true;
+        for(let k=0;k<LY.steps;k++){
+          let w=field ? APP.wfAt(field,p.lat,p.lng,clamp(tf||0,0,1)) : {e:0,n:0,spd:0};
+          const sp=Math.hypot(w.e,w.n);
+          if(sp<0.5){ ok=false; break; }
+          spdAcc+=sp;
+          p=APP.destPoint(p.lat,p.lng, Math.atan2(w.e,w.n)*180/Math.PI, stepKm);
+          pts.push(APP.toXYZ(p.lat,p.lng));
+          if(APP.gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.055) break;   /* ถึงกำแพงตา */
+        }
+        if(ok&&pts.length>2){ pts.spd=spdAcc/LY.steps; pts.w=LY.w; out.push(pts); }
+      }
+    });
+  });
+  if(_ssCache.size>30) _ssCache.clear();
+  _ssCache.set(key,out);
+  return out;
+}
 
 /* สนามลมของพายุ ณ จุดที่ห่างจากตาไป (dx,dy)
    Rankine vortex: ความเร็วไต่ขึ้นจนถึงกำแพงตา แล้วค่อย ๆ ตกลงข้างนอก
@@ -424,7 +577,28 @@ function patch(){
 
      เลี่ยงการรื้อ renderGlobe ทั้งก้อน ด้วยการพักคำสั่งวาดไว้ในคิว
      แล้วปล่อยหลัง restoreNight() ซึ่งเป็นจังหวะเดียวกับที่ริ้วลมถูกวาด */
-  APP.wxStorm=function(){ ABOVE ? QUEUE.push([...arguments]) : draw.apply(null,arguments); };
+  APP.wxStorm=function(){
+    if(MODE==='field') return;                 /* แบบ D — พายุอยู่ในสนามลมแล้ว ไม่มีอะไรต้องวาดทับ */
+    ABOVE ? QUEUE.push([...arguments]) : draw.apply(null,arguments);
+  };
+
+  /* ---------- แบบ D: ยุบพายุเข้าไปในสนามลม ----------
+     สวมทับ wfAt ให้บวกกระแสวน แต่ *เฉพาะ* ตอนสร้างริ้วลมเท่านั้น
+     CUR_STORMS เป็น null ตลอดตอน driftRun เส้นทางจึงไม่ถูกแตะ */
+  const ORIG_WFAT=APP.wfAt;
+  APP.wfAt=function(field,lat,lng,tf){
+    const w=ORIG_WFAT(field,lat,lng,tf);
+    return CUR_STORMS ? blendStorms(w,lat,lng) : w;
+  };
+  const ORIG_DS=APP.driftStreams;
+  APP.driftStreams=function(L,tf){
+    if(MODE!=='field') return ORIG_DS(L,tf);
+    CUR_STORMS=stormsOf(L);
+    let lines;
+    try{ lines=ORIG_DS(L,tf).concat(stormStrands(L,tf)); }
+    finally{ CUR_STORMS=null; }
+    return lines;
+  };
   /* G เป็น const ในเฟรม จึงไม่อยู่บน window — ต้องใช้ตัวที่ดึงออกมาด้วย eval */
   ORIG_RESTORE=G.restoreNight.bind(G);
   G.restoreNight=function(ctx,hole){
@@ -473,7 +647,7 @@ function paintModes(){
     '<button class="mode'+(m.id===MODE?' on':'')+'" data-m="'+m.id+'">'
     +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
   $('#modes').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
-    MODE=b.dataset.m; paintModes(); apply(); });
+    MODE=b.dataset.m; clearStreams(); paintModes(); apply(); });
   $('#arc').innerHTML=ARCS.map(m=>
     '<button class="mode'+(m.id===ARC?' on':'')+'" data-a="'+m.id+'">'
     +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
@@ -566,6 +740,12 @@ function restorm(){
   if(!LET) return;
   const g=+$('#sGust').value;
   LET.lg.forEach(l=>{ if(l[6]>0){ l[7]=g; l[6]=X.sevOf(g); } });
+  clearStreams();
+}
+/* ริ้วลมถูกแคชไว้ต่อจดหมาย+ช่วงเวลา — เปลี่ยนแบบหรือความแรงแล้วต้องล้าง
+   ไม่งั้นจะเห็นสนามเก่าค้างจนกว่าจดหมายจะเดินข้ามช่วง */
+function clearStreams(){
+  _ssCache.clear();
   try{ APP.eval('_streamCache.clear()'); }catch(e){}
 }
 
@@ -586,7 +766,10 @@ async function recordFrames(sec, fps){
   cv.width=st.width; cv.height=st.height;
   const c=cv.getContext('2d');
   REC={t0:0, sec};
-  const urls=[];
+  /* ส่งทีละเฟรมทันที ห้ามสะสมไว้ในหน่วยความจำ
+     ครั้งแรกเก็บ dataURL ทั้ง 600 ใบไว้ก่อนแล้วค่อยส่ง — พอภาพหนักขึ้นเพราะพายุ
+     หน่วยความจำตันและลูปตายเงียบ ๆ ที่เฟรม 451 */
+  let sent=0;
   for(let i=0;i<n;i++){
     const u=i/(n-1);
     REC.t0=performance.now()-u*sec*1000;     /* หลอกให้ recCamera คิดว่าเวลาเดินไปเท่านี้ */
@@ -596,16 +779,14 @@ async function recordFrames(sec, fps){
     APP.renderGlobe();
     c.fillStyle='#0d1220'; c.fillRect(0,0,cv.width,cv.height);
     c.drawImage(st,0,0);
-    urls.push(cv.toDataURL('image/jpeg',0.86));
-    if(i%15===0) $('#status').textContent='เรนเดอร์เฟรม '+(i+1)+'/'+n;
+    await fetch('/__shot/f'+String(i).padStart(4,'0')+'.jpg',
+                {method:'POST', body:cv.toDataURL('image/jpeg',0.84)});
+    sent++;
+    if(i%10===0) $('#status').textContent='อัดเฟรม '+(i+1)+'/'+n;
   }
   REC=null;
-  for(let i=0;i<urls.length;i++){
-    await fetch('/__shot/f'+String(i).padStart(4,'0')+'.jpg',{method:'POST',body:urls[i]});
-    if(i%20===0) $('#status').textContent='ส่งเฟรม '+(i+1)+'/'+urls.length;
-  }
-  $('#status').textContent='ส่งครบ '+urls.length+' เฟรมแล้ว — รอ ffmpeg ต่อ';
-  return urls.length;
+  $('#status').textContent='ส่งครบ '+sent+' เฟรมแล้ว — รอ ffmpeg ต่อ';
+  return sent;
 }
 
 async function record(sec){
