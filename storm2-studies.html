@@ -78,8 +78,12 @@
   <h2>จังหวะการเจอ</h2>
   <div class="modes" id="arc"></div>
 
+  <h2>ชั้นของพายุ</h2>
+  <div class="modes" id="layer"></div>
+
   <div class="facts" id="facts"></div>
   <button class="act" id="reset">คืนมุมกล้องไปที่พายุ</button>
+  <button class="act" id="rec">อัดคลิป 20 วินาที</button>
 </div>
 
 <script>
@@ -91,10 +95,10 @@ let APP=null, X=null, G=null, LET=null, READY=false;
 const MODES=[
   {id:'old', name:'A · ของเดิม',
    note:'ขนาดคงที่เป็นพิกเซล คูณด้วย log2(ซูม) แต่ตันที่ 3.2 เท่า — ยิ่งซูมยิ่งหดเทียบของจริง'},
-  {id:'geo', name:'B · ขนาดภูมิศาสตร์จริง',
-   note:'รัศมีเป็นกิโลเมตรจริง แปลงเป็นพิกเซลด้วยสูตรเดียวกับวงเปิดหมอก — พอซูมเข้าจะล้นจอ'},
-  {id:'in',  name:'C · ภูมิศาสตร์ + โหมดอยู่ในพายุ',
-   note:'เหมือน B แต่พอใหญ่เกินจอ เลิกวาดก้นหอยที่มีศูนย์กลาง เปลี่ยนเป็นแถบพายุพาดทั้งจอ'}
+  {id:'geo', name:'B · ก้นหอยเรขาคณิต',
+   note:'ขนาดถูกต้องแล้ว แต่กอล์ฟตัดสินว่าเป็นลายวงเวียน ไม่ใช่อากาศ — เก็บไว้เทียบเฉย ๆ'},
+  {id:'in',  name:'C · สนามลม (ที่เลือก)',
+   note:'พายุ = ลมจริงที่หมุนวน เดินอนุภาคผ่านสนาม Rankine แล้ววาดด้วยไวยากรณ์และสีเดียวกับริ้วลมของแอป · ไม่ต้องมีโหมดแยก ตาพายุหลุดนอกเฟรมเองเมื่อเราอยู่ข้างใน'}
 ];
 let MODE='in';
 
@@ -103,6 +107,8 @@ const ARCS=[
   {id:'on',   name:'วงเปิดหดตอนพายุ',  note:'ข้อ 35 ที่ไม่เคยเข้าแอปจริง — พายุบังตา มองเห็นแคบลง 38%'}
 ];
 let ARC='on';
+/* พายุอยู่เหนือหมอกหรือใต้หมอก — ข้อ 33 ปะทะข้อ 5 · ค่าตั้งต้นตามข้อ 33 */
+let ABOVE=true;
 
 /* ---------- รัศมีจริงของพายุ ----------
    ⚠️ นี่คือ "สมมติฐานที่ประกาศไว้" ไม่ใช่ค่าที่อ่านจากพยากรณ์
@@ -113,7 +119,149 @@ let ARC='on';
 function stormKm(inten){ return 800 + (inten-0.25)/0.75*1000; }
 function kmToPx(km){ return G.R*Math.sin(km/ER); }
 
-/* ---------- ก้นหอยขนาดใหญ่ ----------
+/* ================================================================
+   พายุที่สร้างด้วย "สนามลม" ไม่ใช่สมการวงกลม
+
+   กอล์ฟ 24 ส.ค.: "ดูเป็นเรขาคณิตสุด ๆ ความเป็นศิลป์ต่างจากธีมแอปลิบลับ
+   ใช้เส้นลมเข้าช่วย ให้ดูน่ากลัวและน่าเคารพในเวลาเดียวกัน
+   ทั้งแอปต้องส่งเสียงเดียวกัน"
+
+   ต้นเหตุที่วัดได้ — พายุพูดคนละภาษากับแอปสองชั้น:
+   1. วิธีสร้าง — ริ้วลมทั้งแอปเกิดจาก *เดินอนุภาคผ่านสนาม* แต่พายุเป็นสมการวงกลมวาดตรง ๆ
+   2. สี — ริ้วลมใช้ rgba(84,90,104) เทาอมฟ้า · พายุเดิมใช้ rgba(232,228,220) หมึกอุ่น
+      คนละวัสดุกันตั้งแต่ยังไม่ทันดูรูปทรง
+
+   แก้โดยให้พายุ *เป็นลม* จริง ๆ: สนามหมุนวนแบบ Rankine + การไหลเข้าหาตา
+   แล้ววาดด้วยไวยากรณ์เดียวกับ G.streams เป๊ะ — along จางไปตามเส้น · คลื่นสว่างวิ่งไล่ ·
+   ความหนาแปรตามความแรง · สีเดียวกัน
+   ผลพลอยได้: ไม่ต้องมี "โหมดอยู่ในพายุ" แยกอีกต่อไป พอพายุใหญ่เกินจอ
+   อนุภาคก็เต็มจอและตาพายุหลุดออกนอกเฟรมไปเอง — โหมดเกิดขึ้นเองจากความจริง
+   ================================================================ */
+
+/* สนามลมของพายุ ณ จุดที่ห่างจากตาไป (dx,dy)
+   Rankine vortex: ความเร็วไต่ขึ้นจนถึงกำแพงตา แล้วค่อย ๆ ตกลงข้างนอก
+   spin: +1 ทวนเข็ม (ซีกเหนือ) · -1 ตามเข็ม (ซีกใต้) — ข้อ 34 */
+function vortexAt(dx,dy,R,spin,inflow){
+  const r=Math.hypot(dx,dy)||1e-6, rn=r/R;
+  const WALL=0.16;
+  const v = rn<WALL ? (rn/WALL) : Math.pow(WALL/rn, 0.5);
+  const tx=-dy/r*spin, ty=dx/r*spin;
+  /* มุมไหลเข้าเกือบคงที่ ไม่ใช่จางหายที่ขอบ — ของจริงลมพัดเฉียงเข้าหาตาราว 20-30° ตลอด
+     ถ้าให้แรงไหลเข้าตกเป็นศูนย์ที่ขอบ อนุภาคจะ *โคจรเป็นวงกลม* ไม่ใช่พันเข้าหาตา
+     ซึ่งคือสิ่งที่ทำให้ภาพออกมาเป็นเรขาคณิต */
+  const q=inflow*(0.75+0.45*Math.min(1,rn));
+  return { x:(tx - dx/r*q), y:(ty - dy/r*q), v };
+}
+/* แฮชคงที่ ห้ามใช้ Math.random — ผู้ส่งกับผู้รับต้องได้ภาพเดียวกัน */
+const hsh=n=>{ const s=Math.sin(n*12.9898)*43758.5453; return s-Math.floor(s); };
+
+/* เดินอนุภาคผ่านสนาม → ได้เส้นโค้งที่มีที่มา ไม่ใช่ส่วนโค้งวงกลม
+   แคชไว้ต่อขนาด เพราะรูปร่างไม่เปลี่ยนตามเวลา มีแต่คลื่นสว่างที่วิ่ง */
+const _vcache=new Map();
+function vortexLines(R,spin,inten,W,H){
+  const key=Math.round(R/8)+'|'+spin+'|'+Math.round(inten*8)+'|'+Math.round(W/40)+'x'+Math.round(H/40);
+  if(_vcache.has(key)) return _vcache.get(key);
+  /* หว่านเฉพาะบริเวณที่ "เป็นพายุจริง" และ "มองเห็นได้" ตัดกัน
+     ผูกกับจออย่างเดียว → ตอนพายุเล็ก อนุภาคไปตกนอกพายุ ได้เส้นจางเต็มจอแทนที่จะเป็นก้อน
+     ผูกกับ R อย่างเดียว → ตอนพายุใหญ่กว่าจอ อนุภาคส่วนใหญ่ตกนอกเฟรม เสียเปล่า */
+  const reach=Math.min(R*1.15, Math.hypot(W,H)*0.75);
+  /* ความหนาแน่นต่อพื้นที่ต้องคงที่ ไม่งั้นพายุใหญ่จะกลายเป็นความว่างเปล่า (บทเรียนข้อ 29)
+     พายุคือ *ลมที่แน่นกว่าลมธรรมดา* — ความหนาแน่นคือตัวตนของมัน ไม่ใช่สีหรือรูปทรง */
+  const dens=Math.max(1, Math.sqrt(reach/90));
+  const lines=[];
+  /* สองชั้นแบบเดียวกับองก์ปล่อยที่กอล์ฟผ่านแล้ว
+     แกนหลัก: น้อย ยาว ช้า = ความน่าเคารพ · ริ้วรอง: เยอะ สั้น เร็ว = ความน่ากลัว */
+  const layers=[
+    {n:Math.round((16+inten*10)*dens), steps:54, step:R*0.055, w:1.00, spd:0.55},
+    {n:Math.round((30+inten*26)*dens), steps:26, step:R*0.040, w:0.62, spd:1.00}
+  ];
+  layers.forEach((L,li)=>{
+    for(let i=0;i<L.n;i++){
+      const h1=hsh(i*7.3+li*131.7), h2=hsh(i*19.1+li*57.3);
+      /* กระจายตามรากที่สองเพื่อให้ความหนาแน่นต่อพื้นที่สม่ำเสมอ
+         ไม่งั้นจะกองแน่นตรงกลางจนตาพายุตัน */
+      const rad=reach*(0.10+0.90*Math.sqrt(h1));
+      const th=h2*Math.PI*2;
+      let px=Math.cos(th)*rad, py=Math.sin(th)*rad;
+      /* มุมไหลเข้าต่างกันเล็กน้อยรายเส้น — ถ้าเท่ากันหมด ทุกเส้นจะซ้อนเป็นวงเดียวกันเป๊ะ
+         ธรรมชาติไม่มีอะไรเท่ากันพอดี และตานี่แหละที่จับได้ว่าเป็นของทำ */
+      const inflow=0.30+hsh(i*5.9+li*23.1)*0.28;
+      const pts=[]; let spdAcc=0;
+      for(let k=0;k<L.steps;k++){
+        pts.push(px,py);
+        const f=vortexAt(px,py,R,spin,inflow);
+        spdAcc+=f.v;
+        const st=L.step*(0.45+f.v*1.05);
+        px+=f.x*st; py+=f.y*st;
+        if(Math.hypot(px,py)<R*0.055) break;       /* ถึงกำแพงตาแล้วหยุด — เกิดรูตรงกลางเอง */
+      }
+      if(pts.length>=6) lines.push({pts, spd:(spdAcc/L.steps), w:L.w, ph:hsh(i*3.7+li*11.3), sp:L.spd});
+    }
+  });
+  if(_vcache.size>40) _vcache.clear();
+  _vcache.set(key,lines);
+  return lines;
+}
+
+/* วาดพายุ — ไวยากรณ์เดียวกับ G.streams ทุกบรรทัด */
+function stormField(ctx,cx,cy,t,inten,rpx,W,H,spin){
+  const lines=vortexLines(rpx,spin,inten,W,H);
+  const cover=Math.min(1.6, rpx/Math.min(W,H));
+
+  /* ม่านมืด — พายุบังแสง · ยิ่งกลืนจอยิ่งมืด แต่ไม่มืดจนกลบลมของตัวเอง
+     นี่คือส่วนที่ทำให้ "น่ากลัว" โดยไม่ต้องเพิ่มเส้นสักเส้น */
+  if(cover>0.25){
+    const veil=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(rpx,Math.hypot(W,H)*0.55));
+    const dark=Math.min(0.34,(cover-0.25)*0.42)*(0.45+inten*0.55);
+    veil.addColorStop(0,   'rgba(6,9,16,'+(dark*0.35).toFixed(3)+')');
+    veil.addColorStop(0.55,'rgba(6,9,16,'+dark.toFixed(3)+')');
+    veil.addColorStop(1,   'rgba(6,9,16,0)');
+    ctx.save(); ctx.fillStyle=veil; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
+
+  ctx.save(); ctx.lineCap='round';
+  const B=new Map();
+  for(const ln of lines){
+    const P=ln.pts, last=P.length/2-1;
+    if(last<1) continue;
+    const li=clamp(ln.spd*(0.45+inten*0.85),.12,1);
+    /* คลื่นสว่างวิ่งไล่ไปตามริ้ว เหลื่อมเฟสกันทีละเส้น — สูตรเดียวกับ G.streams */
+    const head=((t*(0.17+li*0.30)*ln.sp)+ln.ph*1.35)%1.35;
+    for(let i=1;i<=last;i++){
+      const x0=cx+P[(i-1)*2], y0=cy+P[(i-1)*2+1];
+      const x1=cx+P[i*2],     y1=cy+P[i*2+1];
+      if((x0<-8&&x1<-8)||(x0>W+8&&x1>W+8)) continue;
+      if((y0<-8&&y1<-8)||(y0>H+8&&y1>H+8)) continue;
+      const f=i/last;
+      const along=Math.pow(1-f,.75);
+      const near=Math.max(0,1-Math.abs(f-head)*4.5);
+      let a=ln.w*((.20+li*.42)*along + near*(.30+li*.55)*along);
+      if(a<=.006) continue;
+      if(a>.55) a=.55;
+      const ai=Math.min(17,Math.round(a*32));
+      const wi=Math.min(3,Math.round(((.8+li*.8)*(1+near*.6)-.7)*1.6));
+      const key=ai*4+wi;
+      let arr=B.get(key); if(!arr) B.set(key,arr=[]);
+      arr.push(x0,y0,x1,y1);
+    }
+  }
+  B.forEach((arr,key)=>{
+    /* สีเดียวกับริ้วลมของแอปเป๊ะ — นี่คือจุดที่ทำให้พูดภาษาเดียวกัน */
+    ctx.strokeStyle='rgba(84,90,104,'+((key>>2)/32).toFixed(3)+')';
+    ctx.lineWidth=.7+(key&3)/1.6;
+    ctx.beginPath();
+    for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
+    ctx.stroke();
+  });
+
+  /* ไม่วาดวงตาพายุ — วงกลมเส้นเดียวคือรูปทรงเรขาคณิตที่กอล์ฟไม่เอา
+     ตาพายุเกิดเองจากการที่อนุภาคหยุดเดินเมื่อถึงกำแพงตา กลายเป็นรูที่มีขอบเป็นลม
+     ซึ่งคือวิธีที่ตาพายุจริงปรากฏในภาพถ่ายดาวเทียม */
+  ctx.restore();
+}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+/* ---------- ก้นหอยขนาดใหญ่ (เก็บไว้เทียบ — กอล์ฟตัดสินแล้วว่าไม่เอา) ----------
    บทเรียนข้อ 29: ขยายขนาดต้อง *เพิ่มความหนาแน่น* ไม่ใช่ยืดเส้นเดิมให้ยาวขึ้น
    ของเดิมมี 7+3 แขน · ที่ 24 px นั่นคือเส้นแน่น แต่ที่ 500 px มันคือความว่างเปล่า
    จำนวนแขนจึงต้องโตตามรากที่สองของรัศมี ให้ "เส้นต่อพื้นที่" คงที่ */
@@ -236,26 +384,18 @@ function makeStorm(orig){
     /* ขนาดที่ wxStorm วาดจริง = size*(r0+len) ของแถบนอก = size*1.12
        จึงต้องแก้สมการกลับ เพื่อให้ขอบนอกของก้นหอยตรงกับรัศมีภูมิศาสตร์ */
     const s=rpx/((9+intensity*15)*1.12);
-    /* ต่ำกว่าขนาดอ้างอิงเดิมให้ใช้ของเดิม — ความหนาแน่นที่ขนาดเล็กจูนมาดีอยู่แล้ว */
-    if(rpx<30) return orig(ctx,x,y,t,intensity,rich,s);
-    if(MODE==='geo') return stormSpiral(ctx,x,y,t,intensity,rpx);
-    /* MODE==='in' — ไล่ระดับ ไม่ให้กระโดด
-       ต่ำกว่า 0.55 ของด้านสั้น = ยังเห็นเป็นก้อนอยู่ตรงโน้น → ก้นหอย
-       เกิน 1.10 = กลืนจอไปแล้ว → ไม่มีศูนย์กลางให้มอง */
-    const k=(rpx/screen - 0.55)/(1.10-0.55);
-    const blend=Math.max(0,Math.min(1,k));
-    if(blend<1){
-      ctx.save(); ctx.globalAlpha=(1-blend);
-      stormSpiral(ctx,x,y,t,intensity,rpx);
-      ctx.restore();
+    if(MODE==='geo'){
+      if(rpx<30) return orig(ctx,x,y,t,intensity,rich,s);
+      return stormSpiral(ctx,x,y,t,intensity,rpx);
     }
-    if(blend>0){
-      ctx.save(); ctx.globalAlpha=blend;
-      stormInside(ctx,x,y,t,intensity,W,H,rpx);
-      ctx.restore();
-    }
+    /* MODE==='in' — สนามลม ไม่มีโหมดแยกอีกแล้ว
+       ขนาดเล็ก อนุภาคกองรอบตา · ขนาดใหญ่ อนุภาคเต็มจอและตาหลุดออกนอกเฟรมเอง */
+    stormField(ctx,x,y,t,intensity,rpx,W,H,SPIN);
   };
 }
+/* ทิศหมุนตามซีกโลก — ซีกเหนือทวนเข็ม ซีกใต้ตามเข็ม (ข้อ 34)
+   ตั้งใหม่ทุกครั้งที่เลือกช่วงพายุ เพราะพายุคนละลูกอยู่คนละซีกได้ */
+let SPIN=1;
 
 /* ---------- ประกอบเข้ากับแอป ---------- */
 function boot(){
@@ -271,10 +411,26 @@ function boot(){
   makeLetter();
 }
 
-let ORIG_STORM=null, ORIG_REVEAL=null;
+let ORIG_STORM=null, ORIG_REVEAL=null, ORIG_RESTORE=null;
+const QUEUE=[];
 function patch(){
   ORIG_STORM=APP.wxStorm;
-  APP.wxStorm=makeStorm(ORIG_STORM);
+  const draw=makeStorm(ORIG_STORM);
+  /* ---------- ลำดับชั้น: พายุต้องอยู่ *เหนือ* หมอก ----------
+     ของเดิมวาดพายุก่อน G.fog() โดยอ้างข้อ 5 (อากาศเห็นได้ "ในวง")
+     แต่ข้อ 33 เขียนไว้ตรงข้ามว่าพายุมองเห็นทะลุหมอกทั้งเส้นทาง
+     และข้อ 31 บอกว่าลมทะลุหมอกเสมอ — พายุก็คือลม จึงต้องทะลุด้วย
+     ผลที่วัดได้: ใต้หมอก พายุจะจางกว่าริ้วลมที่อยู่รอบตัวมันเอง สู้ไม่ได้เลย
+
+     เลี่ยงการรื้อ renderGlobe ทั้งก้อน ด้วยการพักคำสั่งวาดไว้ในคิว
+     แล้วปล่อยหลัง restoreNight() ซึ่งเป็นจังหวะเดียวกับที่ริ้วลมถูกวาด */
+  APP.wxStorm=function(){ ABOVE ? QUEUE.push([...arguments]) : draw.apply(null,arguments); };
+  /* G เป็น const ในเฟรม จึงไม่อยู่บน window — ต้องใช้ตัวที่ดึงออกมาด้วย eval */
+  ORIG_RESTORE=G.restoreNight.bind(G);
+  G.restoreNight=function(ctx,hole){
+    ORIG_RESTORE(ctx,hole);
+    while(QUEUE.length){ const a=QUEUE.shift(); a[0]=ctx; draw.apply(null,a); }
+  };
   /* ข้อ 35 — วงเปิดหดเมื่อจดหมายอยู่ในพายุ · ของเดิมใน index.html ขึ้นกับระยะทางอย่างเดียว */
   ORIG_REVEAL=APP.revealKm;
   APP.revealKm=function(L){
@@ -323,6 +479,13 @@ function paintModes(){
     +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
   $('#arc').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
     ARC=b.dataset.a; paintModes(); apply(); });
+  $('#layer').innerHTML=[
+    {id:1,name:'เหนือหมอก (ข้อ 33)',note:'พายุคือลม · ข้อ 31 บอกว่าลมทะลุหมอกเสมอ · เห็นพายุรออยู่ข้างหน้า = ได้ความตึงเครียดฟรี'},
+    {id:0,name:'ใต้หมอก (ของเดิม อ้างข้อ 5)',note:'พายุโดนหมอกกลืนจนจางกว่าริ้วลมที่อยู่รอบตัวมันเอง'}
+  ].map(m=>'<button class="mode'+((m.id===1)===ABOVE?' on':'')+'" data-l="'+m.id+'">'
+    +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
+  $('#layer').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+    ABOVE=b.dataset.l==='1'; QUEUE.length=0; paintModes(); apply(); });
 }
 
 function zoomOf(){ return 1+Math.pow($('#sZoom').value/100,2.2)*45; }
@@ -343,6 +506,7 @@ function focusStorm(){
   let bi=0,bg=-1;
   LET.lg.forEach((l,i)=>{ const g=l[7]??l[2]; if(l[6]>0&&g>bg){bg=g;bi=i;} });
   const p=X.posAt(LET,(bi+0.5)/LET.lg.length);
+  SPIN = p.lat>=0 ? 1 : -1;              /* ข้อ 34 — พายุลูกนี้อยู่ซีกไหน */
   G.focus(p, zoomOf());
   for(let i=0;i<300;i++) G.step();
   apply();
@@ -385,6 +549,7 @@ function bind(){
     $('#'+id).dispatchEvent(new Event('input'));
   });
   $('#reset').onclick=focusStorm;
+  $('#rec').onclick=()=>{ focusStorm(); recordFrames(20,30); };
   $('#toggle').onclick=()=>{
     const p=$('#panel'), hid=p.classList.toggle('hide');
     $('#toggle').classList.toggle('off',hid);
@@ -404,15 +569,112 @@ function restorm(){
   try{ APP.eval('_streamCache.clear()'); }catch(e){}
 }
 
+/* ---------- อัดคลิป ----------
+   กอล์ฟจะไม่อยู่หน้าคอม จึงต้องได้ภาพเคลื่อนไหว ไม่ใช่ภาพนิ่ง
+   ถ่ายจาก canvas โดยตรงด้วย captureStream — ไม่ต้องพึ่งการ composite ของหน้าต่าง */
+let REC=null;
+
+/* อัดแบบเฟรมต่อเฟรม — เวลาในคลิปเป็นเวลาที่เรากำหนดเอง ไม่ใช่เวลานาฬิกา
+   จำเป็นเพราะทั้ง rAF และ setInterval ถูกหน่วงเมื่อหน้าต่างไม่ได้แสดงผล
+   (วัดแล้ว: rAF ได้ 43 KB · setInterval ได้ 24 เฟรมใน 20 วินาที = 1.2 fps)
+   ผลพลอยได้: คลิปลื่นเท่ากันทุกเครื่อง เพราะไม่ขึ้นกับความเร็วในการเรนเดอร์ */
+async function recordFrames(sec, fps){
+  if(!READY||REC) return;
+  const st=APP.document.querySelector('#stage');
+  const n=Math.round(sec*fps);
+  const cv=document.createElement('canvas');
+  cv.width=st.width; cv.height=st.height;
+  const c=cv.getContext('2d');
+  REC={t0:0, sec};
+  const urls=[];
+  for(let i=0;i<n;i++){
+    const u=i/(n-1);
+    REC.t0=performance.now()-u*sec*1000;     /* หลอกให้ recCamera คิดว่าเวลาเดินไปเท่านี้ */
+    recCamera();
+    /* T คือนาฬิกาของแอนิเมชันในแอป ต้องเดินตามเวลาในคลิป ไม่ใช่เวลาจริง */
+    APP.eval('T='+(u*sec).toFixed(4));
+    APP.renderGlobe();
+    c.fillStyle='#0d1220'; c.fillRect(0,0,cv.width,cv.height);
+    c.drawImage(st,0,0);
+    urls.push(cv.toDataURL('image/jpeg',0.86));
+    if(i%15===0) $('#status').textContent='เรนเดอร์เฟรม '+(i+1)+'/'+n;
+  }
+  REC=null;
+  for(let i=0;i<urls.length;i++){
+    await fetch('/__shot/f'+String(i).padStart(4,'0')+'.jpg',{method:'POST',body:urls[i]});
+    if(i%20===0) $('#status').textContent='ส่งเฟรม '+(i+1)+'/'+urls.length;
+  }
+  $('#status').textContent='ส่งครบ '+urls.length+' เฟรมแล้ว — รอ ffmpeg ต่อ';
+  return urls.length;
+}
+
+async function record(sec){
+  if(!READY||REC) return;
+  const st=APP.document.querySelector('#stage');
+  /* captureStream(0) = เราสั่งเองว่าเฟรมไหนถูกเก็บ
+     ถ้าใช้ captureStream(30) จะพึ่ง rAF ซึ่งถูกหน่วงจนแทบไม่ทำงานเมื่อหน้าต่างไม่ composite
+     (วัดแล้ว: อัด 20 วินาทีได้ไฟล์ 43 KB คือแทบไม่มีเฟรมเลย) */
+  const stream=st.captureStream(0);
+  const track=stream.getVideoTracks()[0];
+  const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+    .find(m=>MediaRecorder.isTypeSupported(m));
+  const mr=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8_000_000});
+  const chunks=[];
+  mr.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  const done=new Promise(r=>mr.onstop=r);
+  REC={t0:performance.now(), sec};
+  mr.start(200);
+  /* วาดเองด้วย setInterval ที่ 30 fps แล้วสั่งเก็บเฟรมทีละใบ — ไม่ขึ้นกับการ composite เลย */
+  const FPS=30;
+  await new Promise(resolve=>{
+    const iv=setInterval(()=>{
+      const e=(performance.now()-REC.t0)/1000;
+      try{
+        recCamera();
+        APP.eval('T='+((performance.now()-T0)/1000).toFixed(3));
+        APP.renderGlobe();
+        track.requestFrame();
+      }catch(err){}
+      $('#status').textContent='กำลังอัด… '+e.toFixed(1)+'s / '+sec+'s';
+      if(e>=sec){ clearInterval(iv); resolve(); }
+    }, 1000/FPS);
+  });
+  mr.stop(); await done; REC=null;
+  const blob=new Blob(chunks,{type:'video/webm'});
+  $('#status').textContent='กำลังส่งคลิป '+(blob.size/1048576).toFixed(1)+' MB…';
+  const fr=new FileReader();
+  const dataUrl=await new Promise(r=>{ fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+  const res=await fetch('/__shot/storm_clip.webm',{method:'POST',body:dataUrl});
+  $('#status').textContent='ส่งคลิปแล้ว ('+res.status+') · '+(blob.size/1048576).toFixed(1)+' MB';
+}
+
+/* กล้องระหว่างอัด — ไล่จากทั้งลูกโลกเข้าไปจนอยู่ในตาพายุ
+   ต้องช้าพอให้ตาไล่ทัน เพราะนี่คือจังหวะ "ลุ้น" ที่กอล์ฟขอ */
+function recCamera(){
+  const e=(performance.now()-REC.t0)/1000, T=REC.sec;
+  const u=Math.min(1,e/T);
+  let zp;
+  if(u<0.15)      zp=8;                                    /* ทั้งลูกโลก — เห็นพายุรออยู่ข้างหน้า */
+  else if(u<0.72) { const k=(u-0.15)/0.57; zp=8+Math.pow(k,1.35)*54; }   /* ค่อย ๆ เข้าไปหา */
+  else            zp=62;                                   /* อยู่ข้างในแล้ว */
+  const z=1+Math.pow(zp/100,2.2)*45;
+  G.zoom+=(z-G.zoom)*0.06; G.R=G.R0*G.zoom; G.zTarget=G.zoom;
+  /* จดหมายเดินหน้าไปเรื่อย ๆ ระหว่างนั้น */
+  if(APP.PREVIEW) APP.eval('PREVIEW.h='+(LET.th*(0.45+u*0.22)).toFixed(4));
+}
+
 let T0=performance.now();
 function tick(){
   if(READY && APP && APP.renderGlobe){
-    try{
-      APP.eval('T='+((performance.now()-T0)/1000).toFixed(3));
-      APP.renderGlobe();
-    }catch(e){}
-    $('#status').textContent='ลูกโลกจริง · จดหมายทดสอบอยู่ในหน่วยความจำ ไม่ถูกบันทึก'
-      +' · '+MODES.find(m=>m.id===MODE).name;
+    /* ระหว่างอัด ลูปอัดเป็นคนวาดเอง — ห้ามวาดซ้ำตรงนี้ ไม่งั้นกล้องจะเดินเร็วเป็นสองเท่า */
+    if(!REC){
+      try{
+        APP.eval('T='+((performance.now()-T0)/1000).toFixed(3));
+        APP.renderGlobe();
+      }catch(e){}
+      $('#status').textContent='ลูกโลกจริง · จดหมายทดสอบอยู่ในหน่วยความจำ ไม่ถูกบันทึก'
+        +' · '+MODES.find(m=>m.id===MODE).name;
+    }
   }
   requestAnimationFrame(tick);
 }
