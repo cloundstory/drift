@@ -252,11 +252,13 @@ const CFG = {
   LOST_KMH:   88,        // พายุรุนแรง — เสี่ยงหาย
   HOLD_MAX:   6,         // ชม. จอดสูงสุด (ปานกลาง)
   HOLD_MAX_S: 12,        // ชม. จอดสูงสุด (รุนแรง)
-  DETOUR_FRAC:0.35,      // "อ้อม" = +เวลาตามสัดส่วน (ไม่คำนวณเส้นเลี่ยงจริง)
-  DETOUR_MIN: 4,         // ชม. — อ้อมต้องช้าลงรู้สึกได้เสมอ
-  DETOUR_MAX: 14,        // ชม. — แต่ต้องไม่นานจนไม่มีใครเลือก
-  LOSS_CROSS: 0.14,      // โอกาสหายเมื่อเลือกข้ามพายุรุนแรง
-  LOSS_DETOUR:0.02,      // โอกาสหายเมื่อเลือกอ้อม
+  LOSS_CROSS: 0.14,      // โอกาสหายเมื่อเจอพายุรุนแรง
+  /* ---------- การเคลือบ (ข้อ 13-16, 60) ----------
+     0 = ไม่เคลือบ · 1 = เคลือบกันน้ำ · 2 = เคลือบหนา
+     ต้นทุนเวลาคูณ *หลัง* ลมคำนวณเสร็จ ไม่ทับผลของลม (บทเรียนข้อ 45.1) */
+  CT_TIME:    0.12,      // +12% ต่อฉบับที่เคลือบ
+  CT_LOSS:    0.02,      // เคลือบหนา: โอกาสหายเหลือเท่านี้ (ยกจาก LOSS_DETOUR ที่ถูกลบ)
+  CT_QUOTA:   3,         // กี่ฉบับต่อเดือน — เฟส 1 เป็นตัวนับที่มองเห็น ไม่ใช่การบังคับ (ข้อ 17)
   SEGS:       12,        // จำนวนช่วงที่สุ่มพยากรณ์บนเส้นทาง
   MAX_BODY:   1100,      // ตัวอักษรสูงสุด (คุมความยาว URL)
   URL_WARN:   2000,      // ความยาว URL ที่เริ่มเสี่ยงกับบางเบราว์เซอร์
@@ -388,7 +390,7 @@ function sanitizeRec(r){
   const wfOk = typeof r.wf==='string' && r.wf.length<=8000 && /^[A-Za-z0-9+/]*$/.test(r.wf);
   const out={ id:r.id, f:pt(r.f), t:pt(r.t),
     s:_num(r.s, 0, Date.now()+864e5, Date.now()),
-    th:_num(r.th, 0, 24*60, 1), rt: r.rt==='d'?'d':'x', lg,
+    th:_num(r.th, 0, 24*60, 1), ct: Math.round(_num(r.ct,0,2,0)), lg,
     lo:Math.round(_num(r.lo,-1,lg.length,-1)),
     bd:_str(r.bd, CFG.MAX_BODY) };
   if(wfOk) out.wf=r.wf;
@@ -555,15 +557,14 @@ function sampleWx(loc,hoursFromNow){
 }
 
 /* เวลาจอดรอพายุ — แยกออกมาเพราะต้องใช้ตอนประเมินเวลาสุ่มลมด้วย */
-function holdOf(spd,mode){
+function holdOf(spd){
   const raw = spd>=CFG.LOST_KMH ? 2 : (spd>=CFG.HOLD_KMH ? 1 : 0);
-  if(mode==='d' && raw===2) return clamp((spd-CFG.HOLD_KMH)/18, 0, 2);   /* อ้อม = เลียบขอบพายุ */
   if(raw===1) return clamp((spd-CFG.HOLD_KMH)/9+0.5, 0.5, CFG.HOLD_MAX);
   if(raw===2) return clamp((spd-CFG.LOST_KMH)/9+2,   2,   CFG.HOLD_MAX_S);
   return 0;
 }
 /* ---------- จำลองการเดินทาง ----------
-   mode 'x' = ข้าม, 'd' = อ้อม
+   ct = การเคลือบ 0 ไม่เคลือบ / 1 กันน้ำ / 2 หนา (ข้อ 13-16, 60)
    legs[i] = [ชม.เดินทาง, ชม.จอด, ลม km/h, ทิศลม°, ฝน mm, kind, ระดับพายุ]
 
    เวลาเดินทางมาจาก "เส้นทางที่ลมพัดพาจริง" ไม่ใช่ระยะเส้นตรงหารความเร็วอีกต่อไป
@@ -572,7 +573,7 @@ function holdOf(spd,mode){
 const wfMid = i => WF.NG*WF.NG + i;   /* จุดแนวเส้นทางอยู่ต่อท้ายตารางสนาม */
 /* cwx = พยากรณ์ของ "ทางเดินลมทั้งชุด" (13×5 = 65 จุด) ดึงมาในคำขอเดียว
    แนวกลาง 13 จุดคือชุดเดิมที่เคยดึงแยก จึงไม่มีคำขอเพิ่ม */
-function simulate(cpts, cwx, dist, mode, seedId){
+function simulate(cpts, cwx, dist, ct, seedId){
   const A=cpts[wfMid(0)], B=cpts[wfMid(CFG.SEGS)];
   /* ไก่กับไข่: เวลาที่ใช้สุ่มลมขึ้นกับเส้นทาง แต่เส้นทางขึ้นกับลม
      → วนสองรอบ รอบแรกเดาจากเส้นตรง รอบสองใช้เวลาจากเส้นทางจริง
@@ -583,7 +584,7 @@ function simulate(cpts, cwx, dist, mode, seedId){
     for(let i=0;i<CFG.SEGS;i++){
       at.push(acc);
       acc += legT ? legT[i] : (dist/CFG.SEGS)/CFG.SPEED;
-      if(W) acc += holdOf(W[i].spd, mode);
+      if(W) acc += holdOf(W[i].spd);
     }
     W=[];
     for(let i=0;i<CFG.SEGS;i++){
@@ -622,9 +623,8 @@ function simulate(cpts, cwx, dist, mode, seedId){
     boostSum+=clamp(align*w.spd/CFG.WIND_REF, -CFG.WIND_CAP, CFG.WIND_CAP);
 
     const raw = w.spd>=CFG.LOST_KMH ? 2 : (w.spd>=CFG.HOLD_KMH ? 1 : 0);
-    const dodged = (mode==='d' && raw===2);
-    const sev = dodged ? 1 : raw;
-    const hold = holdOf(w.spd, mode);
+    const sev = raw;
+    const hold = holdOf(w.spd);
     if(sev>worstSeverity) worstSeverity=sev;
     if(raw>rawWorst) rawWorst=raw;
     if(raw===2) severeIdx.push(i);
@@ -642,7 +642,6 @@ function simulate(cpts, cwx, dist, mode, seedId){
     legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev]);
     t+=legT[i]+hold;
   }
-  if(mode==='d') t+=clamp(t*CFG.DETOUR_FRAC, CFG.DETOUR_MIN, CFG.DETOUR_MAX);
   /* ---------- พื้นเวลา (ข้อ 45.1) ----------
      ของเดิม: ถ้ารวมแล้วไม่ถึง 6 ชม. ให้ตั้งเป็น 6 ตรง ๆ
      ปัญหา: การตั้งค่าตรง ๆ "ทับ" ผลของลมจนหายเกลี้ยง
@@ -670,14 +669,17 @@ function simulate(cpts, cwx, dist, mode, seedId){
   let k = (straightH>0 && baseH>straightH) ? baseH/straightH : 1;
   /* พื้นแข็ง: ลมส่งท้ายแรงผิดปกติต้องไม่ทำให้จดหมายถึงเร็วจนไม่รู้สึกว่าเดินทาง */
   if(t*k>0 && t*k<CFG.FLOOR_MIN) k *= CFG.FLOOR_MIN/(t*k);
+  /* การเคลือบเพิ่มเวลา — คูณเข้ากับตัวคูณเดียวกับพื้นเวลา ไม่ใช่บวกทีหลัง
+     ผลของลมจึงยังอยู่ครบ แค่ทั้งเที่ยวช้าลงตามสัดส่วน */
+  if(ct>0) k *= (1+CFG.CT_TIME);
   legs.forEach(l=>{ l[0]=r2(l[0]*k); l[1]=r2(l[1]*k); });
   /* total ต้องเท่าผลรวมของ legs เป๊ะ — letterState() เดินตาม legs แต่ตัดสินว่าถึงจาก th */
   t = r2(legs.reduce((a,l)=>a+l[0]+l[1], 0));
   /* โอกาสหาย — roll ครั้งเดียวตอนส่ง (deterministic ฝังใน URL) */
   let lost=-1;
-  const rng=seeded(seedId+mode);
+  const rng=seeded(seedId+'c'+ct);
   if(rawWorst===2){                               /* หายได้เฉพาะเส้นที่มีพายุรุนแรงจริง */
-    const p = mode==='d' ? CFG.LOSS_DETOUR : CFG.LOSS_CROSS;
+    const p = (ct===2) ? CFG.CT_LOSS : CFG.LOSS_CROSS;   /* เคลือบหนา = หนักและแข็ง ลมพัดหลุดยาก */
     if(p>0 && rng()<p && severeIdx.length){
       lost=severeIdx[Math.floor(rng()*severeIdx.length)];
     }
@@ -2212,7 +2214,13 @@ function tracesOf(L,upto){
   let pre=0, st=0;
   const n = upto===undefined ? L.lg.length : upto+1;
   for(let i=0;i<Math.min(n,L.lg.length);i++){ const l=L.lg[i]; pre+=l[4]*l[0]; if(l[6]>0) st++; }
-  return { rain: clamp(pre/40,0,1), storm: Math.min(3,st), days: L.th/24 };
+  /* การเคลือบตัดร่องรอยที่มันกันได้ (ข้อ 13) — ความเก่าตามวันยังอยู่เสมอ เพราะเวลาไม่มีอะไรกันได้ */
+  const ct=L.ct|0;
+  return {
+    rain:  ct===1||ct===2 ? 0 : clamp(pre/40,0,1),
+    storm: ct===2 ? 0 : Math.min(3,st),
+    days:  L.th/24
+  };
 }
 const llOf = p => ({lat:p.la, lng:p.lo});
 
@@ -2471,9 +2479,9 @@ async function doSend(){
     const pts=wfPoints(A,B);
     const wx=await fetchWx(pts);
     const id=uid();
-    const simX=simulate(pts,wx,dist,'x',id);
+    const sim0=simulate(pts,wx,dist,0,id);
     pending={ id, dist, pts, wx, A, B, me, to, from, body,
-              place:pendTo.place, sim:simX, simX, simD:null, mode:'x' };
+              place:pendTo.place, sim:sim0, sims:[sim0,null,null], ct:0 };
     showForecast();
     openSheet('forecast');
   }catch(e){
@@ -2499,22 +2507,49 @@ function showForecast(){
     + (holds?' · จอดรอ '+holds+' ครั้ง':'');
 
   const box=$('#fcChoice'); box.innerHTML='';
-  if(sim.worst===2 || (p.simD&&p.simX.worst===2)){
-    /* เจอพายุหนัก → ทางเลือกเดียวของทั้งเส้นทาง (0–1 ครั้งเท่านั้น) */
-    if(!p.simD) p.simD=simulate(p.pts,p.wx,p.dist,'d',p.id);
+  /* ---------- เลือกการเคลือบ (ข้อ 13-16, 60) ----------
+     โผล่ทุกฉบับ ไม่ใช่เฉพาะตอนเจอพายุ — การเคลือบคือ "การเตรียมตัว" ไม่ใช่ "การแก้ปัญหาเฉพาะหน้า"
+     และหลังข้อ 18 ตัดการสั่งเส้นทางทิ้ง นี่คือคำตอบเดียวที่มนุษย์เหลือต่อลม */
+  {
+    const left=ctLeft();
     const wrap=document.createElement('div');
-    wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามีพายุใหญ่ · สั่งเสียให้สายลมได้ว่าจะข้ามไปเลย หรืออ้อม</div>';
-    const mk=(mode,title,desc)=>{
+    if(sim.raw===2) wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามีพายุใหญ่ — เคลือบหนาจะช่วยให้จดหมายไม่หลงทาง</div>';
+    const mk=(ct,title,desc,cost)=>{
       const b=document.createElement('button');
-      b.className='pick'+(p.mode===mode?' on':'');
-      b.innerHTML='<b>'+title+'</b><small>'+desc+'</small>';
-      b.onclick=()=>{ p.mode=mode; p.sim = mode==='x'?p.simX:p.simD; showForecast(); };
+      b.className='pick'+(p.ct===ct?' on':'');
+      b.innerHTML='<b>'+title+'</b><small>'+desc+'</small>'
+        +(cost?'<small style="color:#8b6a33">'+cost+'</small>':'');
+      b.onclick=()=>{
+        if(ct>0 && left<=0 && p.ct!==ct) return toast('เดือนนี้เคลือบครบ '+CFG.CT_QUOTA+' ฉบับแล้ว');
+        p.ct=ct;
+        if(!p.sims[ct]) p.sims[ct]=simulate(p.pts,p.wx,p.dist,ct,p.id);
+        p.sim=p.sims[ct]; showForecast();
+      };
       return b;
     };
-    wrap.appendChild(mk('x','ข้ามไปเลย','ถึงใน '+fmtDur(p.simX.total)+' · แต่กลางพายุมีโอกาสที่ลมจะพัดจดหมายหลงทาง'));
-    wrap.appendChild(mk('d','อ้อมไปทางอื่น','ถึงใน '+fmtDur(p.simD.total)+' · ช้ากว่าแต่แทบไม่มีโอกาสหาย'));
+    const t=c=>{ if(!p.sims[c]) p.sims[c]=simulate(p.pts,p.wx,p.dist,c,p.id); return fmtDur(p.sims[c].total); };
+    wrap.appendChild(mk(0,'ไม่เคลือบ',
+      'ปล่อยไปตามที่ลมจะทำ · ฝนทิ้งคราบได้ พายุทิ้งรอยยับได้','ถึงใน '+t(0)));
+    wrap.appendChild(mk(1,'เคลือบกันน้ำ',
+      'ฝนตลอดทางไม่ทิ้งคราบสักหยด · แต่พายุยังทำให้ยับได้',
+      'ถึงใน '+t(1)+' · เหลือ '+left+' ใน '+CFG.CT_QUOTA));
+    wrap.appendChild(mk(2,'เคลือบหนา',
+      'ไม่ยับ และโอกาสหายกลางพายุเหลือ '+Math.round(CFG.CT_LOSS*100)+'% จาก '+Math.round(CFG.LOSS_CROSS*100)+'%',
+      'ถึงใน '+t(2)+' · เหลือ '+left+' ใน '+CFG.CT_QUOTA));
     box.appendChild(wrap);
   }
+}
+
+/* โควตาการเคลือบ — เฟส 1 บังคับใช้ไม่ได้จริง (ล้าง localStorage ก็รีเซ็ต ตามข้อ 17)
+   แต่ตัวนับที่ผู้ใช้เห็นมีผลต่อการตัดสินใจจริง และช่องข้อมูลนี้รองรับเฟส 2 ได้เลย */
+function ctLeft(){
+  const now=new Date(), key=now.getFullYear()+'-'+(now.getMonth()+1);
+  const used=store.letters().filter(L=>{
+    if(L.dir!=='out'||!L.ct) return false;
+    const d=new Date(L.s);
+    return (d.getFullYear()+'-'+(d.getMonth()+1))===key;
+  }).length;
+  return Math.max(0, CFG.CT_QUOTA-used);
 }
 
 async function confirmSend(){
@@ -2524,7 +2559,7 @@ async function confirmSend(){
     id:p.id,
     f:{n:p.from, la:+p.me.lat.toFixed(4), lo:+p.me.lng.toFixed(4), p:p.me.place},
     t:{n:p.to,   la:+p.B.lat.toFixed(4),  lo:+p.B.lng.toFixed(4),  p:p.place},
-    s:Date.now(), th:sim.total, rt:p.mode, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
+    s:Date.now(), th:sim.total, ct:p.ct, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
   };
   store.put(Object.assign({dir:'out'},rec));
   const payload=await packPayload(rec);
