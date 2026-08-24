@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — การเคลือบ: งานภาพ</title>
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 60px)}
+.wrap{max-width:560px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:30px;line-height:1.9}
+section{margin-bottom:44px}
+h2{font-size:14px;font-weight:normal;letter-spacing:.16em;margin-bottom:4px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:16px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:0 0 34px}
+.ctl{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px;color:var(--dim)}
+.ctl label{flex:0 0 86px;letter-spacing:.05em}
+.ctl input[type=range]{flex:1;accent-color:#c69a54;height:32px}
+.ctl output{flex:0 0 52px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--txt)}
+.row{display:flex;gap:10px;align-items:flex-start}
+.cell{flex:1;text-align:center}
+.cell canvas{width:100%;height:210px;display:block}
+.cap{font-size:11.5px;color:var(--dim);letter-spacing:.05em;margin-top:2px}
+.cap b{display:block;font-weight:normal;color:var(--txt);font-size:12.5px;letter-spacing:.08em}
+.btn{border:1px solid var(--line);border-radius:999px;padding:8px 15px;background:rgba(255,255,255,.42);
+  font:inherit;font-size:12px;letter-spacing:.05em;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.9);border-color:rgba(198,154,84,.55)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+/* ---- ปุ่มเลือกการเคลือบ: หน้าตาที่จะไปอยู่ใน #fcChoice จริง ---- */
+.pick{width:100%;display:flex;gap:13px;align-items:center;text-align:left;border:1px solid var(--line);
+  border-radius:13px;padding:12px 14px;background:rgba(255,255,255,.28);margin-bottom:9px;cursor:pointer}
+.pick.on{border-color:rgba(198,154,84,.6);background:rgba(255,255,255,.62)}
+/* เล็กกว่านี้แล้วความต่างของการไหวอ่านไม่ออก — ลองที่ 46px มาแล้ว */
+.pick canvas{flex:0 0 62px;width:62px;height:78px;display:block}
+.pick .tx{flex:1}
+.pick b{display:block;font-weight:normal;font-size:14px;letter-spacing:.04em;margin-bottom:2px}
+.pick small{display:block;font-size:11.5px;color:var(--dim);line-height:1.7}
+.pick .cost{font-size:11px;color:#8b6a33;letter-spacing:.04em}
+.seal{display:block;margin:0 auto;background:rgba(255,255,255,.35);border-radius:3px}
+.num{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--faint);letter-spacing:.02em;
+  white-space:pre-wrap;margin-top:12px;line-height:1.75}
+.err{color:#8b3a33;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>การเคลือบ — งานภาพ</h1>
+<p class="lead">ข้อ 13-16, 60 · <b>กระดาษยังเป็นกระดาษ ไม่มีอะไรมาห่อ</b> การเคลือบเปลี่ยนแค่ผิว<br>
+โค้ดวาดทั้งหมดดึงสดจาก <code>index.html</code> — หน้านี้เปลี่ยนแค่ตัวคูณ</p>
+<div id="boot" class="err" style="text-align:center"></div>
+
+<section id="s1" hidden>
+  <h2>๑ · ตอนลอย</h2>
+  <p class="q">กระดาษใบเดียวกัน ลมชุดเดียวกัน ต่างกันแค่ผิวของมัน<br>
+  <b>คำถาม:</b> ที่ลมแรงและลมเบา แยกทั้งสามแบบออกจากกันได้ด้วยตาไหม โดยไม่ต้องอ่านชื่อ</p>
+  <div class="ctl"><label>แรงลม</label><input id="wind" type="range" min="0" max="100" value="55"><output id="windO"></output></div>
+  <div class="bar">
+    <button class="btn on" id="play">หยุด</button>
+    <button class="btn" data-w="15">ลมเบา</button>
+    <button class="btn" data-w="55">ลมปานกลาง</button>
+    <button class="btn" data-w="92">ลมแรง</button>
+    <button class="btn" id="seals">ตรามุม: เปิด</button>
+  </div>
+  <div class="row">
+    <div class="cell"><canvas id="f0"></canvas><div class="cap"><b>ไม่เคลือบ</b>เบา ไหวทั้งใบ</div></div>
+    <div class="cell"><canvas id="f1"></canvas><div class="cap"><b>เคลือบกันน้ำ</b>ผิวตึง ริ้วถี่แต่ตื้น</div></div>
+    <div class="cell"><canvas id="f2"></canvas><div class="cap"><b>เคลือบหนา</b>หนัก ช้า มุมไม่กระพือ</div></div>
+  </div>
+</section>
+
+<div class="rule" id="r1" hidden></div>
+
+<section id="s2" hidden>
+  <h2>๒ · จูนตัวคูณ</h2>
+  <p class="q">ทั้งสี่ตัวคูณกับค่าที่ <code>meshPoints</code> คำนวณจากลมอยู่แล้ว — <b>การเคลือบไม่ได้สร้างการเคลื่อนไหวใหม่ แค่หน่วงของเดิม</b><br>
+  <b>sway</b> ความกว้างของคลื่น · <b>freq</b> ความถี่ · <b>speed</b> ความเร็ว · <b>flap</b> มุมกระพือ</p>
+  <div class="bar">
+    <button class="btn on" data-ct="1">จูนแบบกันน้ำ</button>
+    <button class="btn" data-ct="2">จูนแบบหนา</button>
+  </div>
+  <div class="ctl"><label>sway</label><input class="tune" data-k="sway"  type="range" min="10" max="150" value="62"><output></output></div>
+  <div class="ctl"><label>freq</label><input class="tune" data-k="freq"  type="range" min="20" max="260" value="155"><output></output></div>
+  <div class="ctl"><label>speed</label><input class="tune" data-k="speed" type="range" min="20" max="200" value="115"><output></output></div>
+  <div class="ctl"><label>flap</label><input class="tune" data-k="flap"  type="range" min="0"  max="150" value="35"><output></output></div>
+  <div class="ctl"><label>มวล (แกว่งใบ)</label><input class="tune" data-k="mass" type="range" min="20" max="200" value="80"><output></output></div>
+  <div class="num" id="dump"></div>
+</section>
+
+<div class="rule" id="r2" hidden></div>
+
+<section id="s3" hidden>
+  <h2>๓ · ขณะเลือก</h2>
+  <p class="q">ปุ่มไม่วาดรูปอะไรทั้งนั้น — <b>มันแสดงการเคลื่อนไหวจริงของแบบนั้น</b> ภาษาเดียวกับตอนลอย
+  ผู้ใช้จึงเห็นสิ่งที่จะได้ก่อนตัดสินใจ · โควตา 3 ฉบับ · +12% เวลา</p>
+  <div id="picks"></div>
+</section>
+
+<div class="rule" id="r3" hidden></div>
+
+<section id="s4" hidden>
+  <h2>๔ · ตราที่มุม</h2>
+  <p class="q">ขยาย 3 เท่า · <b>เล็กจนเกือบไม่เห็นตอนลอยจริง</b> — มันไม่ใช่ป้ายบอก แต่เป็นร่องรอยว่ามีอะไรอยู่บนผิว<br>
+  กันน้ำ = ระลอกที่ไม่ซึม · หนา = กรอบที่รับแรงไว้</p>
+  <div class="row">
+    <div class="cell"><canvas id="z1" class="seal" width="130" height="130"></canvas><div class="cap">เคลือบกันน้ำ</div></div>
+    <div class="cell"><canvas id="z2" class="seal" width="130" height="130"></canvas><div class="cap">เคลือบหนา</div></div>
+  </div>
+</section>
+</div>
+
+<script>
+/* ============================================================
+   ดึงโค้ดวาดจาก index.html ตอนโหลด — หาด้วย "ชื่อฟังก์ชัน" แล้วนับวงเล็บปีกกา
+   ห้ามใช้เลขบรรทัด (BUILD_NOTES เตือนไว้ว่าพังทันทีที่มี markup เพิ่ม)
+   ============================================================ */
+const NEED=['clamp','mix','c255','meshPoints','rainBlooms','drawFlutter'];
+/* index.html ใช้ทั้งสองรูปแบบ — arrow สั้น ๆ เป็น const, ตัวยาวเป็น function declaration */
+function grab(src,name){
+  const m=src.indexOf('function '+name+'(');
+  if(m>=0){
+    let d=0;
+    for(let j=src.indexOf('{',m);j<src.length;j++){
+      if(src[j]==='{') d++;
+      else if(src[j]==='}'){ d--; if(!d) return src.slice(m,j+1); }
+    }
+    return null;
+  }
+  return grabConst(src,name);
+}
+function grabConst(src,name){
+  const re=new RegExp('const\\s+'+name+'\\s*=[^;\\n]*;');
+  const m=src.match(re); return m?m[0]:null;
+}
+
+let T=0, PLAY=true, SEALS=true, TUNE_CT=1, RAF=null;
+const PICK_WIND=0.72;   /* ลมคงที่ในปุ่มเลือก — ดูข้อความกำกับใน loop() */
+/* ตัวคูณของการเคลือบ — คูณทับค่าที่ meshPoints คำนวณจากลมอยู่แล้ว ไม่ได้แทนที่
+   1 = กันน้ำ (ผิวบาง ตึง ลื่น)  ·  2 = หนา (ผิวหนา แข็ง มีมวล) */
+const COAT=[
+  {sway:1.00,freq:1.00,speed:1.00,flap:1.00,mass:1.00,name:'ไม่เคลือบ'},
+  {sway:0.62,freq:1.55,speed:1.15,flap:0.35,mass:0.80,name:'เคลือบกันน้ำ'},
+  {sway:0.40,freq:0.55,speed:0.55,flap:0.10,mass:1.55,name:'เคลือบหนา'}
+];
+let CUR=0, LAST=null;
+
+(async function boot(){
+  const el=document.getElementById('boot');
+  try{
+    el.textContent='กำลังดึงโค้ดวาดจาก index.html…';
+    const src=await (await fetch('index.html?'+Date.now())).text();
+    const parts=[];
+    const RAD=grabConst(src,'RAD'); if(RAD) parts.push(RAD);
+    for(const n of NEED){
+      const code=grab(src,n);
+      if(!code) throw new Error('หา '+n+'() ใน index.html ไม่เจอ — ชื่อฟังก์ชันอาจถูกเปลี่ยน');
+      parts.push(code);
+    }
+    /* function declaration ขึ้น global เอง แต่ const เป็น lexical ของ eval — ต้องส่งออกเอง */
+    (0,eval)(parts.join('\n')+'\n;Object.assign(window,{clamp,mix,c255});');
+    if(typeof clamp!=='function') throw new Error('eval แล้วแต่ฟังก์ชันไม่ขึ้น global');
+
+    /* ---- ทับ meshPoints ด้วยรุ่นที่รู้จักการเคลือบ ----
+       เขียนทับหลัง eval → drawFlutter ตัวเดิมจะเรียกตัวนี้เอง (resolve ตอนรัน)
+       นี่คือ "จุดเดียว" ที่จะต้องแก้จริงใน index.html ตอนทำฟีเจอร์ */
+    window.meshPoints=function(W,H,t,wind,cols,rows){
+      const e=COAT[CUR];
+      const sway=(8+wind*46)*e.sway, freq=(1.2+wind*3.2)*e.freq,
+            speed=(.6+wind*2.6)*e.speed, flap=wind*wind*e.flap;
+      const pts=[];
+      for(let r=0;r<=rows;r++){
+        const row=[], v=r/rows;
+        for(let c=0;c<=cols;c++){
+          const u=c/cols;
+          let x=(u-.5)*W, y=(v-.5)*H;
+          const ripple=Math.sin(u*freq*Math.PI*2+v*1.5-t*speed);
+          const edge=Math.pow(u,1.6);
+          const cornerBoost=1+flap*edge*Math.abs(v-.5)*2.4;
+          x+=ripple*sway*.25*(.4+edge);
+          const z=ripple*(sway*.5)*edge*cornerBoost;
+          y+=z*.35;
+          x+=Math.sin(v*Math.PI)*-sway*.15;
+          row.push({x,y,z,u,v});
+        }
+        pts.push(row);
+      }
+      LAST={pts,rows,cols,W,H};
+      return {pts,sway};
+    };
+
+    el.hidden=true;
+    ['s1','r1','s2','r2','s3','r3','s4'].forEach(id=>document.getElementById(id).hidden=false);
+    buildPicks(); wireUI(); dump(); loop();
+  }catch(err){
+    el.innerHTML='เปิดไฟล์นี้ผ่าน <b>http</b> เท่านั้น (file:// จะ fetch index.html ไม่ได้)<br>'+err.message;
+  }
+})();
+
+/* ---------- ตราที่มุม ----------
+   ข้อ 15: ตราเล็ก ๆ ที่มุมกระดาษ · ไม่ใช่ไอคอนบอกฟังก์ชัน แต่เป็นร่องรอยว่ามีอะไรห่ออยู่
+   วาดในระบบพิกัดเดียวกับ drawFlutter (translate+rotate ชุดเดียวกัน) */
+function seal(ctx,cx,cy,W,H,t,wind,ct,k){
+  if(!ct) return;
+  k=k||1;
+  ctx.save();
+  ctx.translate(cx+Math.sin(t*.4)*(4+wind*16)*COAT[ct].mass, cy+Math.sin(t*.33+9.1)*(3+wind*9)*COAT[ct].mass);
+  ctx.rotate((wind-.35)*.5*.4+Math.sin(t*.5+3)*.03);
+  const x=W*.5-W*.16, y=H*.5-H*.12;
+  ctx.strokeStyle='rgba(198,154,84,.62)'; ctx.lineWidth=1.1*k; ctx.lineCap='round';
+  /* ทั้งสองแบบเป็น "สองชั้นซ้อน" เหมือนกัน ต่างที่รูปทรง — อ่านเป็นคู่กันได้
+     โค้ง = ระลอกที่ไม่ซึมเข้า · เหลี่ยม = กรอบที่รับแรงไว้ */
+  if(ct===1){
+    ctx.beginPath(); ctx.arc(x,y,3.4*k,-0.6,Math.PI*1.5); ctx.stroke();
+    ctx.globalAlpha=.55;
+    ctx.beginPath(); ctx.arc(x,y,6.2*k,-0.35,Math.PI*1.25); ctx.stroke();
+  }else{
+    rrect(ctx,x,y,3.6*k,3.0*k,1.2*k); ctx.stroke();
+    ctx.globalAlpha=.55;
+    rrect(ctx,x,y,6.6*k,5.4*k,2.0*k); ctx.stroke();
+  }
+  ctx.restore();
+}
+/* สี่เหลี่ยมมุมมนรอบจุดกลาง — เขียนเองเพราะ ctx.roundRect ไม่มีในมือถือรุ่นเก่า */
+function rrect(ctx,cx,cy,hw,hh,r){
+  const l=cx-hw,t=cy-hh,rt=cx+hw,b=cy+hh;
+  ctx.beginPath();
+  ctx.moveTo(l+r,t);
+  ctx.lineTo(rt-r,t); ctx.quadraticCurveTo(rt,t,rt,t+r);
+  ctx.lineTo(rt,b-r); ctx.quadraticCurveTo(rt,b,rt-r,b);
+  ctx.lineTo(l+r,b);  ctx.quadraticCurveTo(l,b,l,b-r);
+  ctx.lineTo(l,t+r);  ctx.quadraticCurveTo(l,t,l+r,t);
+  ctx.closePath();
+}
+
+function fit(cv){
+  const d=Math.min(devicePixelRatio||1,2);
+  const w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==w*d||cv.height!==h*d){ cv.width=w*d; cv.height=h*d; }
+  const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0);
+  c.clearRect(0,0,w,h);
+  return {c,w,h};
+}
+function paint(cv,ct,wind,scale){
+  const {c,w,h}=fit(cv);
+  CUR=ct;
+  const pw=Math.min(w*.62,86*(scale||1)), ph=pw*1.28;
+  drawFlutter(c,w/2,h/2,pw,ph,T,wind,0,null);
+  if(SEALS) seal(c,w/2,h/2,pw,ph,T,wind,ct,scale||1);
+}
+
+let PICKC=[];
+function buildPicks(){
+  const box=document.getElementById('picks'); box.innerHTML=''; PICKC=[];
+  const rows=[
+    [0,'ไม่เคลือบ','ปล่อยไปตามที่ลมจะทำ · ฝนทิ้งคราบได้ พายุทิ้งรอยยับได้','ฟรี'],
+    [1,'เคลือบกันน้ำ','ฝนตลอดทางไม่ทิ้งคราบสักหยด · แต่พายุยังทำให้ยับได้','+12% เวลา · 1 ใน 3 ครั้ง'],
+    [2,'เคลือบหนา','ไม่ยับ และโอกาสหายกลางพายุเหลือ 2% จาก 14%','+12% เวลา · 1 ใน 3 ครั้ง']
+  ];
+  rows.forEach(([ct,title,desc,cost],i)=>{
+    const b=document.createElement('button');
+    b.className='pick'+(i===1?' on':'');
+    b.innerHTML='<canvas></canvas><div class="tx"><b>'+title+'</b><small>'+desc+
+                '</small><span class="cost">'+cost+'</span></div>';
+    b.onclick=()=>{ [...box.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); };
+    box.appendChild(b);
+    PICKC.push({cv:b.querySelector('canvas'),ct});
+  });
+}
+
+function wireUI(){
+  const wind=document.getElementById('wind'), wo=document.getElementById('windO');
+  const show=()=>wo.textContent=(wind.value/100).toFixed(2);
+  wind.oninput=show; show();
+  document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{ wind.value=b.dataset.w; show(); });
+  document.getElementById('play').onclick=e=>{ PLAY=!PLAY; e.target.textContent=PLAY?'หยุด':'เล่น'; e.target.classList.toggle('on',PLAY); if(PLAY)loop(); };
+  document.getElementById('seals').onclick=e=>{ SEALS=!SEALS; e.target.textContent='ตรามุม: '+(SEALS?'เปิด':'ปิด'); };
+  document.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-ct]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); TUNE_CT=+b.dataset.ct; syncTune();
+  });
+  document.querySelectorAll('.tune').forEach(s=>{
+    s.oninput=()=>{ COAT[TUNE_CT][s.dataset.k]=s.value/100; s.nextElementSibling.textContent=(s.value/100).toFixed(2); dump(); };
+  });
+  syncTune();
+}
+function syncTune(){
+  document.querySelectorAll('.tune').forEach(s=>{
+    s.value=Math.round(COAT[TUNE_CT][s.dataset.k]*100);
+    s.nextElementSibling.textContent=COAT[TUNE_CT][s.dataset.k].toFixed(2);
+  });
+  dump();
+}
+function dump(){
+  const f=e=>'{sway:'+e.sway.toFixed(2)+', freq:'+e.freq.toFixed(2)+', speed:'+e.speed.toFixed(2)+
+            ', flap:'+e.flap.toFixed(2)+', mass:'+e.mass.toFixed(2)+'}';
+  document.getElementById('dump').textContent =
+    'CT_WATER: '+f(COAT[1])+'\nCT_THICK: '+f(COAT[2]);
+}
+
+function loop(){
+  if(RAF) cancelAnimationFrame(RAF);
+  const step=()=>{
+    if(PLAY) T+=1/60;
+    const w=+document.getElementById('wind').value/100;
+    paint(document.getElementById('f0'),0,w);
+    paint(document.getElementById('f1'),1,w);
+    paint(document.getElementById('f2'),2,w);
+    /* ปุ่มใช้ลมคงที่ ไม่ใช่ลมของเที่ยวนั้น — ที่ลมเบาทั้งสามแบบไหวเหมือนกันหมด
+       ปุ่มต้องแสดง "สิ่งที่การเคลือบทำ" ไม่ใช่ "อากาศวันนี้" ไม่งั้นวันลมสงบจะเลือกไม่ถูก */
+    PICKC.forEach(p=>paint(p.cv,p.ct,PICK_WIND,.55));
+    zoomSeal('z1',1); zoomSeal('z2',2);
+    RAF=requestAnimationFrame(step);
+  };
+  step();
+}
+function zoomSeal(id,ct){
+  const cv=document.getElementById(id), c=cv.getContext('2d');
+  c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,130,130);
+  c.save(); c.translate(65,65);
+  seal(c,0,0,0,0,0,.35,ct,3);
+  c.restore();
+}
+</script>
+</body>
+</html>
