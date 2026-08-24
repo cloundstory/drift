@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>drift — ตัวอักษร</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;400&family=Noto+Sans+Thai:wght@300;400&family=IBM+Plex+Sans+Thai:wght@300;400&family=Sarabun:wght@300;400&family=Anuphan:wght@300;400&family=Trirong:wght@300;400&family=Taviraj:wght@300;400&family=Maitree:wght@300;400&family=Pridi:wght@300;400&family=Noto+Serif:wght@300;400&family=EB+Garamond:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 80px)}
+.wrap{max-width:470px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:24px;line-height:1.9}
+h2{font-size:13px;font-weight:normal;letter-spacing:.16em;margin-bottom:3px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:16px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:34px 0 28px}
+.bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.btn{border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:rgba(255,255,255,.42);
+  font-family:Georgia,serif;font-size:11.5px;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.92);border-color:rgba(198,154,84,.55)}
+.sp{position:relative;border-radius:2px;overflow:hidden;box-shadow:0 2px 9px rgba(84,90,104,.12);margin-bottom:8px}
+.sp canvas{position:absolute;inset:0;width:100%;height:100%}
+.sp .in{position:relative;padding:24px 22px 20px}
+.tag{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.05em;color:var(--faint);
+  margin-bottom:13px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tag b{font-weight:normal;color:#8b6a33;font-family:inherit}
+.hd{text-align:right;font-size:11.5px;color:rgba(84,90,104,.52);margin-bottom:15px;letter-spacing:.02em}
+.to{font-size:16px;color:rgba(43,43,47,.86);margin-bottom:11px}
+.bd{font-size:15.5px;line-height:2.05;color:rgba(43,43,47,.9);white-space:pre-line}
+.en{font-size:15px;line-height:1.95;color:rgba(43,43,47,.82);margin-top:10px}
+.fr{text-align:right;font-size:15px;color:rgba(43,43,47,.86);margin-top:13px}
+.note{font-size:11.5px;color:var(--faint);line-height:1.8;margin:-1px 0 20px;padding-left:2px}
+.note b{font-weight:normal;color:var(--dim)}
+.warn{font-size:11.5px;color:#8b6a33;line-height:1.8;margin:-1px 0 20px;padding-left:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ตัวอักษร · สากล</h1>
+<p class="lead">ทุกแผ่นคือกระดาษจริงจาก <code>index.html</code><br>
+<b>ทุกแผ่นมีทั้งไทยและอังกฤษ</b> เพราะปลายทางเป็นชื่อเมืองภาษาอังกฤษเสมอ</p>
+
+<div class="bar">
+  <span style="font-size:11.5px;color:var(--dim)">น้ำหนัก</span>
+  <button class="btn on" data-w="300">บาง 300</button>
+  <button class="btn" data-w="400">ปกติ 400</button>
+  <span style="font-size:11.5px;color:var(--dim);margin-left:6px">ขนาด</span>
+  <button class="btn" data-fs="14.5">เล็ก</button>
+  <button class="btn on" data-fs="15.5">กลาง</button>
+  <button class="btn" data-fs="17">ใหญ่</button>
+</div>
+
+<section>
+  <h2>๑ · ฟอนต์เดียวครอบทั้งไทยและอังกฤษ</h2>
+  <p class="q">ทางที่ตรงที่สุด ฝังไฟล์เดียว หน้าตาเดียวกันทุกเครื่อง<br>
+  <b>ดูที่บรรทัดอังกฤษเป็นหลัก</b> — ตัวไทยของทุกตัวในนี้ดีหมด ตัวที่ต่างกันจริงคือละติน</p>
+  <div id="single"></div>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <h2>๒ · ไทยตัวหนึ่ง อังกฤษอีกตัวหนึ่ง</h2>
+  <p class="q">ให้ละตินเป็นฟอนต์ระดับสากลจริง ๆ แล้วให้ไทยเข้าคู่<br>
+  <b>ต้นทุน:</b> ต้องฝังสองตระกูล ไฟล์ใหญ่ขึ้นราวเท่าตัว · <b>ที่ได้:</b> ละตินสวยกว่าชัดเจน</p>
+  <div id="pair"></div>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <h2>๓ · คำที่ใช้จริง</h2>
+  <p class="q">ข้อ 44 บอกว่า <b>"ปล่อยให้ลมพา" ต้องย้ายจากปุ่มไปเป็นความหมายของท่าทาง</b></p>
+  <div id="words"></div>
+</section>
+</div>
+
+<script>
+const HD='Chachoengsao · 24 August 2026';
+const TO='ถึง ช · Chiang Mai';
+const TH=`ที่นี่ฝนตกทั้งวัน ฉันนั่งดูน้ำไหลลงจากชายคา
+แล้วนึกถึงตอนที่เรายืนรอรถเมล์ด้วยกันเมื่อสามปีก่อน
+เธอบอกว่าฝนทำให้เวลาช้าลง ฉันเพิ่งเข้าใจวันนี้เอง`;
+const EN='The wind is heading north-east at 18 km/h. They say it will take three days.';
+const FR='จาก กอล์ฟ · Golf';
+
+/* ตัวเดียวครอบทั้งสองภาษา — เรียงจาก "สากลโดยการออกแบบ" ไปหา "มีบุคลิกไทยมากขึ้น" */
+const SINGLE=[
+ ['Noto Serif Thai','เซริฟ · ระบบ Noto',
+  '<b>สากลที่สุดโดยนิยาม</b> — Google ออกแบบให้ทุกภาษาบนโลกอยู่ในระบบเดียวกัน ละตินคือ Noto Serif ตัวเต็ม ไม่ใช่ของแถม'],
+ ['Noto Sans Thai','ซานส์ · ระบบ Noto',
+  'เหมือนข้างบนแต่ไม่มีเซริฟ · เป็นกลางมาก อาจเป็นกลางเกินไปสำหรับจดหมาย'],
+ ['IBM Plex Sans Thai','ซานส์ · IBM Plex',
+  'ละตินคือ IBM Plex Sans ซึ่งเป็นฟอนต์ระดับองค์กรระดับโลก · สะอาด ทันสมัย แต่ออกไปทางเครื่องมือมากกว่าจดหมาย'],
+ ['Sarabun','ซานส์ · มาตรฐานราชการไทย',
+  'คนไทยเห็นทุกวันจนไม่รู้สึกอะไร · ปลอดภัยแต่ไม่มีอะไรให้จำ'],
+ ['Anuphan','ซานส์ · ร่วมสมัย',
+  'สะอาดและใหม่กว่า Sarabun ชัดเจน · ละตินทำมาดี'],
+ ['Trirong','เซริฟ · Cadson Demak',
+  'มีบุคลิกที่สุดในกลุ่มเซริฟ · ละตินเป็นเซริฟคลาสสิกที่ใช้ได้จริง'],
+ ['Taviraj','เซริฟ · คอนทราสต์สูง',
+  'สง่าที่สุด · แต่ที่ขนาดเล็กบนมือถือ เส้นบางอาจหายไปในบางจอ'],
+ ['Maitree','เซริฟ · เรียบ',
+  'อ่านสบายที่สุดเมื่อยาว ๆ · บุคลิกกลางที่สุดในกลุ่มเซริฟ'],
+];
+/* ไทยตัวหนึ่ง ละตินอีกตัวหนึ่ง */
+const PAIR=[
+ ['Noto Serif Thai','EB Garamond','ไทย Noto Serif Thai + ละติน EB Garamond',
+  'EB Garamond เป็นเซริฟคลาสสิกที่ใช้ในหนังสือทั่วโลก · อบอุ่นกว่า Noto Serif มาก'],
+ ['Trirong','EB Garamond','ไทย Trirong + ละติน EB Garamond',
+  'สองตัวนี้มีน้ำหนักและอารมณ์ใกล้กัน อยู่ด้วยกันแล้วไม่ขัด'],
+ ['Noto Serif Thai','Noto Serif','ไทย + ละติน ในระบบ Noto ทั้งคู่',
+  'ตัวเดียวกับข้อ ๑ แต่เขียนแยกให้เห็นว่าเป็นการจับคู่ที่ตั้งใจ ไม่ใช่ fallback'],
+];
+
+let FS=15.5, WT=300;
+const PAPERS=[];
+function paper(host,{tag,kind,note,warn,headFont,bodyFont,enFont}){
+  const el=document.createElement('div');
+  el.innerHTML='<div class="sp"><canvas></canvas><div class="in">'+
+    '<div class="tag"><b>'+tag+'</b><span>'+(kind||'')+'</span></div>'+
+    '<div class="hd">'+HD+'</div><div class="to">'+TO+'</div>'+
+    '<div class="bd">'+TH+'</div><div class="en">'+EN+'</div>'+
+    '<div class="fr">'+FR+'</div></div></div>'+
+    (note?'<div class="note">'+note+'</div>':'')+(warn?'<div class="warn">'+warn+'</div>':'');
+  const sp=el.querySelector('.sp');
+  ['hd','to','fr'].forEach(c=>sp.querySelector('.'+c).style.fontFamily=headFont);
+  sp.querySelector('.bd').style.fontFamily=bodyFont;
+  sp.querySelector('.en').style.fontFamily=enFont||bodyFont;
+  host.appendChild(el);
+  PAPERS.push(sp);
+  return sp;
+}
+const q=f=>"'"+f+"', Georgia, serif";
+function build(){
+  const s=document.getElementById('single'); s.innerHTML='';
+  SINGLE.forEach(([f,kind,note])=>paper(s,{tag:f,kind,note,headFont:q(f),bodyFont:q(f)}));
+  const p=document.getElementById('pair'); p.innerHTML='';
+  PAIR.forEach(([th,la,tag,note])=>paper(p,{tag,kind:'สองตระกูล',note,
+    headFont:"'"+la+"','"+th+"',Georgia,serif", bodyFont:q(th), enFont:"'"+la+"',Georgia,serif"}));
+  const w=document.getElementById('words'); w.innerHTML='';
+  [['หน้า ๑ · จบการเขียน','วางปากกา','ตกลงแล้วในข้อ 44'],
+   ['หน้า ๒ · กลับไปแก้','หยิบปากกาขึ้นอีกครั้ง','สมมาตรกับ "วางปากกา" ตรง ๆ'],
+   ['หน้า ๒ · กลับไปแก้','ยังมีคำค้างอยู่','ยอมรับว่ายังไม่จบ ไม่ใช่ว่าเขียนผิด'],
+   ['หน้า ๒ · ไปต่อ','พอแล้ว ให้ลมดู','ไม่ใช่ "ถัดไป"'],
+   ['หน้า ๓ · ตอนรอ','ปล่อยให้ลมพา','คำที่ย้ายมาจากปุ่มเดิม (ข้อ 44)'],
+   ['หน้า ๓ · กำลังปัด','ลมกำลังรับไว้','ระหว่างทาง ไม่ใช่ผลลัพธ์'],
+   ['หน้า ๓ · ปล่อยแล้ว','ไปแล้ว','สั้นที่สุดที่เป็นไปได้']
+  ].forEach(([where,word,why])=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(84,90,104,.09)';
+    d.innerHTML='<span style="flex:0 0 112px;font-size:11px;color:var(--faint)">'+where+'</span>'+
+      '<span style="flex:1"><span class="wd" style="font-size:17px;color:rgba(43,43,47,.9)">'+word+'</span>'+
+      '<span style="display:block;font-size:11.5px;color:var(--dim);margin-top:2px">'+why+'</span></span>';
+    w.appendChild(d);
+  });
+  applyType();
+}
+function applyType(){
+  document.querySelectorAll('.bd,.en').forEach(e=>{e.style.fontSize=(e.classList.contains('en')?FS-0.5:FS)+'px';});
+  document.querySelectorAll('.sp .hd,.sp .to,.sp .bd,.sp .en,.sp .fr,.wd').forEach(e=>e.style.fontWeight=WT);
+}
+async function boot(){
+  const src=await (await fetch('index.html?'+Date.now())).text();
+  const grab=n=>{
+    const m=src.indexOf('function '+n+'(');
+    if(m>=0){let d=0;for(let j=src.indexOf('{',m);j<src.length;j++){
+      if(src[j]==='{')d++;else if(src[j]==='}'){d--;if(!d)return src.slice(m,j+1);}}}
+    const r=src.match(new RegExp('const\\s+'+n+'\\s*=[^;\\n]*;'));return r?r[0]:null;};
+  (0,eval)(['clamp','mix','c255','rainBlooms','drawPaper'].map(grab).join('\n')
+           +'\n;Object.assign(window,{clamp,mix,c255});');
+  build(); redraw();
+  document.querySelectorAll('[data-fs]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-fs]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); FS=+b.dataset.fs; applyType(); redraw();});
+  document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-w]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); WT=+b.dataset.w; applyType(); redraw();});
+  await document.fonts.ready; redraw();
+}
+function redraw(){
+  PAPERS.forEach(sp=>{const cv=sp.querySelector('canvas');
+    if(sp.clientWidth&&sp.clientHeight) drawPaper(cv,{rain:0,storm:0,days:0});});
+}
+addEventListener('resize',redraw);
+boot().catch(e=>{document.querySelector('.wrap').insertAdjacentHTML('afterbegin',
+  '<p style="color:#8b3a33;text-align:center">ต้องเปิดผ่าน http · '+e.message+'</p>');});
+</script>
+</body>
+</html>

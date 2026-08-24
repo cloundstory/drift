@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — หน้าสาม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c69a54;--txt:rgba(43,43,47,.9);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.36)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);
+  font-family:'Noto Serif Thai',Georgia,serif;font-weight:300;color:var(--txt);
+  -webkit-user-select:none;user-select:none}
+
+/* ลูกโลกจริงจาก index.html — เป็นฉากหลัง ไม่ใช่ภาพจำลอง */
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0}
+#stagewrap{position:fixed;inset:0;overflow:hidden;touch-action:none;perspective:820px;perspective-origin:50% 78%}
+/* perspective-origin อยู่ค่อนล่าง เพราะคนดูยืนอยู่บนพื้น มองขึ้นไป ไม่ได้ลอยอยู่กลางอากาศ */
+#flycv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#sky{position:fixed;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(120% 80% at 50% 100%,rgba(255,253,246,.0) 0%,rgba(255,253,246,.55) 55%,rgba(255,255,255,.85) 100%)}
+
+/* กระดาษใบนั้น — เต็มจอ ไม่มีอะไรอื่น */
+#sheet{display:none}   /* กระดาษวาดด้วย mesh ตลอดทั้งสองเฟส ไม่มีการสลับ DOM ↔ canvas */
+#sheet canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:2px;
+  box-shadow:0 8px 34px rgba(84,90,104,.20)}
+#sheet .in{position:absolute;inset:0;padding:30px 26px;display:flex;flex-direction:column}
+.hd{text-align:right;font-size:11.5px;color:rgba(84,90,104,.5);letter-spacing:.02em}
+.to{font-size:16.5px;margin:16px 0 12px}
+.bd{flex:1;font-size:15.5px;line-height:2.05;white-space:pre-line;overflow:hidden}
+.fr{text-align:right;font-size:15px}
+
+/* คำ — ต้องเงียบ ไม่กระพริบเรียกร้อง (contemplative) */
+#word{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 46px);
+  text-align:center;font-size:13.5px;letter-spacing:.22em;color:rgba(84,90,104,.5);
+  text-shadow:0 1px 10px rgba(238,235,228,.75);
+  transition:opacity .5s,letter-spacing .8s;pointer-events:none}
+#word.gone{opacity:0}
+#word.wide{letter-spacing:.5em;color:var(--gold)}
+
+/* แผงลอง — ไม่ใช่ส่วนของแอป */
+#panel{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:8px;right:8px;
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;z-index:9;
+  font-family:Georgia,serif;font-size:11px}
+#panel .b{border:1px solid rgba(84,90,104,.18);border-radius:999px;padding:5px 10px;
+  background:rgba(255,255,255,.55);color:var(--txt);cursor:pointer;font:inherit}
+#panel .b.on{background:rgba(255,255,255,.95);border-color:rgba(198,154,84,.6)}
+#panel .lb{color:var(--dim);letter-spacing:.04em;margin-left:4px}
+#hud{position:fixed;bottom:6px;left:8px;font-family:ui-monospace,Menlo,monospace;
+  font-size:10.5px;color:var(--faint);z-index:9;line-height:1.55;white-space:pre}
+#err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#8b3a33;font-size:13px;text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<iframe id="app" src="index.html"></iframe>
+
+<div id="sky"></div>
+<canvas id="flycv"></canvas>
+<div id="stagewrap">
+  <div id="sheet">
+    <canvas></canvas>
+    <div class="in">
+      <div class="hd">Chachoengsao · 24 August 2026</div>
+      <div class="to">ถึง ช · Chiang Mai</div>
+      <div class="bd">ที่นี่ฝนตกทั้งวัน ฉันนั่งดูน้ำไหลลงจากชายคา
+แล้วนึกถึงตอนที่เรายืนรอรถเมล์ด้วยกันเมื่อสามปีก่อน
+เธอบอกว่าฝนทำให้เวลาช้าลง ฉันเพิ่งเข้าใจวันนี้เอง
+
+ไม่มีอะไรด่วน แค่อยากให้รู้ว่ายังคิดถึง</div>
+      <div class="fr">จาก กอล์ฟ</div>
+    </div>
+  </div>
+</div>
+
+<div id="word">ปล่อยให้ลมพา</div>
+
+<div id="panel">
+  <span class="lb">ลมต้นทาง</span>
+  <button class="b on" data-spd="3">สงบ 3</button>
+  <button class="b" data-spd="18">18</button>
+  <button class="b" data-spd="34">34</button>
+  <button class="b" data-spd="55">แรง 55</button>
+  <span class="lb">ทิศลม</span>
+  <button class="b on" data-dir="200">ใต้</button>
+  <button class="b" data-dir="290">ตะวันตก</button>
+  <span class="lb"></span>
+  <button class="b" id="again">เริ่มใหม่</button>
+</div>
+<div id="hud"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sheet=$('#sheet'), word=$('#word'), hud=$('#hud');
+let SPD=3, DIR=200, W=innerWidth, H=innerHeight;
+let APP=null, G=null, X=null, LET=null, T=0, PHASE='wait', STREAK_STR=0;   /* wait → drag → fly → globe */
+let prog=0, drag=false, startY=0, startVal=0, y=0;
+let fly=0, flyStart=0;
+
+const WIND_FULL=45;
+const CUT=0.62;   /* สัดส่วนของแอนิเมชันที่เป็นช็อตแรก ที่เหลือคือลูกโลก */
+const windOf=s=>Math.max(0,Math.min(1,s/WIND_FULL));
+/* แรงต้าน = ลมจริง (ข้อ 44 · ตกลง 24 ส.ค.)
+   หน้านี้ไม่มีอะไรให้เลื่อนอ่าน ท่าทางจึงกินทั้งจอได้ ระยะจึงยาวกว่าตอนเป็นแถบ 96px */
+function feel(spd){
+  const w=windOf(spd);
+  return { w,
+    need: Math.round(H*(0.34-w*0.17)),   /* สัดส่วนของจอ ไม่ใช่ px ตายตัว */
+    assist:+(w*0.55).toFixed(2),
+    back:  +((1-w)*0.42).toFixed(2),
+    hang:  Math.round((1-w)*640),
+    keep:  +(0.72-w*0.30).toFixed(2) };
+}
+
+/* ---------- ฉากหลัง: index.html ตัวจริง ---------- */
+$('#app').addEventListener('load',()=>{
+  try{
+    APP=$('#app').contentWindow;
+    /* index.html ประกาศ G/CFG/store ด้วย const → เป็น global *lexical* ไม่ขึ้น window
+       eval ใน context ของ iframe เข้าถึง scope นั้นได้ จึงดึงออกมาโดยไม่ต้องแก้ index.html */
+    APP.eval('window.__x={G,CFG,store,posAt,letterState,fitKm,previewable,get sel(){return selected},set sel(v){selected=v}}');
+    X=APP.__x; G=X.G;
+    if(!G) throw new Error('ไม่เจอ G ใน index.html');
+    /* ต้องมีจดหมายที่ "เพิ่งส่ง" อยู่จริง ไม่งั้นลูกโลกไม่มีหมอก ไม่มีริ้วลม ไม่มีจุดทอง
+       ของจริงจะบันทึกจดหมายก่อนเริ่มแอนิเมชันอยู่แล้ว (ข้อ 44) */
+    LET=X.previewable()[0];
+    if(LET){
+      X.sel=LET.id;
+      /* หน้าสามคือจดหมายที่ "เพิ่งออกเดินทาง" — ถ้าฉบับที่หยิบมาถึงปลายทางแล้ว
+         หมอกกับริ้วลมจะถูกปิดตามกฎข้อ 3 ลูกโลกจะโล่ง
+         ใช้โหมดจำลองของแอปตั้งนาฬิกาไว้ที่ 0 แทนการเขียนข้อมูลใหม่ */
+      APP.previewOn(LET);
+      APP.eval('PREVIEW.h=0;PREVIEW.play=false');
+    }
+    /* ซ่อน UI ของแอป เหลือแต่ลูกโลก */
+    const d=APP.document;
+    const st=d.createElement('style');
+    st.textContent='.sheet,#dock,#top,.play,#toast,header,.bar{display:none!important}';
+    d.head.appendChild(st);
+    /* ตั้งกล้องให้ซูมสุด ณ จุดต้นทาง — เหมือนเรายืนอยู่ตรงนั้นจริง */
+    /* กล้องเริ่มที่ตัวจดหมายเอง ซูมสุด — เหมือนเรากำลังก้มมองกระดาษในมือ */
+    const at = LET ? X.posAt(LET,0) : (APP.eval('store.me()')||{lat:13.69,lng:101.07});
+    G.focus({lat:at.lat,lng:at.lng}, X.CFG.ZOOM_MAX);
+    G.zoom=G.zTarget; G.R=G.R0*G.zoom;
+    if(G.target){G.rotY=G.target.y;G.rotX=G.target.x;G.target=null;}
+    APP.sizeStage();
+    buildTex();
+    /* อุ่นเครื่องก่อน: เฟรมแรกที่ลูกโลกโผล่ต้องสร้างริ้วลม 143 เส้นใหม่ วัดได้ 32 ms = กระตุกหนึ่งเฟรม
+       ตรงจุดตัดพอดี ซึ่งเป็นวินาทีที่สำคัญที่สุดของทั้งแอป — วาดทิ้งหนึ่งครั้งตอนโหลด แคชก็พร้อม
+       (บทเรียนเดียวกับข้อ 55 ที่เพิ่มริ้วแล้วเฟรมพังทันที) */
+    {
+      const zEnd=LET?G.fitZoom(X.fitKm(LET)):6;
+      const keep=G.zoom;
+      G.zoom=G.zTarget=zEnd; G.R=G.R0*G.zoom;
+      try{ APP.renderGlobe(); }catch(e){}
+      G.zoom=G.zTarget=keep; G.R=G.R0*G.zoom;
+    }
+    tick();
+  }catch(e){
+    document.body.insertAdjacentHTML('beforeend','<div id="err">เปิดผ่าน http และต้องมี index.html อยู่ข้าง ๆ<br>'+e.message+'</div>');
+  }
+});
+
+/* ---------- จดหมายทั้งใบเป็นภาพเดียว แล้วเอาไปแปะบน mesh ----------
+   drawFlutter ของแอปวาดกระดาษเป็นสีล้วน ไม่มีตัวหนังสือ
+   ช็อตปลิวต้องเห็นว่าเป็น *จดหมายฉบับนั้น* ไม่ใช่กระดาษเปล่าใบใดก็ได้
+   จึงต้อง render จดหมายลง canvas ครั้งเดียว แล้ว warp ตาม mesh เดิมของแอป
+   วัดแล้ว 1.93 ms/เฟรม ที่ 12x15 (360 สามเหลี่ยม) จากงบ 16.7 */
+const TW=340, TH=460;
+let TEX=null, TEX_BACK=null;
+function buildTex(){
+  const mk=()=>{const c=document.createElement('canvas');c.width=TW;c.height=TH;return c;};
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-9999px;width:'+TW+'px;height:'+TH+'px';
+  const src=document.createElement('canvas');src.style.width=TW+'px';src.style.height=TH+'px';
+  holder.appendChild(src);document.body.appendChild(holder);
+  APP.drawPaper(src,{rain:0,storm:0,days:0});
+  /* ด้านหลัง = กระดาษแผ่นเดียวกันแต่ไม่มีหมึก
+     จดหมายเขียนหน้าเดียว ถ้าเห็นตัวหนังสือทั้งสองด้านคือของที่ไม่มีอยู่จริง */
+  TEX_BACK=mk(); TEX_BACK.getContext('2d').drawImage(src,0,0,TW,TH);
+  TEX=mk();
+  const g=TEX.getContext('2d');g.drawImage(src,0,0,TW,TH);holder.remove();
+  const F=(w,sz)=>w+' '+sz+"px 'Noto Serif Thai',Georgia,serif";
+  g.textAlign='right'; g.fillStyle='rgba(84,90,104,.5)'; g.font=F(300,11);
+  g.fillText('Chachoengsao · 24 August 2026',TW-24,38);
+  g.textAlign='left'; g.fillStyle='rgba(43,43,47,.9)'; g.font=F(300,15.5);
+  g.fillText('ถึง ช · Chiang Mai',24,72);
+  g.font=F(300,14.5);
+  ['ที่นี่ฝนตกทั้งวัน ฉันนั่งดูน้ำ','ไหลลงจากชายคา แล้วนึกถึง','ตอนที่เรายืนรอรถเมล์ด้วยกัน','เมื่อสามปีก่อน','','ไม่มีอะไรด่วน แค่อยากให้รู้','ว่ายังคิดถึง']
+    .forEach((L,i)=>g.fillText(L,24,110+i*30));
+  g.textAlign='right'; g.font=F(300,14.5); g.fillText('จาก กอล์ฟ',TW-24,TH-34);
+}
+const FOC=820;
+const LIGHT=(()=>{const v=[0.34,-0.46,-0.82];const m=Math.hypot(...v);return v.map(x=>x/m);})();
+function warpLetter(g,cx,cy,pw,ph,t,wind,rotY,rotX,rotZ,depth,curl,cols,rows){
+  const {pts}=APP.meshPoints(pw,ph,t,wind,cols,rows);
+  const cY=Math.cos(rotY),sY=Math.sin(rotY);
+  const cX=Math.cos(rotX),sX=Math.sin(rotX);
+  const cZ=Math.cos(rotZ),sZ=Math.sin(rotZ);
+  const P=[];
+  for(let r=0;r<=rows;r++){
+    const row=[];
+    for(let c=0;c<=cols;c++){
+      const p=pts[r][c];
+      let x=p.x,y=p.y,z=p.z;
+      /* ---- ม้วน: ดัดรอบแกนตั้งที่อยู่ในระนาบกระดาษ ----
+         มุมม้วนโตขึ้นตามความสูง กระดาษจึงเป็น *กรวย* ไม่ใช่ทรงกระบอก */
+      if(curl>0.001){
+        const k=curl*(0.35+0.85*p.v);
+        if(k>0.001){
+          const R=pw/(k*2), th=(x/pw)*k*2;
+          x=R*Math.sin(th); z+=R*(1-Math.cos(th));
+        }
+      }
+      const x1=x*cY+z*sY, zA=-x*sY+z*cY;
+      const y1=y*cX-zA*sX, z1=y*sX+zA*cX;
+      const x2=x1*cZ-y1*sZ, y2=x1*sZ+y1*cZ;
+      const s=FOC/(FOC+depth+z1);
+      row.push({x:cx+x2*s, y:cy+y2*s, X:x2, Y:y2, Z:z1});
+    }
+    P.push(row);
+  }
+  /* ---- แสงต่อ *จุด* ไม่ใช่ต่อช่อง ----
+     ทาสีทั้งช่องด้วยค่าเดียวทำให้ขอบช่องกลายเป็นเส้นคม ตาอ่านเป็นรอยยับ
+     คิด normal ที่จุดจากเวกเตอร์สัมผัสสองด้าน แล้วไล่สีข้ามช่อง ผิวจึงโค้งเนียน */
+  const LU=[];
+  for(let r=0;r<=rows;r++){
+    const row=[];
+    for(let c=0;c<=cols;c++){
+      const p=P[r][c];
+      const pu=P[r][Math.min(c+1,cols)], mu=P[r][Math.max(c-1,0)];
+      const pv=P[Math.min(r+1,rows)][c], mv=P[Math.max(r-1,0)][c];
+      const ax=pu.X-mu.X, ay=pu.Y-mu.Y, az=pu.Z-mu.Z;
+      const bx=pv.X-mv.X, by=pv.Y-mv.Y, bz=pv.Z-mv.Z;
+      let nx=ay*bz-az*by, ny=az*bx-ax*bz, nz=ax*by-ay*bx;
+      const nl=Math.hypot(nx,ny,nz)||1;
+      row.push({l:Math.abs((nx*LIGHT[0]+ny*LIGHT[1]+nz*LIGHT[2])/nl), f:nz/nl});
+      void p;
+    }
+    LU.push(row);
+  }
+  const tone=l=>{                       /* แปลงความสว่างเป็นสีทาทับ */
+    if(l<0.60) return 'rgba(64,61,54,'+((0.60-l)*0.46).toFixed(3)+')';
+    if(l>0.88) return 'rgba(255,253,246,'+((l-0.88)*0.85).toFixed(3)+')';
+    return 'rgba(0,0,0,0)';
+  };
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const Q=[P[r][c],P[r][c+1],P[r+1][c+1],P[r+1][c]];
+    const L4=[LU[r][c].l,LU[r][c+1].l,LU[r+1][c+1].l,LU[r+1][c].l];
+    /* ช่องนี้หันหน้าหรือหันหลังให้เรา — ตัดสินจากทิศของ normal ตามแนวสายตา */
+    const face=(LU[r][c].f+LU[r][c+1].f+LU[r+1][c+1].f+LU[r+1][c].f)/4;
+    const TX=(face>=0)?TEX:TEX_BACK;
+    const U=[[c/cols*TW,r/rows*TH],[(c+1)/cols*TW,r/rows*TH],[(c+1)/cols*TW,(r+1)/rows*TH],[c/cols*TW,(r+1)/rows*TH]];
+    /* ไล่สีตามแกนที่ความสว่างเปลี่ยนมากกว่า — การม้วนทำให้เปลี่ยนตามแนวนอนเป็นหลัก */
+    const dU=Math.abs((L4[1]+L4[2])-(L4[0]+L4[3]));
+    const dV=Math.abs((L4[3]+L4[2])-(L4[0]+L4[1]));
+    const alongU=dU>=dV;
+    const lA=alongU?(L4[0]+L4[3])/2:(L4[0]+L4[1])/2;
+    const lB=alongU?(L4[1]+L4[2])/2:(L4[3]+L4[2])/2;
+    for(const [a,b,d] of [[0,1,2],[0,2,3]]){
+      const x0=Q[a].x,y0=Q[a].y,x1=Q[b].x,y1=Q[b].y,x2=Q[d].x,y2=Q[d].y;
+      const u0=U[a][0],v0=U[a][1],u1=U[b][0],v1=U[b][1],u2=U[d][0],v2=U[d][1];
+      const den=(u1-u0)*(v2-v0)-(u2-u0)*(v1-v0); if(!den) continue;
+      const ma=((x1-x0)*(v2-v0)-(x2-x0)*(v1-v0))/den, mb=((x2-x0)*(u1-u0)-(x1-x0)*(u2-u0))/den;
+      const mc=((y1-y0)*(v2-v0)-(y2-y0)*(v1-v0))/den, md=((y2-y0)*(u1-u0)-(y1-y0)*(u2-u0))/den;
+      g.save();
+      /* ขยาย path ออกครึ่งพิกเซลกันเส้นขาวตามรอยต่อช่อง */
+      g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.lineTo(x2,y2);g.closePath();
+      g.clip(); g.lineWidth=1; g.strokeStyle='rgba(0,0,0,0)'; g.stroke();
+      g.transform(ma,mc,mb,md,x0-ma*u0-mb*v0,y0-mc*u0-md*v0);
+      g.drawImage(TX,0,0);
+      const uA=c/cols*TW, uB=(c+1)/cols*TW, vA=r/rows*TH, vB=(r+1)/rows*TH;
+      const gr=alongU ? g.createLinearGradient(uA,vA,uB,vA) : g.createLinearGradient(uA,vA,uA,vB);
+      gr.addColorStop(0,tone(lA)); gr.addColorStop(1,tone(lB));
+      g.fillStyle=gr; g.fillRect(uA-1,vA-1,(uB-uA)+2,(vB-vA)+2);
+      g.restore();
+    }
+  }
+}
+/* ---------- กระดาษ ---------- */
+function paintSheet(){
+  const cv=sheet.querySelector('canvas');
+  const w=sheet.clientWidth, h=sheet.clientHeight;
+  if(!w||!h||!APP||!APP.drawPaper) return;
+  APP.drawPaper(cv,{rain:0,storm:0,days:0});
+}
+
+/* ---------- ท่าทาง ---------- */
+const atY=e=>(e.touches?e.touches[0]:e).clientY;
+function down(e){ if(PHASE!=='wait') return; drag=true; startY=atY(e); startVal=y; e.preventDefault(); }
+function move(e){
+  if(!drag) return;
+  const f=feel(SPD);
+  let dy=startY-atY(e);
+  dy = dy>0 ? dy*(1+f.assist)-(dy*f.back*0.5) : dy*0.28;
+  y=Math.max(0,startVal+dy);
+  prog=Math.min(1,y/f.need);
+  if(prog>=1) launch();
+  e.preventDefault();
+}
+function up(){
+  if(!drag) return; drag=false;
+  const f=feel(SPD);
+  if(prog>=f.keep) launch(); else { y=0; prog=0; }
+}
+addEventListener('touchstart',down,{passive:false});
+addEventListener('touchmove',move,{passive:false});
+addEventListener('touchend',up);
+addEventListener('mousedown',down);
+addEventListener('mousemove',move);
+addEventListener('mouseup',up);
+/* เดสก์ท็อป — ต้องค้างไว้ ไม่ใช่กดครั้งเดียว น้ำหนักของท่าทางจึงยังอยู่ */
+let hold=null;
+addEventListener('keydown',e=>{
+  if((e.key!=='ArrowUp'&&e.key!==' ')||hold||PHASE!=='wait') return;
+  e.preventDefault();
+  hold=setInterval(()=>{ const f=feel(SPD); y+=H*0.006*(1+f.assist);
+    prog=Math.min(1,y/f.need); if(prog>=1){clearInterval(hold);hold=null;launch();} },16);
+});
+addEventListener('keyup',()=>{ if(hold){clearInterval(hold);hold=null; if(prog<feel(SPD).keep){y=0;prog=0;}} });
+
+function launch(){
+  if(PHASE!=='wait') return;
+  drag=false; PHASE='fly'; fly=0; flyStart=performance.now();
+  word.textContent='ลมกำลังรับไว้'; word.classList.add('wide');
+}
+
+/* วาดช็อตปลิว — เล็กลงด้วย perspective จริง (f/(f+z)) และลด mesh ตามระยะ (LOD, ART §5) */
+/* ---------- เส้นลมในอากาศ ----------
+   เดินตามสนามลมทีละก้าวเหมือน G.streams บนลูกโลก แต่แบ่งเป็นสองชั้น:
+   **ริ้วหลัก** ยาว เข้ม เคลื่อนช้ามาก อยู่ให้เห็นตลอด — เป็นโครงของกระแส
+   **ริ้วรอง** สั้น จาง เคลื่อนเร็ว — เป็นรายละเอียดที่วิ่งผ่าน
+   ก่อนหน้านี้มีชั้นเดียวที่เคลื่อนเร็วหมด ทุกเส้นจึงโผล่แล้วหายพร้อมกันเป็นพัก ๆ */
+const SEEDS=(()=>{const a=[];
+  const rnd=(i,k)=>{const x=Math.sin(i*127.1+k*311.7)*43758.5453;return x-Math.floor(x);};
+  for(let i=0;i<40;i++){
+    const main=i<14;                                  /* 14 เส้นแรกคือโครงหลัก */
+    a.push({
+      x:rnd(i,1)*1.5-0.25, y:rnd(i,2)*1.7-0.35,
+      z:-900+rnd(i,3)*1800,
+      ph:rnd(i,4),
+      len: main ? (1.15+rnd(i,5)*0.45) : (0.45+rnd(i,5)*0.5),
+      sp:  main ? (0.10+rnd(i,6)*0.10) : (0.75+rnd(i,6)*0.8),
+      w:   main ? 1 : 0.52,
+      main
+    });
+  }
+  return a;})();
+/* สนามลม: ทิศหลักจากลมจริง + ความปั่นป่วนสามชั้นที่คาบไม่ลงตัวกัน — deterministic ทั้งหมด */
+function flowAngle(x,y,t,base){
+  return base
+    + Math.sin(x*0.0075 + t*0.26)*0.55
+    + Math.sin(y*0.0104 - t*0.19)*0.44
+    + Math.sin((x*0.62+y*0.79)*0.0051 + t*0.12)*0.33;
+}
+function paintStreaks(g,strength,f,blow,behind,depthPaper){
+  if(strength<=0.01) return;
+  const base=-Math.PI/2 + Math.sin(blow)*0.85;
+  const STEPS=22;
+  g.lineCap='round';
+  for(let i=0;i<SEEDS.length;i++){
+    const s=SEEDS[i];
+    if((s.z<depthPaper)!==behind) continue;
+    const persp=FOC/(FOC+Math.max(0,s.z+900)*0.9+220);
+    const drift=((T*(0.055+f.w*0.10)*s.sp)+s.ph)%1;
+    /* จางตอนเกิดและตอนหมดอายุ ไม่ใช่โผล่มาทั้งเส้นแล้วหายไปทั้งเส้น */
+    const life=Math.min(1,drift/0.14)*Math.min(1,(1-drift)/0.14);
+    let x=s.x*W, y=(((s.y+drift)%1.7)-0.35)*H;
+    const step=W*0.055*(0.8+f.w*0.5);
+    const head=((T*(0.17+f.w*0.30))+i*0.137)%1.35;
+    let px=W/2+(x-W/2)*persp, py=H/2+(y-H/2)*persp;
+    const n=Math.round(STEPS*s.len);
+    for(let j=1;j<=n;j++){
+      const ang=flowAngle(x,y,T*0.9+s.ph*6.28,base);
+      x+=Math.cos(ang)*step; y+=Math.sin(ang)*step;
+      const cx=W/2+(x-W/2)*persp, cy=H/2+(y-H/2)*persp;
+      const t=j/n;
+      /* ริ้วหลักจางตามความยาวน้อยกว่ามาก จึงอยู่ให้เห็นทั้งเส้น */
+      const along=s.main ? (0.55+0.45*Math.pow(1-t,0.9)) : Math.pow(1-t,0.75);
+      const near=Math.max(0,1-Math.abs(t-head)*4.5);
+      let a=strength*life*s.w*(0.42+persp*0.58)*((0.17+f.w*0.26)*along + near*(0.26+f.w*0.48)*along);
+      if(a>0.40) a=0.40;
+      if(a>0.005 && !(cy<-60&&py<-60) && !(cy>H+60&&py>H+60) && !(cx<-60&&px<-60) && !(cx>W+60&&px>W+60)){
+        g.strokeStyle='rgba(84,90,104,'+a.toFixed(3)+')';
+        g.lineWidth=(s.main?0.85:0.55)*(0.9+f.w*0.7)*(0.55+persp*0.45)*(1+near*0.6);
+        g.beginPath();g.moveTo(px,py);g.lineTo(cx,cy);g.stroke();
+      }
+      px=cx;py=cy;
+    }
+  }
+}
+
+/* ---------- เกรน ---------- */
+const GRAIN=(()=>{
+  const N=110, c=document.createElement('canvas'); c.width=c.height=N;
+  const g=c.getContext('2d'), im=g.createImageData(N,N);
+  let sd=20260824;
+  const rnd=()=>{sd=(sd*1664525+1013904223)>>>0; return sd/4294967296;};
+  for(let i=0;i<im.data.length;i+=4){
+    const v=(rnd()+rnd()+rnd())/3;
+    const q=128+(v-0.5)*186;
+    im.data[i]=im.data[i+1]=im.data[i+2]=q; im.data[i+3]=255;
+  }
+  g.putImageData(im,0,0); return c;
+})();
+let GRAIN_PAT=null;
+function paintGrain(g,alpha){
+  if(!GRAIN_PAT) GRAIN_PAT=g.createPattern(GRAIN,'repeat');
+  g.save();
+  g.globalCompositeOperation='soft-light';
+  g.globalAlpha=alpha;
+  g.fillStyle=GRAIN_PAT;
+  g.fillRect(0,0,W,H);
+  g.restore();
+}
+
+function paintPaper3D(tx,ty,tz,rx,ry,rz,curl,mwind,op,f){
+  const cv=$('#flycv'), d=Math.min(devicePixelRatio||1,2);
+  if(cv.width!==W*d||cv.height!==H*d){ cv.width=W*d; cv.height=H*d; }
+  const g=cv.getContext('2d'); g.setTransform(d,0,0,d,0,0); g.clearRect(0,0,W,H);
+  if(!TEX||op<=0.004) return;
+  const depth=Math.max(0,-tz);
+  const bw=Math.min(W*0.86,380), bh=bw*(TH/TW);
+  const persp=FOC/(FOC+depth);
+  /* ช่องละเอียดตอนใกล้ — ตอนนี้แสงไล่ต่อจุดแล้วจึงคุ้มที่จะเพิ่ม */
+  const lod = persp>0.55 ? [13,16] : persp>0.28 ? [9,11] : [6,7];
+  const blow=(DIR+180)*Math.PI/180;
+  paintStreaks(g,STREAK_STR,f,blow,true,depth);      /* เส้นที่อยู่หลังกระดาษ */
+  g.globalAlpha=op;
+  warpLetter(g, W/2+tx, H/2+ty, bw, bh, T, mwind,
+             ry*Math.PI/180, rx*Math.PI/180, rz*Math.PI/180, depth, curl, lod[0], lod[1]);
+  g.globalAlpha=1;
+  paintStreaks(g,STREAK_STR,f,blow,false,depth);     /* เส้นที่อยู่หน้ากระดาษ */
+  paintGrain(g,0.085);   /* จางจนแทบไม่รู้ตัว — เห็นชัดเมื่อไหร่คือแรงเกินไปแล้ว */
+}
+
+/* ---------- ลูป ---------- */
+const HANGF=()=>feel(SPD).hang;
+function tick(){
+  T+=1/60;
+  const f=feel(SPD);
+
+  if(PHASE==='fly'){
+    const el=performance.now()-flyStart;
+    if(el>f.hang) fly=Math.min(1,(el-f.hang)/2600);   /* ~2.6 วิ รวมสองช็อต */
+    if(fly>=1&&PHASE==='fly'){ PHASE='globe'; word.textContent='ไปแล้ว'; }
+  }
+
+  /* ---------- ช็อตที่ ๑ · เรายืนอยู่บนพื้น กระดาษถูกโยนขึ้นฟ้า ----------
+     ทั้งตอนรอและตอนปล่อยวาดด้วย mesh ตัวเดียวกัน ค่าทุกตัวต่อกันสนิทที่รอยต่อ
+     (เคยแยกเป็น DOM ตอนรอ + canvas ตอนปล่อย แล้วเห็นกระดาษ "เปลี่ยนหน้าตา" ตรงจังหวะปล่อย)
+     ลมคือพระเอก: ยิ่งลอยไกล ลมยิ่งม้วนกระดาษแน่นขึ้นเรื่อย ๆ ตามที่กระดาษบางจริงเป็น */
+  const blow=(DIR+180)*Math.PI/180;
+  let ty,tx=0,tz,op=1,rz,rx,ry=0,curl,mwind;
+  if(PHASE==='wait'||drag){
+    ty=-prog*H*0.10;  tz=-prog*90;
+    rz=prog*2.5;      rx=-prog*6;
+    curl=prog*0.18;                       /* เริ่มโค้งตั้งแต่ตอนดัน — มือออกแรง กระดาษตอบ */
+    STREAK_STR=prog*0.55;                 /* ลมเริ่มเห็นได้ตั้งแต่ยกกระดาษขึ้น */
+    mwind=0.13+prog*0.09;
+  }else{
+    const e=Math.min(1,fly/CUT);
+    const rise=1-Math.pow(1-e,1.5);       /* พุ่งตอนหลุดมือ แล้วช้าลงเมื่อสูงขึ้น */
+    /* ทุกบรรทัดเริ่มจากค่าที่ prog=1 พอดี rise=0 จึงไม่มีการกระโดด */
+    ty=-H*0.10 - rise*H*0.45;
+    tz=-90 - Math.pow(rise,1.8)*5200;
+    tx=Math.sin(blow)*rise*W*0.30*(0.30+f.w) + gust*rise*W*0.045;
+    rx=-6 - rise*52;
+    /* ความปั่นป่วนของอากาศ — คาบสามชั้นที่ไม่ลงตัวกัน จึงไม่มีรอบไหนซ้ำรอบก่อน
+       แต่ยังคำนวณซ้ำได้ทุกหลัก ผู้ส่งกับผู้รับจึงเห็นกระดาษใบเดียวกันจริง ๆ */
+    const gust=(Math.sin(T*1.37)*0.55+Math.sin(T*0.83+1.7)*0.30+Math.sin(T*2.11+4.1)*0.15)*f.w;
+    ry=Math.sin(blow)*rise*30 + Math.pow(rise,3.2)*205 + gust*rise*22;
+    rz=2.5 + Math.sin(blow)*rise*26*(0.4+f.w) + gust*rise*13;
+    /* ม้วนแรงขึ้นเรื่อย ๆ ไม่คลายกลับ — ลมไม่ได้หยุดกระทำเมื่อกระดาษลอยไกลขึ้น
+       ช่วงต้นยังอ่านออกเพราะโตช้า (rise^1.4) ช่วงปลายม้วนแน่นตอนที่เล็กจนอ่านไม่ออกอยู่แล้ว */
+    curl=0.18 + Math.pow(rise,1.4)*(0.85+f.w*1.70)*(1+gust*0.22);   /* ลมกระโชกม้วนแน่นขึ้นชั่วขณะ */
+    mwind=0.22 + rise*f.w*0.30;   /* ต้องเริ่มที่ค่าเดียวกับตอน prog=1 ไม่งั้นคลื่นกระตุกตรงรอยต่อ */
+    STREAK_STR=0.55+rise*0.65;    /* เริ่มที่ค่าเดียวกับ prog=1 แล้วแรงขึ้นเมื่อขึ้นสูง */
+    op=e<0.80?1:Math.max(0,1-(e-0.80)/0.20);
+  }
+  paintPaper3D(tx,ty,tz,rx,ry,rz,curl,mwind,op,f);
+  /* ---------- ช็อตที่ ๒ · ตัดมาที่ลูกโลก ----------
+     ไม่ใช่การซูมต่อเนื่องจากช็อตแรก — คนละมุมกล้อง คนละที่ยืน
+     ตัดหลังกระดาษหายไปในแสงแล้ว โดยจุดทองอยู่ตรงที่กระดาษหายไปพอดี
+     สายตาจะเชื่อมเองว่าเป็นของสิ่งเดียวกัน (เจตนาเดิมของข้อ 44) */
+  const cut = Math.max(0,(fly-CUT)/(1-CUT));
+  $('#app').style.opacity = (PHASE==='wait') ? '0' : Math.min(1,cut/0.45).toFixed(3);
+  if(G&&APP){
+    const zEnd = LET ? G.fitZoom(X.fitKm(LET)) : 6;
+    /* เข้ามาที่ระยะใกล้กว่าปลายทางเล็กน้อยแล้วผ่อนออก — ให้ยังรู้สึกว่ากล้องมีชีวิต
+       ไม่ใช่ภาพนิ่งที่โผล่มาเฉย ๆ และไม่ใช่การซูมยาวจากอวกาศ */
+    const z = zEnd*(1+0.42*Math.pow(1-cut,2));
+    G.zoom=G.zTarget=z; G.R=G.R0*G.zoom;
+    /* ช็อตแรกลูกโลกยังไม่โผล่ — ไม่ต้องวาดทิ้ง เพราะเฟรมที่หนักที่สุดคือตอนตัด
+       ที่ mesh 12x15 กับลูกโลกเต็มใบทำงานชนกัน (วัดได้ 14.3 ms) */
+    if(+($('#app').style.opacity||0)>0.004){
+      /* T ของ index.html เป็น let เหมือนกัน ตั้งค่าผ่าน eval */
+      try{ APP.eval('T='+T.toFixed(3)); APP.renderGlobe(); }catch(e){}
+    }
+  }
+  hud.textContent='phase '+PHASE+'  prog '+prog.toFixed(2)+'  fly '+fly.toFixed(2)
+    +'\nต้องดัน '+f.need+'px  ลมช่วย +'+f.assist+'  ค้าง '+f.hang+'ms'
+    +(G?'\nzoom '+G.zoom.toFixed(1):'');
+  requestAnimationFrame(tick);
+}
+
+/* ---------- แผงลอง ---------- */
+document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=e=>{
+  e.stopPropagation();
+  document.querySelectorAll('[data-spd]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); SPD=+b.dataset.spd; reset();
+});
+document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=e=>{
+  e.stopPropagation();
+  document.querySelectorAll('[data-dir]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); DIR=+b.dataset.dir; reset();
+});
+$('#again').onclick=e=>{ e.stopPropagation(); reset(); };
+$('#panel').addEventListener('mousedown',e=>e.stopPropagation());
+$('#panel').addEventListener('touchstart',e=>e.stopPropagation());
+function reset(){
+  PHASE='wait'; prog=0; y=0; fly=0; drag=false;
+  word.textContent='ปล่อยให้ลมพา'; word.classList.remove('wide','gone');
+  $('#app').style.opacity='0';
+  $('#sky').style.opacity='0';
+  $('#flycv').style.display='none'; sheet.style.display='';
+  if(G&&X){ G.zoom=G.zTarget=X.CFG.ZOOM_MAX; G.R=G.R0*G.zoom; }
+}
+addEventListener('resize',()=>{ W=innerWidth; H=innerHeight; if(APP)APP.sizeStage(); });
+</script>
+</body>
+</html>

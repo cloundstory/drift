@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — หน้าเขียน + โมเมนต์ปล่อย</title>
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 80px)}
+.wrap{max-width:430px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:26px;line-height:1.9}
+section{margin-bottom:40px}
+h2{font-size:14px;font-weight:normal;letter-spacing:.16em;margin-bottom:4px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:14px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:0 0 32px}
+.bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.btn{border:1px solid var(--line);border-radius:999px;padding:7px 13px;background:rgba(255,255,255,.42);
+  font:inherit;font-size:11.5px;letter-spacing:.04em;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.92);border-color:rgba(198,154,84,.55)}
+.tag{font-size:11px;color:var(--faint);letter-spacing:.04em}
+.num{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--faint);margin-top:10px;white-space:pre-wrap;line-height:1.7}
+
+/* ---------- §1 กระดาษที่เขียนลงไปจริง ---------- */
+.sheetpaper{position:relative;border-radius:2px;overflow:hidden;box-shadow:0 2px 10px rgba(84,90,104,.13)}
+.sheetpaper canvas{position:absolute;inset:0;width:100%;height:100%}
+.sheetpaper .in{position:relative;padding:30px 26px 24px}
+.hdr{text-align:right;font-size:11.5px;color:var(--faint);letter-spacing:.05em;margin-bottom:22px}
+/* ช่องกรอกต้องเป็นบรรทัดของจดหมาย ไม่ใช่กล่องฟอร์ม */
+.ln{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
+.ln .lb{flex:0 0 auto;font-size:15px;color:rgba(43,43,47,.82)}
+.ln input{flex:1;min-width:0;font:inherit;font-size:15px;color:rgba(43,43,47,.92);background:none;
+  border:0;border-bottom:1px solid rgba(84,90,104,.22);outline:none;padding:1px 3px 2px}
+.ln input:focus{border-bottom-color:rgba(198,154,84,.65)}
+.ln.small input,.ln.small .lb{font-size:12.5px;color:var(--dim)}
+.body{width:100%;min-height:160px;font:inherit;font-size:15px;line-height:2.05;color:rgba(43,43,47,.9);
+  background:none;border:0;outline:none;resize:none;margin-top:18px;-webkit-user-select:text;user-select:text}
+.sign{display:flex;justify-content:flex-end;align-items:baseline;gap:6px;margin-top:14px}
+.sign input{width:44%;text-align:center}
+.hits{position:relative;z-index:2;margin:2px 0 0}
+.hit{display:block;width:100%;text-align:left;padding:6px 9px;border-radius:7px;font-size:12.5px;
+  background:rgba(255,255,255,.5);border:0;font:inherit;cursor:pointer;margin-bottom:3px}
+
+/* ---------- §2 การ์ดสายลมตอบกลับ + แถบเลื่อน ---------- */
+.card{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.34);
+  padding:18px 16px 0;overflow:hidden;position:relative}
+.card h3{font-size:13px;font-weight:normal;letter-spacing:.14em;color:var(--dim);margin-bottom:3px}
+.card .big{font-size:23px;letter-spacing:.03em;margin:6px 0 2px}
+.card .poem{font-size:13px;color:var(--dim);line-height:1.85}
+.card .meta{font-size:11.5px;color:var(--faint);margin-top:5px}
+.pick{width:100%;display:flex;gap:11px;align-items:center;text-align:left;border:1px solid var(--line);
+  border-radius:12px;padding:9px 12px;background:rgba(255,255,255,.26);margin-bottom:7px;cursor:pointer;font:inherit}
+.pick.on{border-color:rgba(198,154,84,.6);background:rgba(255,255,255,.62)}
+.pick canvas{flex:0 0 40px;width:40px;height:50px}
+.pick b{display:block;font-weight:normal;font-size:13.5px;letter-spacing:.03em}
+.pick small{display:block;font-size:11px;color:var(--dim);line-height:1.6}
+/* แถบเลื่อน — สูงคงที่ 96px ที่ก้นการ์ด ไม่ใช่ทั้งจอ (ข้อ 44) */
+.slot{position:relative;height:96px;margin:14px -16px 0;border-top:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0));
+  overflow:hidden;touch-action:none;cursor:grab}
+.slot.drag{cursor:grabbing}
+.slot canvas{position:absolute;inset:0;width:100%;height:100%}
+.slot .hintline{position:absolute;left:0;right:0;bottom:13px;text-align:center;font-size:11.5px;
+  color:var(--faint);letter-spacing:.1em;pointer-events:none;transition:opacity .25s}
+.done{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:13px;letter-spacing:.12em;color:var(--gold);opacity:0;pointer-events:none;transition:opacity .4s}
+.err{color:#8b3a33;font-size:12.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>หน้าเขียน · โมเมนต์ปล่อย</h1>
+<p class="lead">ข้อ 44 · โค้ดวาดกระดาษดึงสดจาก <code>index.html</code><br>
+<b>ลองพิมพ์และลองปัดจริงบนมือถือ</b></p>
+<div id="boot" class="err"></div>
+
+<section id="s1" hidden>
+  <h2>๑ · หน้าเขียน — กระดาษจริงที่เขียนลงไป</h2>
+  <p class="q">ช่องกรอกกลายเป็น<b>บรรทัดของจดหมาย</b> ไม่ใช่กล่องฟอร์มเรียงกัน ·
+  หัวมุมขวาบนคือที่ที่เรายืนอยู่จริง<br>
+  ขอบขวากระดาษ<b>กระเพื่อมตามลมจริง ณ ที่ที่ผู้ใช้ยืน</b> — ลมเข้ามาอยู่ในองก์แรกแล้ว
+  แต่ตัวกระดาษต้องนิ่งพอจะเขียนได้</p>
+  <div class="bar">
+    <span class="tag">ลมที่ต้นทาง</span>
+    <button class="btn on" data-spd="3">สงบ 3</button>
+    <button class="btn" data-spd="18">18 กม./ชม.</button>
+    <button class="btn" data-spd="34">34</button>
+    <button class="btn" data-spd="55">แรง 55</button>
+  </div>
+  <div class="sheetpaper" id="paper">
+    <canvas id="pcv"></canvas>
+    <div class="in">
+      <div class="hdr" id="hdr">ฉะเชิงเทรา · ๒๔ สิงหาคม</div>
+      <div class="ln"><span class="lb">ถึง</span><input id="wTo" placeholder="ชื่อผู้รับ" autocomplete="off"></div>
+      <div class="ln small"><span class="lb">ที่</span><input id="wPlace" placeholder="เมืองปลายทาง" autocomplete="off"></div>
+      <div class="hits" id="wHits"></div>
+      <textarea class="body" id="wBody" placeholder="เขียนสิ่งที่อยากบอก…"></textarea>
+      <div class="sign"><span class="lb">จาก</span><input id="wFrom" placeholder="ชื่อคุณ" autocomplete="off"></div>
+    </div>
+  </div>
+  <div class="bar" style="margin-top:12px;justify-content:center">
+    <button class="btn" id="btnPen" style="padding:11px 26px;font-size:13px">วางปากกา</button>
+  </div>
+</section>
+
+<div class="rule" id="r1" hidden></div>
+
+<section id="s2" hidden>
+  <h2>๒ · เลื่อนขึ้นเพื่อปล่อย</h2>
+  <p class="q"><b>แรงต้านคือลมจริง ณ ที่ที่ยืนอยู่</b> — ลมแรงกระดาษหลุดมือเร็ว ลมสงบต้องดันไกลกว่า
+  แล้วค้างกลางอากาศครู่หนึ่งก่อนไป<br>
+  ลองสลับลมด้านบนแล้วปัดดู · แถบสูง 96px เท่านั้น ที่เหลือของการ์ดยังเลื่อนอ่านได้ตามปกติ</p>
+  <div class="bar">
+    <span class="tag">ตัวบอกว่าเลื่อนได้</span>
+    <button class="btn on" data-cue="edge">ขอบกระดาษโผล่</button>
+    <button class="btn" data-cue="lift">ยกตัวตอนแตะ</button>
+    <button class="btn" data-cue="text">ข้อความจาง</button>
+  </div>
+  <div class="card" id="card">
+    <h3>สายลมตอบกลับ</h3>
+    <p class="meta" id="cRoute">ฉะเชิงเทรา → เชียงใหม่ · 609 กม.</p>
+    <div class="big" id="cTime">ถึงในราว 6 ชั่วโมง</div>
+    <div class="poem" id="cPoem">ลมวันนี้ไปทางเดียวกับจดหมาย</div>
+    <div class="meta" id="cMeta" style="margin-bottom:14px">ถึงประมาณ 24 ส.ค. 20:15</div>
+    <div id="cPicks"></div>
+    <div class="slot" id="slot">
+      <canvas id="scv"></canvas>
+      <div class="hintline" id="hint">เลื่อนขึ้นเพื่อปล่อย</div>
+      <div class="done" id="done">ลมรับไปแล้ว</div>
+    </div>
+  </div>
+  <div class="num" id="dump"></div>
+</section>
+</div>
+
+<script>
+/* ดึงโค้ดวาดจาก index.html — หาด้วยชื่อ ไม่ใช่เลขบรรทัด */
+const NEED=['clamp','mix','c255','meshPoints','rainBlooms','drawFlutter','drawPaper'];
+function grab(src,name){
+  const m=src.indexOf('function '+name+'(');
+  if(m>=0){ let d=0;
+    for(let j=src.indexOf('{',m);j<src.length;j++){
+      if(src[j]==='{')d++; else if(src[j]==='}'){ d--; if(!d) return src.slice(m,j+1); } }
+    return null; }
+  const r=src.match(new RegExp('const\\s+'+name+'\\s*=[^;\\n]*;'));
+  return r?r[0]:null;
+}
+
+let T=0, SPD=3, CUE='edge', COATSEL=1, RAF=null;
+/* ตัวคูณการเคลือบ — ยกมาจาก coating-studies (ข้อ 60.4) */
+const COAT=[{sway:1,freq:1,speed:1,flap:1,mass:1},
+            {sway:.62,freq:1.55,speed:1.15,flap:.35,mass:.80},
+            {sway:.40,freq:.55,speed:.55,flap:.10,mass:1.55}];
+let CUR=0;
+
+/* ---------- แรงต้าน = ลมจริง ----------
+   ลมแรง: กระดาษ "อยากไปเอง" ระยะสั้นลง มีแรงช่วยดึง หลุดมือทันทีที่ถึงเกณฑ์
+   ลมสงบ: ต้องออกแรงเอง ระยะยาวขึ้น กระดาษถ่วงกลับ และค้างกลางอากาศก่อนไป
+   45 กม./ชม. = แรงเต็มพิกัด (สูงกว่านี้แทบไม่มีในเส้นทางในประเทศ) */
+const WIND_FULL=45;
+const windOf = spd => Math.max(0,Math.min(1,spd/WIND_FULL));
+function feel(spd){
+  const w=windOf(spd);
+  return {
+    w,
+    need:  Math.round(92-w*54),   /* ระยะที่ต้องดันถึง (px) 92 → 38 */
+    assist:+(w*0.55).toFixed(2),  /* ลมช่วยดึงขึ้นระหว่างลาก */
+    back:  +((1-w)*0.42).toFixed(2), /* ลมสงบถ่วงกลับ */
+    hang:  Math.round((1-w)*620), /* ค้างกลางอากาศกี่ ms ก่อนลอยไป */
+    keep:  +(0.72-w*0.30).toFixed(2) /* ปล่อยนิ้วแล้วยังไปต่อ ถ้าถึงสัดส่วนนี้ของ need */
+  };
+}
+
+(async function boot(){
+  const el=document.getElementById('boot');
+  try{
+    el.textContent='กำลังดึงโค้ดวาดจาก index.html…';
+    const src=await (await fetch('index.html?'+Date.now())).text();
+    const parts=[];
+    for(const n of NEED){
+      const c=grab(src,n);
+      if(!c) throw new Error('หา '+n+' ใน index.html ไม่เจอ');
+      parts.push(c);
+    }
+    (0,eval)(parts.join('\n')+'\n;Object.assign(window,{clamp,mix,c255});');
+    window.meshPoints=function(W,H,t,wind,cols,rows){
+      const e=COAT[CUR];
+      const sway=(8+wind*46)*e.sway, freq=(1.2+wind*3.2)*e.freq,
+            speed=(.6+wind*2.6)*e.speed, flap=wind*wind*e.flap;
+      const pts=[];
+      for(let r=0;r<=rows;r++){ const row=[],v=r/rows;
+        for(let c=0;c<=cols;c++){ const u=c/cols;
+          let x=(u-.5)*W,y=(v-.5)*H;
+          const ripple=Math.sin(u*freq*Math.PI*2+v*1.5-t*speed);
+          const edge=Math.pow(u,1.6);
+          x+=ripple*sway*.25*(.4+edge);
+          const z=ripple*(sway*.5)*edge*(1+flap*edge*Math.abs(v-.5)*2.4);
+          y+=z*.35; x+=Math.sin(v*Math.PI)*-sway*.15;
+          row.push({x,y,z,u,v});
+        } pts.push(row); }
+      return {pts,sway};
+    };
+    el.hidden=true;
+    ['s1','r1','s2'].forEach(i=>document.getElementById(i).hidden=false);
+    buildPicks(); wireUI(); dump(); loop();
+  }catch(e){
+    el.innerHTML='ต้องเปิดผ่าน <b>http</b> · '+e.message;
+  }
+})();
+
+/* ---------- §1 กระดาษหน้าเขียน ----------
+   กระดาษต้องนิ่งพอจะเขียนได้ → ใช้ drawPaper (นิ่ง) เป็นเนื้อ
+   แล้วให้ "ขอบขวา" กระเพื่อมตามลมจริงอย่างเดียว — ลมมีอยู่ แต่ไม่มารบกวนการเขียน */
+function paintWritingPaper(){
+  const cv=document.getElementById('pcv'), box=document.getElementById('paper');
+  const w=box.clientWidth, h=box.clientHeight;
+  if(!w||!h) return;
+  drawPaper(cv,{rain:0,storm:0,days:0});
+  const d=Math.min(devicePixelRatio||1,2), c=cv.getContext('2d');
+  const wind=windOf(SPD);
+  /* ขอบขวาไหว — ยิ่งลมแรงยิ่งลึกและถี่ */
+  const amp=5+wind*26, freq=1.1+wind*2.4;
+  c.save();
+  c.globalCompositeOperation='destination-out';
+  /* ต้องตั้ง fillStyle ทึบเอง — ไม่งั้นได้ alpha ที่ drawPaper ทิ้งไว้ (vignette a=.05) แล้วแทบไม่ตัดอะไรเลย */
+  c.fillStyle='#000';
+  c.beginPath(); c.moveTo(w,0);
+  for(let y=0;y<=h;y+=4){
+    const v=y/h;
+    c.lineTo(w-(Math.sin(v*freq*Math.PI*2-T*(.5+wind*2.2))*.5+.5)*amp*(0.35+v*0.9), y);
+  }
+  c.lineTo(w,h); c.closePath(); c.fill();
+  c.restore();
+  /* เงาที่ขอบให้รู้ว่ากระดาษยกตัว */
+  c.save();
+  const g=c.createLinearGradient(w-amp*2.2,0,w,0);
+  g.addColorStop(0,'rgba(120,105,75,0)');
+  g.addColorStop(1,'rgba(120,105,75,'+(.05+wind*.10)+')');
+  c.fillStyle=g; c.fillRect(w-amp*2.2,0,amp*2.2,h);
+  c.restore();
+}
+
+/* ---------- §2 แถบเลื่อน ---------- */
+const S={y:0, drag:false, startY:0, startVal:0, flying:false, hang:0, vy:0};
+function paintSlot(){
+  const cv=document.getElementById('scv'), slot=document.getElementById('slot');
+  const w=slot.clientWidth, h=slot.clientHeight;
+  if(!w||!h) return;
+  const d=Math.min(devicePixelRatio||1,2);
+  if(cv.width!==w*d||cv.height!==h*d){ cv.width=w*d; cv.height=h*d; }
+  const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0); c.clearRect(0,0,w,h);
+  const f=feel(SPD);
+  const prog=Math.min(1,S.y/f.need);
+  CUR=COATSEL;
+  /* กระดาษเล็กที่รอถูกปล่อย — โผล่จากก้นแถบขึ้นมาตามตัวบอกที่เลือก
+     แถบเดินตาม *ความคืบหน้า* ไม่ใช่ระยะนิ้วดิบ — ไม่งั้นวันลมสงบ (ต้องดัน 88px)
+     กระดาษจะพ้นแถบสูง 96px หายไปก่อนถึงเป้า และเส้นเป้าจะตกนอกกรอบ */
+  const peek = CUE==='edge' ? 16 : (CUE==='lift' && (S.drag||S.y>0) ? 14 : 6);
+  const pw=Math.min(w*.42,120), ph=pw*1.26;
+  const TOP=16;                                   /* เส้นเป้าอยู่ห่างขอบบนเท่านี้เสมอ */
+  const travel=(h-peek+ph/2)-(TOP+ph/2);
+  const cx=w/2, cy=(h-peek+ph/2) - prog*travel - (S.flying?S.fly:0);
+  c.save();
+  c.globalAlpha=S.flying?Math.max(0,1-S.fly/150):1;
+  drawFlutter(c,cx,cy,pw,ph,T,Math.max(.12,windOf(SPD)*(0.55+prog*0.6)),0,null);
+  c.restore();
+  /* เส้นเป้าหมาย — จางมาก ให้รู้ว่า "ถึงตรงนี้แล้วไป" โดยไม่เรียกร้องความสนใจ */
+  if(S.drag||S.y>2){
+    c.strokeStyle='rgba(198,154,84,'+(.10+prog*.34)+')';
+    c.lineWidth=1; c.setLineDash([3,5]);
+    c.beginPath(); c.moveTo(w*.30,TOP); c.lineTo(w*.70,TOP); c.stroke();
+    c.setLineDash([]);
+  }
+}
+function wireSlot(){
+  const slot=document.getElementById('slot');
+  const hint=document.getElementById('hint'), done=document.getElementById('done');
+  const at=e=>(e.touches?e.touches[0]:e).clientY;
+  const start=e=>{
+    if(S.flying) return;
+    S.drag=true; S.startY=at(e); S.startVal=S.y; slot.classList.add('drag');
+    if(CUE==='text') hint.style.opacity='0';
+    e.preventDefault();
+  };
+  const move=e=>{
+    if(!S.drag) return;
+    const f=feel(SPD);
+    let dy=S.startY-at(e);
+    /* ลมช่วยดึงขึ้น / ลมสงบถ่วงกลับ — แรงต้านคือลมจริง */
+    dy = dy>0 ? dy*(1+f.assist) - (dy*f.back*0.5) : dy*0.3;
+    S.y=Math.max(0,S.startVal+dy);
+    if(S.y>=f.need) release();
+    e.preventDefault();
+  };
+  const end=()=>{
+    if(!S.drag) return;
+    S.drag=false; slot.classList.remove('drag');
+    const f=feel(SPD);
+    if(S.y>=f.need*f.keep) release();      /* ลมแรง = ยังไม่ถึงเส้นก็ไปต่อได้ */
+    else { S.y=0; if(CUE==='text') hint.style.opacity=''; }
+  };
+  slot.addEventListener('touchstart',start,{passive:false});
+  slot.addEventListener('touchmove',move,{passive:false});
+  slot.addEventListener('touchend',end);
+  slot.addEventListener('mousedown',start);
+  addEventListener('mousemove',move);
+  addEventListener('mouseup',end);
+  /* เดสก์ท็อป: ต้องมีทางคีย์บอร์ด — ค้างลูกศรขึ้น/เว้นวรรค ให้ได้น้ำหนักใกล้เคียงการลาก */
+  let holdT=null;
+  slot.tabIndex=0;
+  slot.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowUp'&&e.key!==' ') return;
+    e.preventDefault();
+    if(holdT||S.flying) return;
+    holdT=setInterval(()=>{ const f=feel(SPD); S.y+=2.2*(1+f.assist); if(S.y>=f.need){ clearInterval(holdT);holdT=null; release(); } },16);
+  });
+  slot.addEventListener('keyup',e=>{ if(holdT){ clearInterval(holdT); holdT=null; S.y=0; } });
+}
+function release(){
+  if(S.flying) return;
+  const f=feel(SPD);
+  S.drag=false; S.flying=true; S.fly=0; S.hang=f.hang;   /* ลมสงบ = ค้างกลางอากาศก่อน */
+  document.getElementById('slot').classList.remove('drag');
+  document.getElementById('hint').style.opacity='0';
+  setTimeout(()=>{ document.getElementById('done').style.opacity='1'; }, f.hang+420);
+  setTimeout(()=>{
+    S.flying=false; S.fly=0; S.y=0;
+    document.getElementById('done').style.opacity='0';
+    document.getElementById('hint').style.opacity='';
+  }, f.hang+2200);
+}
+
+let PICKC=[];
+function buildPicks(){
+  const box=document.getElementById('cPicks'); box.innerHTML=''; PICKC=[];
+  [[0,'ไม่เคลือบ','ของที่ระลึกจากเขตที่บินผ่าน · แต่ฝนทิ้งคราบได้'],
+   [1,'เคลือบกันน้ำ','ฝนไม่ทิ้งคราบ · +12% เวลา'],
+   [2,'เคลือบหนา','ไม่ยับ · หายยากลง · +12% เวลา']].forEach(([ct,t,d],i)=>{
+    const b=document.createElement('button');
+    b.className='pick'+(ct===COATSEL?' on':'');
+    b.innerHTML='<canvas></canvas><div><b>'+t+'</b><small>'+d+'</small></div>';
+    b.onclick=()=>{ COATSEL=ct; [...box.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); dump(); };
+    box.appendChild(b); PICKC.push({cv:b.querySelector('canvas'),ct});
+  });
+}
+function wireUI(){
+  document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-spd]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); SPD=+b.dataset.spd; S.y=0; dump();
+  });
+  document.querySelectorAll('[data-cue]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-cue]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); CUE=b.dataset.cue;
+    document.getElementById('hint').style.opacity = CUE==='text' ? '' : '0';
+  });
+  document.getElementById('hint').style.opacity='0';
+  document.getElementById('btnPen').onclick=()=>document.getElementById('s2').scrollIntoView({behavior:'smooth'});
+  wireSlot();
+}
+function dump(){
+  const f=feel(SPD);
+  document.getElementById('dump').textContent =
+    'ลม '+SPD+' กม./ชม. (w='+f.w.toFixed(2)+')\n'+
+    'ต้องดันถึง '+f.need+' px · ลมช่วย +'+f.assist+' · ถ่วงกลับ '+f.back+'\n'+
+    'ปล่อยนิ้วที่ '+Math.round(f.keep*100)+'% ของระยะก็ไปต่อ · ค้างกลางอากาศ '+f.hang+' ms';
+}
+function loop(){
+  if(RAF) cancelAnimationFrame(RAF);
+  const step=()=>{
+    T+=1/60;
+    if(S.flying){ const f=feel(SPD);
+      if(S.hang>0) S.hang-=16.7; else S.fly=(S.fly||0)+3.2+f.w*6.5; }
+    CUR=0; paintWritingPaper();
+    paintSlot();
+    PICKC.forEach(p=>{ CUR=p.ct;
+      const cv=p.cv, d=Math.min(devicePixelRatio||1,2);
+      if(cv.width!==40*d){ cv.width=40*d; cv.height=50*d; }
+      const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0); c.clearRect(0,0,40,50);
+      drawFlutter(c,20,25,26,33,T,0.72,0,null);
+    });
+    RAF=requestAnimationFrame(step);
+  };
+  step();
+}
+</script>
+</body>
+</html>
