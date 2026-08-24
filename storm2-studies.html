@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>drift — ขนาดพายุ (ข้อ 46.6 + 62.7)</title>
+<style>
+  :root{
+    --ink:#e8e4dc; --dim:#8b8378; --line:rgba(232,228,220,.14);
+    --bg:#0d1220; --panel:rgba(13,18,32,.92);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:14px/1.55 ui-sans-serif,system-ui,"Segoe UI",sans-serif;overflow:hidden}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0}
+  #panel{position:fixed;top:0;left:0;bottom:0;width:330px;overflow-y:auto;
+    background:var(--panel);backdrop-filter:blur(14px);
+    border-right:1px solid var(--line);padding:16px 16px 40px;z-index:10}
+  #panel.hide{transform:translateX(-100%)}
+  #toggle{position:fixed;top:12px;left:342px;z-index:11;padding:7px 12px;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);cursor:pointer;font-size:12px}
+  #toggle.off{left:12px}
+  h1{font-size:15px;margin:0 0 4px;letter-spacing:.02em}
+  .sub{color:var(--dim);font-size:11.5px;margin:0 0 16px;line-height:1.5}
+  h2{font-size:12px;margin:18px 0 8px;color:var(--dim);font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em}
+  .row{display:flex;align-items:center;gap:8px;margin:7px 0}
+  .row label{flex:0 0 88px;font-size:12px;color:var(--dim)}
+  .row input[type=range]{flex:1;accent-color:#d9b24a}
+  .row output{flex:0 0 66px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+  .modes{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
+  .mode{padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    cursor:pointer;background:transparent;color:var(--ink);text-align:left;font-size:12.5px;
+    transition:border-color .15s,background .15s}
+  .mode:hover{border-color:rgba(217,178,74,.4)}
+  .mode.on{border-color:#d9b24a;background:rgba(217,178,74,.09)}
+  .mode b{display:block;font-size:13px;margin-bottom:2px}
+  .mode span{color:var(--dim);font-size:11px;line-height:1.45;display:block}
+  .facts{border-top:1px solid var(--line);margin-top:16px;padding-top:12px;
+    font-size:11.5px;color:var(--dim);line-height:1.6}
+  .facts b{color:var(--ink);font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+  .warn{color:#d9a04a}
+  .ok{color:#7fb069}
+  button.act{width:100%;padding:9px;margin-top:8px;border-radius:8px;cursor:pointer;
+    background:rgba(217,178,74,.13);border:1px solid rgba(217,178,74,.45);color:#e8dcc0;font-size:12.5px}
+  button.act:hover{background:rgba(217,178,74,.2)}
+  #status{position:fixed;bottom:12px;left:346px;z-index:11;font-size:11.5px;color:var(--dim);
+    background:var(--panel);padding:6px 11px;border-radius:8px;border:1px solid var(--line)}
+  #status.off{left:12px}
+</style>
+</head>
+<body>
+<iframe id="app" src="index.html"></iframe>
+<button id="toggle">ซ่อนแผง</button>
+<div id="status">กำลังโหลด…</div>
+
+<div id="panel">
+  <h1>ขนาดพายุ — ข้อ 46.6 + 62.7</h1>
+  <p class="sub">
+    กอล์ฟ 24 ส.ค.: “พายุไม่ได้เกิดง่าย ๆ การเจอต้องอิมแพคพอ ให้ผู้ใช้ได้ลุ้นจริง ๆ”<br>
+    ลูกโลกในเฟรมคือของจริงจาก <b>index.html</b> — จดหมายทดสอบอยู่ในหน่วยความจำอย่างเดียว
+    <b>ไม่แตะ localStorage</b>
+  </p>
+
+  <h2>แบบที่วาด</h2>
+  <div class="modes" id="modes"></div>
+
+  <h2>สภาพ</h2>
+  <div class="row"><label>กระโชก</label>
+    <input type="range" id="sGust" min="50" max="150" value="99"><output id="oGust"></output></div>
+  <div class="row"><label>ซูม</label>
+    <input type="range" id="sZoom" min="0" max="100" value="18"><output id="oZoom"></output></div>
+  <div class="row"><label>จดหมายอยู่</label>
+    <input type="range" id="sProg" min="0" max="100" value="62"><output id="oProg"></output></div>
+
+  <h2>จังหวะการเจอ</h2>
+  <div class="modes" id="arc"></div>
+
+  <div class="facts" id="facts"></div>
+  <button class="act" id="reset">คืนมุมกล้องไปที่พายุ</button>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const ER=6371;
+let APP=null, X=null, G=null, LET=null, READY=false;
+
+/* ---------- แบบที่เอามาเทียบ ---------- */
+const MODES=[
+  {id:'old', name:'A · ของเดิม',
+   note:'ขนาดคงที่เป็นพิกเซล คูณด้วย log2(ซูม) แต่ตันที่ 3.2 เท่า — ยิ่งซูมยิ่งหดเทียบของจริง'},
+  {id:'geo', name:'B · ขนาดภูมิศาสตร์จริง',
+   note:'รัศมีเป็นกิโลเมตรจริง แปลงเป็นพิกเซลด้วยสูตรเดียวกับวงเปิดหมอก — พอซูมเข้าจะล้นจอ'},
+  {id:'in',  name:'C · ภูมิศาสตร์ + โหมดอยู่ในพายุ',
+   note:'เหมือน B แต่พอใหญ่เกินจอ เลิกวาดก้นหอยที่มีศูนย์กลาง เปลี่ยนเป็นแถบพายุพาดทั้งจอ'}
+];
+let MODE='in';
+
+const ARCS=[
+  {id:'off',  name:'ปกติ',            note:'ไม่เปลี่ยนอะไรตอนจดหมายเข้าพายุ (ของเดิม)'},
+  {id:'on',   name:'วงเปิดหดตอนพายุ',  note:'ข้อ 35 ที่ไม่เคยเข้าแอปจริง — พายุบังตา มองเห็นแคบลง 38%'}
+];
+let ARC='on';
+
+/* ---------- รัศมีจริงของพายุ ----------
+   ⚠️ นี่คือ "สมมติฐานที่ประกาศไว้" ไม่ใช่ค่าที่อ่านจากพยากรณ์
+   พยากรณ์ให้ความเร็วลมต่อจุด ไม่ได้ให้ขอบเขตของพายุ
+   จะวัดขอบเขตจากสนามลม 15x15 ก็ได้ แต่ระยะห่างจุดแปรตามความยาวเส้นทาง (750-6000 กม.)
+   พายุลูกเดียวกันจะได้ขนาดต่างกันตามเส้นทางที่บังเอิญมองมัน ซึ่งละเมิดข้อ 56 เอง
+   จึงผูกกับความแรงอย่างเดียว: ช่วง 800-1800 กม. มาจากข้อ 46.6 ที่กอล์ฟตัดสินไปแล้ว */
+function stormKm(inten){ return 800 + (inten-0.25)/0.75*1000; }
+function kmToPx(km){ return G.R*Math.sin(km/ER); }
+
+/* ---------- ก้นหอยขนาดใหญ่ ----------
+   บทเรียนข้อ 29: ขยายขนาดต้อง *เพิ่มความหนาแน่น* ไม่ใช่ยืดเส้นเดิมให้ยาวขึ้น
+   ของเดิมมี 7+3 แขน · ที่ 24 px นั่นคือเส้นแน่น แต่ที่ 500 px มันคือความว่างเปล่า
+   จำนวนแขนจึงต้องโตตามรากที่สองของรัศมี ให้ "เส้นต่อพื้นที่" คงที่ */
+function stormSpiral(ctx,x,y,t,inten,rpx){
+  const col=a=>'rgba(232,228,220,'+a+')';
+  const dens=Math.max(1,Math.sqrt(rpx/26));          /* 26 px = ขนาดอ้างอิงของเดิม */
+  const bands=[
+    {arms:Math.round(7*dens), r0:.46, len:.66, sweep:.95, spin:.34, a:1.00, w:1.00},
+    {arms:Math.round(3*dens), r0:.26, len:.26, sweep:.70, spin:.62, a:1.35, w:1.15}
+  ];
+  const steps=Math.round(Math.min(64, 18+dens*10));
+  ctx.save(); ctx.lineCap='round';
+  for(const b of bands){
+    for(let a=0;a<b.arms;a++){
+      const off=a*Math.PI*2/b.arms + t*(b.spin+inten*.5);
+      const r0=rpx*(b.r0 + (a%2)*.10);
+      const sweep=Math.PI*(b.sweep+inten*.5);
+      const head=((t*(.5+inten*.7))+a*0.21)%1.3;
+      for(let i=0;i<steps;i++){
+        const f0=i/steps, f1=(i+1)/steps;
+        const th0=off+f0*sweep, th1=off+f1*sweep;
+        const rr0=r0+rpx*b.len*Math.pow(f0,.85), rr1=r0+rpx*b.len*Math.pow(f1,.85);
+        const along=Math.pow(1-f0,.85);
+        const near=Math.max(0,1-Math.abs(f0-head)*4.2);
+        const a1=((.12+inten*.34)*along + near*(.15+inten*.28)*along)*b.a;
+        if(a1<.01) continue;
+        ctx.strokeStyle=col(Math.min(.55,a1).toFixed(3));
+        ctx.lineWidth=((.85+inten*.95)*(1-f0*.5))*(1+near*.7)*b.w;
+        ctx.beginPath();
+        ctx.moveTo(x+Math.cos(th0)*rr0, y+Math.sin(th0)*rr0);
+        ctx.lineTo(x+Math.cos(th1)*rr1, y+Math.sin(th1)*rr1);
+        ctx.stroke();
+      }
+    }
+  }
+  /* ตาพายุ — ขนาดตามสัดส่วนจริง ไม่ใช่ค่าคงที่ */
+  ctx.lineWidth=Math.max(.9, rpx*0.006);
+  ctx.strokeStyle=col((.26+inten*.22).toFixed(3));
+  ctx.beginPath(); ctx.arc(x,y,rpx*.20,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- C: โหมดอยู่ในพายุ ----------
+   จากในพายุจริงไม่มีใครเห็นตาพายุ เห็นแค่แถบเมฆพาดผ่านหัวเป็นชั้น ๆ
+   จึงวาดเป็นส่วนโค้งของวงกลมยักษ์ที่ศูนย์กลางอยู่นอกจอ ไม่มีจุดรวมสายตา
+   ความเข้มต้องสู้ริ้วลมได้ ไม่งั้นพายุจะจมหายไปในลมของตัวเอง */
+function stormInside(ctx,cx,cy,t,inten,W,H,rpx){
+  const col=a=>'rgba(232,228,220,'+a+')';
+  const diag=Math.hypot(W,H);
+  ctx.save(); ctx.lineCap='round';
+
+  /* 1) ม่านมืด — พายุบังแสง เป็นสิ่งเดียวที่บอกว่า "เราอยู่ข้างใน" ได้ทันทีโดยไม่ต้องอ่านเส้น */
+  const veil=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(rpx,diag*0.6));
+  const dark=0.10+inten*0.26;
+  veil.addColorStop(0,   'rgba(6,9,16,'+(dark*0.30).toFixed(3)+')');
+  veil.addColorStop(0.55,'rgba(6,9,16,'+(dark).toFixed(3)+')');
+  veil.addColorStop(1,   'rgba(6,9,16,0)');
+  ctx.fillStyle=veil; ctx.fillRect(0,0,W,H);
+
+  /* 2) แถบพายุ — ส่วนโค้งซ้อนชั้น เคลื่อนเข้าหาศูนย์กลางช้า ๆ */
+  const bands=Math.round(7+inten*7);
+  for(let b=0;b<bands;b++){
+    const f=((b/bands) + (t*0.035))%1;
+    const rr=rpx*(0.22+f*1.05);
+    const fade=Math.sin(f*Math.PI);                 /* จางที่ขอบทั้งสองด้าน ไม่มีขอบตัด */
+    const a=(0.10+inten*0.26)*fade;
+    if(a<0.012) continue;
+    ctx.strokeStyle=col(Math.min(.5,a).toFixed(3));
+    ctx.lineWidth=(1.0+inten*2.2)*fade;
+    /* วงไม่กลมสนิท — พายุจริงเป็นแถบขาด ๆ ไม่ใช่วงเวียน */
+    const segs=Math.round(9+inten*7);
+    for(let s=0;s<segs;s++){
+      const gap=0.30+0.22*Math.sin(b*2.1+s*1.7+t*0.2);
+      const a0=(s/segs)*Math.PI*2 + t*(0.05+inten*0.10)*(1+b*0.05);
+      const a1=a0+(Math.PI*2/segs)*(1-gap);
+      ctx.beginPath(); ctx.arc(cx,cy,rr,a0,a1); ctx.stroke();
+    }
+  }
+
+  /* 3) ริ้วที่กวาดผ่านทั้งจอ — สื่อว่าลมพัดผ่าน *ตัวเรา* ไม่ใช่หมุนอยู่ตรงโน้น
+     ทุกริ้วเป็นเส้นสัมผัสวงรอบศูนย์กลาง จึงอ่านเป็นการหมุนโดยไม่ต้องเห็นตา */
+  const n=Math.round(16+inten*22);
+  for(let i=0;i<n;i++){
+    const seed=i*97.13;
+    const r1=(Math.sin(seed)*0.5+0.5), r2=(Math.sin(seed*1.7)*0.5+0.5);
+    const ph=((t*(0.13+inten*0.20)+r1)%1);
+    /* วางตัวรอบศูนย์กลาง แล้วให้เคลื่อนตามวงในระหว่างช่วงชีวิต */
+    const rad=rpx*(0.25+r2*0.95);
+    const ang=r1*Math.PI*2 + ph*(0.5+inten*0.8);
+    const px=cx+Math.cos(ang)*rad, py=cy+Math.sin(ang)*rad;
+    if(px<-diag*.2||px>W+diag*.2||py<-diag*.2||py>H+diag*.2) continue;
+    const tang=ang+Math.PI/2;
+    const len=diag*(0.10+r2*0.22);
+    const life=Math.sin(ph*Math.PI);
+    const a=(0.10+inten*0.24)*life;
+    if(a<0.012) continue;
+    ctx.strokeStyle=col(Math.min(.5,a).toFixed(3));
+    ctx.lineWidth=(0.9+inten*1.8)*life;
+    ctx.beginPath();
+    const steps=9;
+    for(let k=0;k<=steps;k++){
+      const u=k/steps-0.5;
+      /* โค้งตามวง ไม่ใช่เส้นตรง — ความโค้งมาจากรัศมีจริงตรงนั้น */
+      const th=ang+u*len/Math.max(rad,1);
+      const x=cx+Math.cos(th)*rad, y=cy+Math.sin(th)*rad;
+      k?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ---------- ตัวแทน wxStorm ที่จะยัดเข้าไปในแอป ---------- */
+function makeStorm(orig){
+  return function(ctx,x,y,t,intensity,rich,scale){
+    if(MODE==='old') return orig(ctx,x,y,t,intensity,rich,scale);
+    const W=G.W, H=G.H;
+    const rpx=kmToPx(stormKm(intensity));
+    const screen=Math.min(W,H);
+    /* ขนาดที่ wxStorm วาดจริง = size*(r0+len) ของแถบนอก = size*1.12
+       จึงต้องแก้สมการกลับ เพื่อให้ขอบนอกของก้นหอยตรงกับรัศมีภูมิศาสตร์ */
+    const s=rpx/((9+intensity*15)*1.12);
+    /* ต่ำกว่าขนาดอ้างอิงเดิมให้ใช้ของเดิม — ความหนาแน่นที่ขนาดเล็กจูนมาดีอยู่แล้ว */
+    if(rpx<30) return orig(ctx,x,y,t,intensity,rich,s);
+    if(MODE==='geo') return stormSpiral(ctx,x,y,t,intensity,rpx);
+    /* MODE==='in' — ไล่ระดับ ไม่ให้กระโดด
+       ต่ำกว่า 0.55 ของด้านสั้น = ยังเห็นเป็นก้อนอยู่ตรงโน้น → ก้นหอย
+       เกิน 1.10 = กลืนจอไปแล้ว → ไม่มีศูนย์กลางให้มอง */
+    const k=(rpx/screen - 0.55)/(1.10-0.55);
+    const blend=Math.max(0,Math.min(1,k));
+    if(blend<1){
+      ctx.save(); ctx.globalAlpha=(1-blend);
+      stormSpiral(ctx,x,y,t,intensity,rpx);
+      ctx.restore();
+    }
+    if(blend>0){
+      ctx.save(); ctx.globalAlpha=blend;
+      stormInside(ctx,x,y,t,intensity,W,H,rpx);
+      ctx.restore();
+    }
+  };
+}
+
+/* ---------- ประกอบเข้ากับแอป ---------- */
+function boot(){
+  APP=$('#app').contentWindow;
+  try{
+    APP.eval('window.__x={G,CFG,store,posAt,fitKm,letterState,posVAt,simulate,gcDist,'
+            +'wfPoints,uid,fetchWx,stormIntensity,revealKm,sevOf,'
+            +'get sel(){return selected}, set sel(v){selected=v}}');
+    X=APP.__x; G=X.G;
+  }catch(e){ $('#status').textContent='เข้าถึงเฟรมไม่ได้: '+e.message; return; }
+  if(!X||!G){ setTimeout(boot,120); return; }
+  patch();
+  makeLetter();
+}
+
+let ORIG_STORM=null, ORIG_REVEAL=null;
+function patch(){
+  ORIG_STORM=APP.wxStorm;
+  APP.wxStorm=makeStorm(ORIG_STORM);
+  /* ข้อ 35 — วงเปิดหดเมื่อจดหมายอยู่ในพายุ · ของเดิมใน index.html ขึ้นกับระยะทางอย่างเดียว */
+  ORIG_REVEAL=APP.revealKm;
+  APP.revealKm=function(L){
+    const base=ORIG_REVEAL(L);
+    if(ARC==='off') return base;
+    const st=X.letterState(L, APP.PREVIEW ? L.s+APP.PREVIEW.h*3600000 : Date.now());
+    const sev=(L.lg&&L.lg[st.legIdx]) ? L.lg[st.legIdx][6] : 0;
+    return sev>0 ? base*0.62 : base;       /* หด 38% ตามข้อ 35 */
+  };
+}
+
+async function makeLetter(){
+  $('#status').textContent='กำลังหาเส้นทางที่มีพายุจริง…';
+  try{
+    /* กรุงเทพ→อูซัวยา — วัดแล้วว่าผ่านมหาสมุทรใต้ซึ่งมีกระโชกระดับ 2 จริง */
+    const A={lat:13.75,lng:100.52}, B={lat:-54.80,lng:-68.30};
+    const dist=X.gcDist(A,B), pts=X.wfPoints(A,B);
+    const wx=await X.fetchWx(pts);
+    const sim=X.simulate(pts,wx,dist,0,'__study_storm');
+    LET={ id:'__study_storm', f:{n:'กอล์ฟ',p:'กรุงเทพ',la:A.lat,lo:A.lng},
+          t:{n:'ผู้รับ',p:'อูซัวยา',la:B.lat,lo:B.lng},
+          s:Date.now()-1000, th:sim.total, ct:0, lg:sim.legs, lo:-1, wf:sim.wf,
+          bd:'ทดสอบขนาดพายุ', dir:'out' };
+    /* ไม่บันทึกลง localStorage — สวมทับ store.letters() ในหน่วยความจำเท่านั้น */
+    const st=X.store, realLetters=st.letters.bind(st);
+    st.letters=()=>realLetters().concat([LET]);
+    X.sel='__study_storm';
+    APP.previewOn && APP.previewOn(LET);
+    /* ต้องพร้อมก่อนผูกปุ่ม — bind() ยิง event ตั้งต้นซึ่งเรียก apply() ที่เช็ค READY */
+    READY=true; bind();
+    tick();
+  }catch(e){
+    $('#status').textContent='สร้างจดหมายทดสอบไม่ได้: '+e.message;
+  }
+}
+
+/* ---------- ควบคุม ---------- */
+function paintModes(){
+  $('#modes').innerHTML=MODES.map(m=>
+    '<button class="mode'+(m.id===MODE?' on':'')+'" data-m="'+m.id+'">'
+    +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
+  $('#modes').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+    MODE=b.dataset.m; paintModes(); apply(); });
+  $('#arc').innerHTML=ARCS.map(m=>
+    '<button class="mode'+(m.id===ARC?' on':'')+'" data-a="'+m.id+'">'
+    +'<b>'+m.name+'</b><span>'+m.note+'</span></button>').join('');
+  $('#arc').querySelectorAll('.mode').forEach(b=>b.onclick=()=>{
+    ARC=b.dataset.a; paintModes(); apply(); });
+}
+
+function zoomOf(){ return 1+Math.pow($('#sZoom').value/100,2.2)*45; }
+
+function apply(){
+  if(!READY) return;
+  const z=zoomOf();
+  G.zoom=z; G.zTarget=z; G.R=G.R0*z;
+  const prog=+$('#sProg').value/100;
+  if(APP.PREVIEW) APP.eval('PREVIEW.h='+(LET.th*prog).toFixed(4)+';PREVIEW.play=false');
+  try{ APP.sizeStage(); APP.renderGlobe(); }catch(e){}
+  facts();
+}
+
+function focusStorm(){
+  if(!READY) return;
+  /* เล็งไปที่ช่วงพายุที่แรงที่สุด */
+  let bi=0,bg=-1;
+  LET.lg.forEach((l,i)=>{ const g=l[7]??l[2]; if(l[6]>0&&g>bg){bg=g;bi=i;} });
+  const p=X.posAt(LET,(bi+0.5)/LET.lg.length);
+  G.focus(p, zoomOf());
+  for(let i=0;i<300;i++) G.step();
+  apply();
+}
+
+function facts(){
+  const gst=+$('#sGust').value;
+  const inten=X.stormIntensity(gst);
+  const km=stormKm(inten), px=kmToPx(km), screen=Math.min(G.W,G.H);
+  const oldZs=Math.max(1,Math.min(3.2,1+Math.log2(Math.max(1,G.zoom))*0.42));
+  const oldPx=(9+inten*15)*1.12*oldZs;
+  const ratio=oldPx/px;
+  const sev=X.sevOf(gst);
+  const mode = px/screen>1.10 ? 'อยู่ในพายุเต็มตัว'
+             : px/screen>0.55 ? 'กำลังไล่ระดับเข้าโหมดใน'
+             : 'ก้นหอยปกติ';
+  $('#facts').innerHTML=
+     '<b>กระโชก '+gst+'</b> → ระดับ '+sev+(sev===2?' <span class="warn">(เสี่ยงหาย)</span>':sev===1?' (จอดรอ)':'')
+    +' · ความเข้ม '+inten.toFixed(2)+'<br>'
+    +'<b>รัศมีจริง</b> <span class="num">'+Math.round(km)+'</span> กม.'
+    +' = <span class="num">'+Math.round(px)+'</span> px บนจอ<br>'
+    +'<b>ของเดิมวาด</b> <span class="num">'+Math.round(oldPx)+'</span> px'
+    +' = <span class="'+(ratio<0.5?'warn':'ok')+'">'+(ratio*100).toFixed(0)+'%</span> ของขนาดจริง<br>'
+    +'<b>ซูม</b> <span class="num">'+G.zoom.toFixed(1)+'</span>×'
+    +' · โลก <span class="num">'+Math.round(G.R)+'</span> px'
+    +' · <span class="num">'+(ER/G.R).toFixed(1)+'</span> กม./px<br>'
+    +'<b>โหมด C จะวาด</b> '+mode+' <span class="num">('+(px/screen).toFixed(2)+' เท่าของด้านสั้น)</span>';
+}
+
+function bind(){
+  ['sGust','sZoom','sProg'].forEach(id=>{
+    $('#'+id).addEventListener('input',()=>{
+      $('#o'+id.slice(1)).textContent =
+        id==='sGust' ? $('#'+id).value+' กม./ชม.'
+      : id==='sZoom' ? zoomOf().toFixed(1)+'×'
+      : ($('#'+id).value+'%');
+      if(id==='sGust') restorm();
+      apply();
+    });
+    $('#'+id).dispatchEvent(new Event('input'));
+  });
+  $('#reset').onclick=focusStorm;
+  $('#toggle').onclick=()=>{
+    const p=$('#panel'), hid=p.classList.toggle('hide');
+    $('#toggle').classList.toggle('off',hid);
+    $('#status').classList.toggle('off',hid);
+    $('#toggle').textContent=hid?'แสดงแผง':'ซ่อนแผง';
+  };
+  paintModes();
+  restorm();
+  focusStorm();
+}
+
+/* เปลี่ยนความแรงพายุในจดหมายทดสอบ ให้ทุกช่วงที่เป็นพายุใช้ค่าที่เลื่อน */
+function restorm(){
+  if(!LET) return;
+  const g=+$('#sGust').value;
+  LET.lg.forEach(l=>{ if(l[6]>0){ l[7]=g; l[6]=X.sevOf(g); } });
+  try{ APP.eval('_streamCache.clear()'); }catch(e){}
+}
+
+let T0=performance.now();
+function tick(){
+  if(READY && APP && APP.renderGlobe){
+    try{
+      APP.eval('T='+((performance.now()-T0)/1000).toFixed(3));
+      APP.renderGlobe();
+    }catch(e){}
+    $('#status').textContent='ลูกโลกจริง · จดหมายทดสอบอยู่ในหน่วยความจำ ไม่ถูกบันทึก'
+      +' · '+MODES.find(m=>m.id===MODE).name;
+  }
+  requestAnimationFrame(tick);
+}
+
+$('#app').addEventListener('load',()=>setTimeout(boot,320));
+</script>
+</body>
+</html>
