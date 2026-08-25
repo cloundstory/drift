@@ -1068,24 +1068,69 @@ function rainMarks(L,tf){
      ถ้าวันไหนอยากได้เมฆที่ไม่มีฝนด้วย ต้องขอ cloud_cover เพิ่มและเก็บลง URL อีกชั้น
 
      จุดเมฆหยาบและกว้างกว่าขีดฝนมาก เพราะระบบเมฆมีขนาดใหญ่และขอบไม่คม */
-  const cl=[], NC=13;
-  for(let r=0;r<NC;r++) for(let c=0;c<NC;c++){
-    const al=((r+0.5)/NC-0.5)*2*half;
-    const cr=((c+0.5+(r%2)*0.5)/NC-0.5)*2*half;
+  /* ---------- ความมืดมาจาก *ความถี่ของเส้น* ไม่ใช่จากความทึบ (ข้อ 84) ----------
+     กอล์ฟ 25 ส.ค.: "อยากให้มันเป็นเส้น ๆ เพราะความเป็นปุยนุ่นมันดูใช้คนละเสียง
+     กับแรงลมที่เป็นเส้นดินสอ เดิมผมใช้ดินสอในการถมให้มันดำ"
+
+     นี่คือกฎที่โปรเจกต์เคยเขียนไว้เองในข้อ 67 แล้วข้อ 70 เผลอทิ้งไปตอนเปลี่ยนเป็นม่านโทน:
+     **เขตที่เข้มกว่าคือเขตที่ถูกแรเงาถี่กว่า** ไม่ใช่เขตที่ alpha สูงกว่า
+
+     ฝนหนัก = เส้นถี่ + ซ้อนสองทิศ · ฝนเบา = เส้นห่าง · ฟ้าโปร่ง = ไม่มีเส้น
+     **ขอบของเมฆคือที่ที่เส้นบางลงจนหมด** ไม่ใช่ที่ที่ความทึบเป็นศูนย์
+     ซึ่งขอบแบบ airbrush นั่นเองคือตัวที่ทำให้อ่านว่า "ปุยนุ่น"
+
+     มุมแรเงาคงที่เทียบกับ *กรอบของเส้นทาง* ไม่ใช่เทียบกับจอ
+     จึงยังดูเป็นรอยมือที่ถมน้ำหนัก แต่หมุนไปกับผืนผ้าเสมอ
+
+     ผลพลอยได้เชิงโครงสร้าง: เส้นเป็นจุดบนทรงกลม จึงบีบตัวตามความโค้ง
+     และจบที่ขอบโลกเองโดยอัตโนมัติ — ข้อ 72 ไม่ต้องคำนวณวงรีเองอีกต่อไป */
+  const HN=70, HS=74, hatch=[];
+  const llAt=(al,cr)=>{
     const mid=pts.mid;
-    let p = al===0 ? {lat:mid.lat,lng:mid.lng}
+    let q = al===0 ? {lat:mid.lat,lng:mid.lng}
                    : destPoint(mid.lat,mid.lng, al>0?pts.brg:(pts.brg+180)%360, Math.abs(al));
-    if(cr!==0) p=destPoint(p.lat,p.lng,(pts.brg+90)%360,cr);
-    const mm=rainAt(f,p.lat,p.lng,bucket/6);
-    if(mm<0.03) continue;
-    /* เก็บเป็น *รัศมีเชิงมุม* บนทรงกลม ไม่ใช่จุดขอบสองจุดแล้ววัดระยะบนจอ (ข้อ 72)
-       ของเดิมวัดจากจุดที่ออฟเซ็ตไปทางตะวันออก ซึ่งพอหมุนจนแนวนั้นชี้เข้าหาศูนย์กลางโลก
-       ระยะที่วัดได้จะหดตามไปด้วย — หย่อมเดียวกันเลยเปลี่ยนขนาดตามมุมกล้อง
-       รัศมีเชิงมุมเป็นสมบัติของหย่อมเอง ไม่ขึ้นกับว่ามองจากไหน */
-    const rKm=half*2/NC*1.55;
-    cl.push({a:toXYZ(p.lat,p.lng), rho:rKm/ER, mm});
-  }
-  out.cloud=cl;
+    if(cr!==0) q=destPoint(q.lat,q.lng,(pts.brg+90)%360,cr);
+    return q;
+  };
+  /* รัศมีที่ครอบกรอบสี่เหลี่ยมได้แม้เส้นจะเอียง */
+  const HR=half*1.45, dU=2*HR/HS;
+  const layer=(angDeg,minMM,gain,base,seed)=>{
+    const ang0=angDeg*RAD;
+    for(let i=0;i<HN;i++){
+      const off=((i+0.5)/HN-0.5)*2*HR;
+      for(let k=0;k<HS;k++){
+        const n=i*131.7+k*7.3+seed;
+        /* มือคนไม่ได้ลากเป็นตาราง — เอียงไม่เท่ากันนิดหน่อยและยาวไม่เท่ากัน
+           ถ้าไม่มีตรงนี้ มันอ่านเป็น *ลายที่ถูกปั๊ม* ไม่ใช่รอยที่ถูกถม */
+        const ang=ang0+(hs(n*1.7)-0.5)*0.17;
+        const ca=Math.cos(ang), sa=Math.sin(ang);
+        const u0=((k+0.5)/HS-0.5)*2*HR;
+        const al0=u0*ca-off*sa, cr0=u0*sa+off*ca;
+        if(Math.abs(al0)>half||Math.abs(cr0)>half) continue;
+        const q0=llAt(al0,cr0);
+        const mm=rainAt(f,q0.lat,q0.lng,bucket/6);
+        if(mm<minMM) continue;
+        /* ⚠️ ยกพื้นด้วย base — ตรงไหนมีเมฆพอจะเห็น ต้องได้เส้นชุดที่ *ต่อเนื่องกัน*
+           ถ้าปล่อยให้ค่าน้อย ๆ ได้ความถี่น้อย ๆ ตามสัดส่วน มันจะอ่านเป็นขีดกระจัดกระจาย
+           ไม่ใช่เนื้อที่ถูกถม — ความต่างต้องชัดระหว่าง "มีเมฆ" กับ "ไม่มี" ก่อน
+           แล้วค่อยไล่ระดับภายในส่วนที่มี */
+        const d=base+(1-base)*Math.min(1,Math.pow((mm-minMM)/gain,0.7));
+        if(hs(n)>d) continue;
+        /* ⚠️ ยาวกว่าระยะก้าว — ขีดที่ผ่านเกณฑ์ติดกันจึง *ต่อกันเป็นเส้นยาว* เอง
+           ตรงไหนถี่จะได้เส้นยาวต่อเนื่อง ตรงไหนบางจะเหลือเป็นขีดสั้น
+           ซึ่งคือหน้าตาของการแรเงาด้วยมือจริง ๆ ถ้าสั้นกว่าก้าวเสมอ จะได้แต่ขีดกระจาย */
+        const u1=u0+dU*(1.0+hs(n*3.1)*0.75);
+        const q1=llAt(u1*ca-off*sa, u1*sa+off*ca);
+        hatch.push({a:toXYZ(q0.lat,q0.lng), b:toXYZ(q1.lat,q1.lng), w:0.5+0.5*d});
+      }
+    }
+  };
+  /* ค่าพวกนี้ปรับจาก *การกระจายจริงของฝน* ไม่ได้เดา — วัดสนามหนึ่งได้
+     ค่ากลาง 0.07 · p90 0.28 · p97 0.50 · สูงสุด 1.88 มม. และมีฝน 62% ของพื้นที่
+     ชุดแรกที่ตั้งไว้ (gain 2.2) ให้เส้นแค่ 137 เส้นทั้งสนาม = แทบมองไม่เห็น */
+  layer(-28, 0.05, 0.60, 0.42, 0);     /* ชั้นหลัก */
+  layer( 34, 0.25, 0.90, 0.30, 991);   /* ชั้นตัด — เฉพาะที่หนักพอ เหมือนมือกดซ้ำอีกทิศ */
+  out.hatch=hatch;
   if(_rainMarks.size>40) _rainMarks.clear();
   _rainMarks.set(key,out);
   return out;
@@ -2253,141 +2298,43 @@ const G = {
      ต้องวาด *หลัง* ลบความทึบของหมอก เพราะกอล์ฟตัดสินให้เห็นอากาศข้างหน้าได้
      (ข้อ 2 อยากให้หมอกปิดอนาคต แต่ข้อ 67 ว่าจดหมายต้องเดินทางไปหาอากาศ
       ถ้าอากาศถูกบัง มันก็กลับไปเป็นสิ่งที่เกิดขึ้นคู่ไปกับจดหมายเหมือนเดิม) */
-  /* ---------- ลายแรเงาดินสอ (ข้อ 71) ----------
-     กอล์ฟ 25 ส.ค.: "อยากให้มีลายเส้นดินสอแรเงาเข้ม ๆ ด้วย"
+  /* ---------- ม่านเมฆเป็นเส้นแรเงา (ข้อ 84) ----------
+     แทนที่ทั้งชุดของข้อ 70-72: หย่อมนุ่ม · ผืนหน้ากาก · lighten · source-in ·
+     ลายดินสอแบบ pattern · การบีบเป็นวงรี · การตัดกับขอบโลก
+     เครื่องจักรพวกนั้นมีไว้เพื่อทำให้ *ก้อนไล่สี* ประพฤติตัวเหมือนงานเขียน
+     พอวาดด้วยเส้นจริงบนทรงกลม มันไม่จำเป็นอีกเลยสักชิ้น
 
-     เข้ากับโครงพอดี เพราะเมฆถูกประกอบด้วย *หน้ากาก* อยู่แล้ว (ข้อ 70.3)
-     จึงเปลี่ยนจากย้อมสีเรียบเป็นย้อมด้วยลายเส้น — รูปทรงมาจากข้อมูล เนื้อมาจากดินสอ
-     ไทล์ใหญ่ 72px และมีหลายมุมหลายความยาว เพื่อไม่ให้เห็นรอยซ้ำของไทล์ */
-  _hatch(){
-    if(this._hp) return this._hp;
-    const N=72, c=document.createElement('canvas'); c.width=c.height=N;
-    const g=c.getContext('2d');
-    g.lineCap='round';
-    const rnd=(n)=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
-    for(let i=0;i<38;i++){
-      const a=(-34+rnd(i)*22)*Math.PI/180;      /* เอียงทางเดียวเป็นหลัก เหมือนมือคนถนัดขวา */
-      const x=rnd(i*3.1)*N, y=rnd(i*7.7)*N;
-      const len=N*(0.30+rnd(i*5.3)*0.55);
-      g.strokeStyle='rgba(46,50,60,'+(0.20+rnd(i*11.1)*0.34).toFixed(3)+')';
-      g.lineWidth=0.7+rnd(i*13.7)*1.1;
-      g.beginPath();
-      g.moveTo(x-Math.cos(a)*len/2, y-Math.sin(a)*len/2);
-      g.lineTo(x+Math.cos(a)*len/2, y+Math.sin(a)*len/2);
-      g.stroke();
+     ไม่ต้องแคชผืนด้วย เพราะเส้นถูกสร้างครั้งเดียวใน rainMarks (แคชตามฉบับ+ช่วงเวลา)
+     ที่เหลือคือหมุน-ฉาย-ลาก แบบเดียวกับริ้วลม จึงจัดกลุ่มตามความเข้มก่อน stroke */
+  hatchClouds(ctx,marks,alpha){
+    if(!marks||!marks.hatch||!marks.hatch.length) return;
+    const B=new Map();
+    for(const h of marks.hatch){
+      const r0=this.rotate(h.a); if(r0.z<0.02) continue;
+      const r1=this.rotate(h.b); if(r1.z<0.02) continue;
+      const p0=this.project(r0), p1=this.project(r1);
+      if((p0.x<-8&&p1.x<-8)||(p0.x>this.W+8&&p1.x>this.W+8)) continue;
+      if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
+      const depth=.42+.58*Math.sqrt(Math.max(0,(r0.z+r1.z)*.5));
+      /* เบาลงต่อเส้น เพราะจำนวนเส้นเป็นตัวบอกน้ำหนัก ไม่ใช่ความเข้มของเส้นเดี่ยว */
+      let a=alpha*h.w*depth*0.46;
+      if(a<=.008) continue;
+      if(a>.62) a=.62;
+      const ai=Math.min(19,Math.round(a*32));
+      let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
+      arr.push(p0.x,p0.y,p1.x,p1.y);
     }
-    /* เส้นสวนทางบาง ๆ อีกชั้น — แรเงาจริงมีสองทิศทับกัน ไม่ได้ลากทางเดียวล้วน */
-    for(let i=0;i<14;i++){
-      const a=(38+rnd(i*2.7)*18)*Math.PI/180;
-      const x=rnd(i*4.9)*N, y=rnd(i*9.3)*N;
-      const len=N*(0.22+rnd(i*6.1)*0.35);
-      g.strokeStyle='rgba(46,50,60,'+(0.10+rnd(i*8.3)*0.16).toFixed(3)+')';
-      g.lineWidth=0.6+rnd(i*3.3)*0.7;
-      g.beginPath();
-      g.moveTo(x-Math.cos(a)*len/2, y-Math.sin(a)*len/2);
-      g.lineTo(x+Math.cos(a)*len/2, y+Math.sin(a)*len/2);
-      g.stroke();
-    }
-    this._hp=c; return c;
-  },
-  /* หยดนุ่มสำเร็จรูป — ขาวล้วน ใช้เป็น *ความเข้ม* ไม่ใช่สี
-     สร้างครั้งเดียวแล้ว drawImage ซ้ำ ถ้าสร้าง gradient ใหม่ทุกจุดทุกเฟรม
-     จะเสียเวลาไปกับการสร้างวัตถุมากกว่าการวาด */
-  _cloudSprite(){
-    if(this._cs) return this._cs;
-    const N=128, c=document.createElement('canvas'); c.width=c.height=N;
-    const g=c.getContext('2d');
-    const rg=g.createRadialGradient(N/2,N/2,0,N/2,N/2,N/2);
-    rg.addColorStop(0,'rgba(255,255,255,1)');
-    rg.addColorStop(.38,'rgba(255,255,255,0.72)');
-    rg.addColorStop(.72,'rgba(255,255,255,0.24)');
-    rg.addColorStop(1,'rgba(255,255,255,0)');
-    g.fillStyle=rg; g.fillRect(0,0,N,N);
-    this._cs=c; return c;
-  },
-  /* ---------- ม่านเมฆ (ข้อ 69, 70) ----------
-     กอล์ฟ 25 ส.ค.: "หมอกที่เราทำตลอด ให้แทนเมฆไปเลยดีกว่าไหม"
-
-     ⚠️ บทเรียนที่ต้องไม่ลืม: วาดหย่อมนุ่มทับกันตรง ๆ ไม่ได้ม่าน แต่ได้ *คราบ*
-     เพราะที่ทับกันจะเข้มขึ้นเรื่อย ๆ จนเห็นเป็นก้อนกลม ๆ มีขอบ
-     ต้องประกอบบนผืนแยกด้วยโหมด lighten — ที่ทับกันเอา *ค่าสูงสุด* ไม่ใช่บวกกัน
-     แล้วย้อมสีทีเดียวด้วย source-in และวางทั้งผืนลงครั้งเดียว
-     ผลคือได้สนามต่อเนื่องที่ไม่มีรอยต่อ ซึ่งคือสิ่งที่ "ม่าน" หมายถึงจริง ๆ */
-  clouds(ctx,marks,alpha){
-    if(!marks||!marks.cloud||!marks.cloud.length) return;
-    /* ⚠️ ความทึบตอนวางผืนเมฆลง — ต้องเป็นค่า *เดียว* ทั้งทางแคชโดนและแคชพลาด (ข้อ 73)
-       ของเดิมเขียนเลขไว้สองที่ พอข้อ 71 เพิ่มความครึ้มแล้วแก้ที่เดียว
-       ทางแคชโดนเลยยังวางที่ 0.62 ส่วนทางที่วาดใหม่วางที่ 0.86
-       กล้องสั่นนิดเดียว กุญแจก็สลับโดน-พลาดสลับกันทุกเฟรม → เมฆทั้งผืนกระพริบพร้อมกัน */
-    const CLOUD_A=0.86;
-    const dpr=Math.min(devicePixelRatio||1,2);
-    if(!this._clcv) this._clcv=document.createElement('canvas');
-    const cv=this._clcv;
-    if(cv.width!==this.W*dpr||cv.height!==this.H*dpr){ cv.width=this.W*dpr; cv.height=this.H*dpr; this._clkey=null; }
-    /* ---------- แคชผืนเมฆ ----------
-       การประกอบผืนเต็มจอ (ล้าง + วาดหย่อม + ย้อมสี) แพงเกินกว่าจะทำทุกเฟรม
-       วัดได้ p95 22.7ms ทะลุงบ 16ms · แต่เมฆเปลี่ยนเฉพาะตอนกล้องขยับหรือชุดข้อมูลเปลี่ยน
-       ใช้กุญแจแบบเดียวกับที่ sphere() ใช้อยู่แล้ว */
-    const key=[Math.round(this.rotY*260),Math.round(this.rotX*260),
-               Math.round(this.zoom*120),this.W,this.H,marks.length,marks.cloud.length].join(',');
-    if(this._clkey===key){
-      if(this._clhas){ ctx.save(); ctx.globalAlpha=Math.min(1,alpha*CLOUD_A);
-        ctx.drawImage(cv,0,0,this.W,this.H); ctx.restore(); }
-      return;
-    }
-    this._clkey=key;
-    const m=cv.getContext('2d');
-    m.setTransform(dpr,0,0,dpr,0,0);
-    m.globalCompositeOperation='source-over';
-    m.clearRect(0,0,this.W,this.H);
-    const sp=this._cloudSprite();
-    m.globalCompositeOperation='lighten';
-    let any=false;
-    for(const c of marks.cloud){
-      const r0=this.rotate(c.a); if(r0.z<0.03) continue;
-      const p0=this.project(r0);
-      /* ---------- บีบตามความโค้งของโลก (ข้อ 72) ----------
-         หย่อมกลมบนผิวทรงกลม เมื่อฉายแบบ orthographic ได้ *วงรี* ไม่ใช่วงกลม
-         กว้างเต็มตามแนวขวาง แต่แบนลงตามแนวเข้าหาศูนย์กลางโลกด้วยตัวคูณ z
-         พอเข้าใกล้ขอบโลก z→0 มันจึงแบนราบไปกับผิว เหมือนทุกอย่างที่วาดบนทรงกลม
-         ของเดิมวาดเป็นวงกลมเสมอ ตรงที่ทุกอย่างแบน จึงมีเมฆอย่างเดียวที่ยังกลม = ปุยลอย */
-      const rt=this.R*Math.sin(c.rho), rr=rt*r0.z;
-      if(rt<2||rt>this.R*2.6) continue;
-      if(p0.x<-rt||p0.x>this.W+rt||p0.y<-rt||p0.y>this.H+rt) continue;
-      const depth=.4+.6*Math.sqrt(r0.z);
-      const a=depth*Math.min(1,Math.pow(c.mm/2.6,0.72));
-      if(a<=.02) continue;
-      m.globalAlpha=a; any=true;
-      m.save();
-      m.translate(p0.x,p0.y);
-      m.rotate(Math.atan2(p0.y-this.CY,p0.x-this.CX));   /* แกน x ท้องถิ่น = แนวรัศมีของโลก */
-      m.drawImage(sp,-rr,-rt,rr*2,rt*2);
-      m.restore();
-    }
-    this._clhas=any;
-    if(!any) return;
-    /* ---------- ตัดกับเส้นขอบโลก (ข้อ 72) ----------
-       project เป็นแบบ orthographic เส้นขอบโลกจึงคือวงกลมรัศมี R พอดี
-       อะไรที่ล้นออกไปนอกวงนั้น ตามนิยามแล้วไม่ได้อยู่บนผืนผ้า มันลอยอยู่ *หน้า* ผ้า
-       แผ่นดินกับริ้วลมจบที่ขอบนี้อยู่แล้วเพราะมันเป็นจุดบนทรงกลม เมฆเป็นสไปรต์จึงไม่จบเอง */
-    m.globalCompositeOperation='destination-in';
-    m.globalAlpha=1;
-    m.fillStyle='#000';
-    m.beginPath(); m.arc(this.CX,this.CY,this.R,0,6.2832); m.fill();
-    /* ย้อมสองชั้น: โทนเรียบเป็นเนื้อเมฆ แล้วลายดินสอทับเฉพาะตรงที่มีเมฆ
-       ถ้ามีแต่ลายจะโปร่งเกินไป ถ้ามีแต่โทนจะเป็นหมอกพ่นสี ไม่ใช่งานเขียน */
-    m.globalCompositeOperation='source-in';
-    m.globalAlpha=1;
-    m.fillStyle='rgba(74,80,94,1)';
-    m.fillRect(0,0,this.W,this.H);
-    m.globalCompositeOperation='source-atop';
-    if(!this._hpat) this._hpat=m.createPattern(this._hatch(),'repeat');
-    m.globalAlpha=0.92;
-    m.fillStyle=this._hpat;
-    m.fillRect(0,0,this.W,this.H);
+    if(!B.size) return;
     ctx.save();
-    ctx.globalAlpha=Math.min(1,alpha*CLOUD_A);
-    ctx.drawImage(cv,0,0,this.W,this.H);
+    ctx.lineCap='round';
+    ctx.lineWidth=1.05;
+    B.forEach((arr,ai)=>{
+      /* เข้มกว่าริ้วลม (84,90,104) อยู่ระดับหนึ่ง — ดินสอแท่งเดียวกัน แต่มือกดหนักกว่า */
+      ctx.strokeStyle='rgba(58,63,76,'+(ai/32).toFixed(3)+')';
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
+      ctx.stroke();
+    });
     ctx.restore();
   },
   /* ---------- ประกายฟ้าแลบบนโลก (ข้อ 70) ----------
@@ -2974,7 +2921,7 @@ function renderGlobe(){
        ถ้าใช้หมอกตัวเดียวกัน วงเปิดจะเปิดฟ้าโปร่งรอบจดหมายเสมอ
        ทั้งที่จดหมายกำลังอยู่กลางฝน — กลับหัวกับความจริง (ข้อ 6 ปะทะข้อ 70) */
     const rm=rainMarks(sel.L, sel.st.prog);
-    G.clouds(sctx, rm, 1);
+    G.hatchClouds(sctx, rm, 1);
     G.bolts(sctx, sel.L, sel.st);
     G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
   }
