@@ -714,7 +714,20 @@ function simulate(cpts, cwx, dist, ct, seedId){
         samples.push({spd:w.spd, dir:w.dir});
       }
     }
-    wfRaw = wfEncode(samples);
+    /* ฝนต่อท้ายสนามลม — ส่วนลมยาวคงที่ (NG*NG*NT*2 ตัวอักษร) ผู้อ่านจึงรู้ว่าฝนเริ่มตรงไหน
+       ไม่ต้องขึ้น WF.VER และลิงก์เก่าที่ไม่มีส่วนนี้ก็ยังถอดได้เหมือนเดิม */
+    const rain=[];
+    for(let t=0;t<WF.RT;t++){
+      const hh = total*(WF.RT>1 ? t/(WF.RT-1) : 0);
+      for(let r=0;r<WF.RG;r++) for(let c=0;c<WF.RG;c++){
+        /* สุ่มจากตารางลมเดิมโดยเทียบสัดส่วน ไม่ต้องขอพิกัดเพิ่ม */
+        const gi=Math.round(r*(WF.NG-1)/(WF.RG-1)), gj=Math.round(c*(WF.NG-1)/(WF.RG-1));
+        const w=sampleWx(cwx[gi*WF.NG+gj], hh);
+        /* รากที่สอง — ฝนเบามีความหมายต่อภาพพอ ๆ กับฝนหนัก ไล่เชิงเส้นจะกลืนฝนเบาหายหมด */
+        rain.push(B64[clamp(Math.round(Math.sqrt(Math.max(0,w.pre))*12),0,63)]);
+      }
+    }
+    wfRaw = wfEncode(samples) + rain.join('');
     field = { pts:wfPoints(A,B), slices:(()=>{
       const flat=wfDecode(wfRaw), per=WF.NG*WF.NG, out=[];
       for(let t=0;t<WF.NT;t++) out.push(flat.slice(t*per,(t+1)*per));
@@ -861,7 +874,20 @@ const WF={ VER:'4', NG:15, NT:3,
 
      ถ้าจะแก้ตัวเลขพวกนี้ ตัวชี้วัดรับงานคือจุดของริ้วอยู่ในจอราว 70-85%
      ที่ซูมตั้งต้น — 100% ในจอ แปลว่ากลับไปเป็น "ทางเดิน" ไม่ใช่สนามแล้ว */
-  HALF_FRAC:1.10, HALF_MIN:750, HALF_MAX:6000 };
+  HALF_FRAC:1.10, HALF_MIN:750, HALF_MAX:6000,
+  /* ---------- สนามฝน (ข้อ 67) ----------
+     กอล์ฟ 25 ส.ค.: "จดหมายต่างหากที่เดินทางไปหาสภาพอากาศ"
+     เดิมอากาศเป็นแค่ป้ายกำกับบนไทม์ไลน์ของจดหมาย ไม่ได้เป็นสถานที่ในโลก
+     ลูกโลกไม่เคยวาดฝนเลยสักหยด มีแต่พายุ (ข้อ 5 ตกลงไว้แล้วแต่ไม่เคยสร้าง)
+
+     หยาบกว่าสนามลมมาก เพราะ *หน้าที่ต่างกัน*:
+     สนามฝนมีไว้ให้ "เห็น" ว่าอากาศอยู่ตรงไหน
+     ส่วนความจริงที่จดหมายเจอยังมาจากจุดบนเส้นทาง 13 จุดที่ยิงสดแม่น ๆ เหมือนเดิม
+     ห้ามเอาสนามหยาบนี้ไปตัดสินว่าฝนตกใส่จดหมายหรือไม่
+
+     8x8x2 เลือกจากการวัด URL จริง: +68 ถึง +125 ไบต์ ทุกเส้นทางยังต่ำกว่าเพดานเตือน 2,000
+     ส่วน 15x15x3 (เท่าลม) กิน +290 ถึง +574 ซึ่งทะลุเพดานทุกเส้น */
+  RG:8, RT:2 };
 function wfHalfKm(dist){ return clamp(dist*WF.HALF_FRAC, WF.HALF_MIN, WF.HALF_MAX); }
 /* ตารางจัตุรัสรอบจุดกึ่งกลางเส้นทาง วางแกนตามทิศของเส้นทาง เรียงตามยาวก่อนแล้วตามขวาง
    ต่อท้ายด้วยจุดบนเส้นทาง 13 จุด สำหรับสุ่มลมของแต่ละช่วง (lg) — ดึงในคำขอเดียวกัน
@@ -903,6 +929,99 @@ function wfDecode(raw){
   }
   return out;
 }
+/* ---------- สนามฝน (ข้อ 67) ----------
+   ถอดจากส่วนท้ายของ wf · ส่วนลมยาวคงที่เสมอ จึงรู้ตำแหน่งเริ่มของฝนได้แน่นอน
+   ลิงก์เก่าที่ไม่มีส่วนนี้จะได้ null แล้วไม่มีฝนบนลูกโลก ซึ่งถูกแล้ว */
+const _rainCache=new Map();
+function rainOf(L){
+  if(_rainCache.has(L.id)) return _rainCache.get(L.id);
+  let out=null;
+  const raw=L.wf;
+  const head=1+WF.NG*WF.NG*WF.NT*2, need=WF.RG*WF.RG*WT_RT();
+  if(raw && raw[0]===WF.VER && raw.length>=head+need){
+    const M={}; for(let i=0;i<64;i++) M[B64[i]]=i;
+    const v=[];
+    for(let i=0;i<need;i++){
+      const q=M[raw[head+i]];
+      /* กลับจากรากที่สอง — ต้องตรงกับตอนเข้ารหัสเป๊ะ ไม่งั้นผู้รับเห็นฝนคนละปริมาณ */
+      v.push(q===undefined?0:Math.pow(q/12,2));
+    }
+    out={v, pts:wfPoints({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo})};
+  }
+  _rainCache.set(L.id,out);
+  return out;
+}
+function WT_RT(){ return WF.RT; }
+/* ฝนที่พิกัดหนึ่ง — พิกัดในระบบของเส้นทางเดียวกับ wfAt() เพื่อให้สองสนามซ้อนกันพอดี */
+function rainAt(field,lat,lng,tf){
+  const pts=field.pts, P={lat,lng};
+  const d=gcDist(pts.mid,P);
+  const th=(bearing(pts.mid,P)-pts.brg)*RAD;
+  const al=d*Math.cos(th), cr=d*Math.sin(th);
+  const gi=clamp((al/pts.half+1)/2*(WF.RG-1),0,WF.RG-1);
+  const gj=clamp((cr/pts.half+1)/2*(WF.RG-1),0,WF.RG-1);
+  const i0=Math.floor(gi), i1=Math.min(WF.RG-1,i0+1), fi=gi-i0;
+  const j0=Math.floor(gj), j1=Math.min(WF.RG-1,j0+1), fj=gj-j0;
+  const u=clamp(tf,0,1)*(WF.RT-1);
+  const t0=Math.floor(u), t1=Math.min(WF.RT-1,t0+1), m=u-t0;
+  const per=WF.RG*WF.RG;
+  const at=(t,i,j)=>field.v[t*per+i*WF.RG+j];
+  const bl=t=>{
+    const q00=at(t,i0,j0), q10=at(t,i1,j0), q01=at(t,i0,j1), q11=at(t,i1,j1);
+    return (q00*(1-fi)+q10*fi)*(1-fj) + (q01*(1-fi)+q11*fi)*fj;
+  };
+  return bl(t0)+(bl(t1)-bl(t0))*m;
+}
+/* รอยฝนบนโลก — ขีดสั้นเอียงตามลม เข้มและถี่ตามปริมาณ
+   ในภาษาหมึกบนกระดาษ พื้นที่หนึ่งถูกบอกด้วย *การแรเงา* ไม่ใช่ด้วยไอคอน
+   จึงเป็นขีดขนานสั้น ๆ แบบเดียวกับที่แผนที่พิมพ์ใช้บอกเขต ไม่ใช่เม็ดฝนตกลงล่างจอ
+   (เม็ดฝนเป็นภาษาของการ์ดพยากรณ์ที่มองจากพื้น ไม่ใช่ของแผนที่ที่มองจากบน) */
+const _rainMarks=new Map();
+function rainMarks(L,tf){
+  const f=rainOf(L);
+  if(!f) return null;
+  const bucket=Math.round(clamp(tf||0,0,1)*6);
+  const key=L.id+':'+bucket;
+  if(_rainMarks.has(key)) return _rainMarks.get(key);
+  const wind=wfOf(L);
+  const pts=f.pts, half=pts.half, N=34, out=[];
+  const hs=(n)=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+  const cell=half*2/N;
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      /* เยื้องแถวคี่ ไม่งั้นขีดจะเรียงเป็นตารางซึ่งอ่านว่าเป็นของทำ ไม่ใช่ของธรรมชาติ */
+      const al0=((r+0.5)/N-0.5)*2*half;
+      const cr0=((c+0.5+(r%2)*0.5)/N-0.5)*2*half;
+      const mid=pts.mid;
+      let p0 = al0===0 ? {lat:mid.lat,lng:mid.lng}
+                       : destPoint(mid.lat,mid.lng, al0>0?pts.brg:(pts.brg+180)%360, Math.abs(al0));
+      if(cr0!==0) p0=destPoint(p0.lat,p0.lng,(pts.brg+90)%360,cr0);
+      const mm=rainAt(f,p0.lat,p0.lng,bucket/6);
+      if(mm<0.04) continue;
+      /* ---------- ความหนักบอกด้วย *ความถี่ของขีด* ไม่ใช่แค่ความเข้ม ----------
+         นี่คือภาษาของแผนที่พิมพ์: เขตที่เข้มกว่าคือเขตที่ถูกแรเงาถี่กว่า
+         ถ้าใช้แค่ความเข้ม ฝนหนักกับฝนเบาจะดูเป็นเนื้อเดียวกัน ต่างกันแค่จาง-เข้ม
+         ซึ่งบนกระดาษอ่านออกยากมาก */
+      const reps=1+Math.min(2,Math.floor(mm/1.6));
+      for(let k=0;k<reps;k++){
+        const h=hs(r*97+c*31+k*13);
+        const jr=(h-0.5)*cell*0.85, jc=(hs(h*911)-0.5)*cell*0.85;
+        let p=destPoint(p0.lat,p0.lng, jr>0?pts.brg:(pts.brg+180)%360, Math.abs(jr));
+        p=destPoint(p.lat,p.lng,(pts.brg+90)%360,jc);
+        /* ขีดเอียงตามลมจริงตรงนั้น — ฝนไม่ได้ตกดิ่ง มันถูกลมพัดเฉียง */
+        let brg=pts.brg+90;
+        if(wind){ const w=wfAt(wind,p.lat,p.lng,bucket/6); if(Math.hypot(w.e,w.n)>0.5) brg=Math.atan2(w.e,w.n)*DEG; }
+        const lenKm=cell*(0.55+Math.min(1,mm/6)*0.55);
+        const q=destPoint(p.lat,p.lng,brg,lenKm);
+        out.push({a:toXYZ(p.lat,p.lng), b:toXYZ(q.lat,q.lng), mm});
+      }
+    }
+  }
+  if(_rainMarks.size>40) _rainMarks.clear();
+  _rainMarks.set(key,out);
+  return out;
+}
+
 /* สนามลมของจดหมายหนึ่งฉบับ — คำนวณครั้งเดียวแล้วเก็บ */
 const _wfCache=new Map();
 function wfOf(L){
@@ -2053,6 +2172,36 @@ const G = {
   /* ริ้วลม — จางไปตามปลายริ้ว บอกทิศในตัวโดยไม่ต้องมีหัวลูกศร
      ภาษาเดียวกับชุดอากาศ "ลม" ที่ออกแบบไว้แล้ว (เข้มด้านต้นลม จางด้านปลายลม)
      จัดกลุ่มตามความเข้มก่อน stroke เหมือน segs() ไม่งั้นจะยิง stroke หลายร้อยครั้งต่อเฟรม */
+  /* ---------- ฝนบนโลก (ข้อ 67) ----------
+     แรเงาด้วยขีดสั้นเอียงตามลม เข้มตามปริมาณ จางตามความลึกเหมือนเส้นอื่นบนทรงกลม
+     ต้องวาด *หลัง* ลบความทึบของหมอก เพราะกอล์ฟตัดสินให้เห็นอากาศข้างหน้าได้
+     (ข้อ 2 อยากให้หมอกปิดอนาคต แต่ข้อ 67 ว่าจดหมายต้องเดินทางไปหาอากาศ
+      ถ้าอากาศถูกบัง มันก็กลับไปเป็นสิ่งที่เกิดขึ้นคู่ไปกับจดหมายเหมือนเดิม) */
+  rain(ctx,marks,alpha){
+    if(!marks||!marks.length) return;
+    const B=new Map();
+    for(const m of marks){
+      const r0=this.rotate(m.a); if(r0.z<0.02) continue;
+      const r1=this.rotate(m.b); if(r1.z<0.02) continue;
+      const p0=this.project(r0), p1=this.project(r1);
+      if((p0.x<-8&&p1.x<-8)||(p0.x>this.W+8&&p1.x>this.W+8)) continue;
+      if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
+      const depth=.35+.65*Math.sqrt((r0.z+r1.z)*.5);
+      let a=alpha*depth*(.17+Math.min(1,m.mm/5)*.34);
+      if(a<=.006) continue;
+      if(a>.52) a=.52;
+      const ai=Math.min(17,Math.round(a*32));
+      let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
+      arr.push(p0.x,p0.y,p1.x,p1.y);
+    }
+    ctx.lineCap='round'; ctx.lineWidth=1;
+    B.forEach((arr,ai)=>{
+      ctx.strokeStyle='rgba(84,90,104,'+(ai/32).toFixed(3)+')';
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
+      ctx.stroke();
+    });
+  },
   streams(ctx,lines,alpha){
     if(!lines||!lines.length) return;
     const B=new Map();
@@ -2524,7 +2673,11 @@ function renderGlobe(){
   G.restoreNight(sctx,hole);
   /* ข้อ 31 — ลมทะลุหมอกเสมอ จึงต้องวาดหลังลบความทึบ
      เฉพาะฉบับที่เลือก ไม่งั้นหลายเส้นทางจะทับกันจนอ่านไม่ออกว่าลมไปทางไหน */
-  if(sel && !sel.st.arrived && !sel.st.gone) G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
+  if(sel && !sel.st.arrived && !sel.st.gone){
+    /* ฝนอยู่ใต้ริ้วลม — ลมคือพระเอก ฝนคือภูมิประเทศที่ลมพัดผ่าน */
+    G.rain(sctx, rainMarks(sel.L, sel.st.prog), 1);
+    G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
+  }
 
   /* ---------- ชั้นจดหมาย: อยู่เหนือหมอกเสมอ ----------
      หมอกปิดโลก ไม่ได้ปิดจดหมาย · ข้อ 7 หน้าเริ่มต้น = หมอก + จุดทอง + จุดปลายทาง */
