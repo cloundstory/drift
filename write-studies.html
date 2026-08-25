@@ -3562,12 +3562,21 @@ const $$=s=>document.querySelector(s);
 
 /* ลมจริง ณ ที่ที่ผู้ใช้ยืน — ฝังไว้เพื่อให้หน้านี้เปิดได้โดยไม่ต้องต่อเน็ต */
 const WIND_HERE=14;
-let MODE='b';   /* a ฟอร์มเดิม · b นิ่งขณะเขียน · c ไหวตลอด */
+/* กอล์ฟตัดสิน 25 ส.ค.: เอา B
+   "ชอบแนวคิดของ C มากกว่า แต่ตัวอักษรที่ขยับอาจทำให้เวียนหัวได้
+    จึงเลือก B เพื่อให้สมาธิของผู้ใช้อยู่กับกระดาษมากที่สุด"
+   หน้านี้คือหน้าที่ผู้ใช้ต้องจ้องนานที่สุดในแอป ความสงบจึงสำคัญกว่าความสมจริง
+   ลมยังอยู่ แค่รอจนวางปากกาแล้วค่อยแสดงตัว */
+let MODE='b';   /* a ฟอร์มเดิม · b นิ่งขณะเขียน (ที่เลือก) · c ไหวตลอด */
 let penDown=false, wt=0;
 
 const css=document.createElement('style');
 css.textContent=`
-  #wrap2{position:fixed;inset:0;z-index:45;display:none;flex-direction:column;
+  /* หดทั้งแผงให้อยู่เหนือคีย์บอร์ด ไม่ใช่ปล่อยให้คีย์บอร์ดทับแล้วค่อยเลื่อนหนี
+     บน iOS คีย์บอร์ดวางทับโดยไม่ย่อ layout viewport แถบล่างจึงหายไปใต้คีย์บอร์ด
+     ถ้าไม่จัดการ — ต้องอ่านความสูงจริงจาก visualViewport มาหักเอง */
+  #wrap2{position:fixed;left:0;right:0;top:0;height:calc(100% - var(--kb,0px));
+    z-index:45;display:none;flex-direction:column;
     background:linear-gradient(165deg,#dfe2e6,#eee9de)}
   #wrap2.on{display:flex}
   #wtop{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
@@ -3575,8 +3584,7 @@ css.textContent=`
   #wtop .act{margin:0}
   #wstage{flex:1 1 auto;position:relative;overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;padding:6px 14px 18px;
-    /* เผื่อที่ให้คีย์บอร์ด — ค่าจริงมาจาก visualViewport ไม่ใช่การเดา */
-    padding-bottom:calc(18px + var(--kb,0px))}
+    padding-bottom:18px}
   #sheet2{position:relative;margin:0 auto;width:100%;max-width:420px;
     border-radius:2px;overflow:hidden;
     box-shadow:0 1px 2px rgba(51,51,58,.10),0 10px 26px rgba(51,51,58,.10);
@@ -3609,6 +3617,27 @@ css.textContent=`
   #wbar button.on{border-color:var(--gold);background:rgba(198,154,84,.13)}
   #wnote{font-size:11px;line-height:1.5;color:var(--faint);padding:0 15px 8px}
   @media (prefers-reduced-motion:reduce){#sheet2{transition:none}}
+
+  /* ---------- แนวนอน ----------
+     กอล์ฟ 25 ส.ค.: "พอนอนเมื่อไหร่ แทบไม่เห็นกระดาษเลย เห็นเพียงช่องเล็ก ๆ"
+     ความจริงคือจอแนวนอนสูงไม่พอสำหรับกระดาษแนวตั้งเมื่อคีย์บอร์ดขึ้น — เถียงไม่ได้
+     แต่ *ที่ว่างที่เสียไปคือแนวนอน* ไม่ใช่แนวตั้ง กระดาษถูกล็อกที่ 420px กลางจอ
+     ปล่อยให้กว้างตามจอ คำต่อบรรทัดจะมากขึ้น บรรทัดน้อยลง เห็นเนื้อจดหมายมากขึ้น
+     ทั้งที่ความสูงเท่าเดิม · บวกกับเก็บแถบบน-ล่างที่กินที่ไปเปล่า ๆ
+     กระดาษแนวนอนก็เป็นกระดาษจริง ไม่ได้โกหกอะไร */
+  @media (orientation:landscape) and (max-height:560px){
+    #wtop{position:absolute;top:0;right:0;z-index:6;padding:8px 10px 0;background:none}
+    #wtop .act{display:none}
+    #wstage{padding:8px 12px 10px}
+    #sheet2{max-width:min(680px,92vw)}
+    #sheet2 .ink{padding:16px 22px 18px;min-height:0}
+    #sheet2 .meta{margin-bottom:8px}
+    #wbody{min-height:28vh;margin-top:10px;line-height:1.75}
+    .wfoot{padding-top:10px}
+    #wnote{display:none}
+    #wbar{padding:6px 12px calc(env(safe-area-inset-bottom) + 7px)}
+    #wbar button{padding:7px 12px;font-size:12px}
+  }
 `;
 document.head.appendChild(css);
 
@@ -3736,6 +3765,9 @@ function openWrite(){
 /* ปุ่มเขียนจดหมายของแอปเปิดหน้านี้แทนฟอร์มเดิม */
 const bw=$$('#btnWrite'); if(bw) bw.onclick=openWrite;
 addEventListener('resize',()=>{ paintPaper(); syncKB(); });
+/* หมุนเครื่องแล้วกล่องเปลี่ยนขนาด พื้นผิวกระดาษต้องวาดใหม่ ไม่งั้นจะยืดผิดสัดส่วน
+   orientationchange มาก่อนที่เลย์เอาต์จะเสร็จ จึงต้องวาดซ้ำอีกครั้งหลังจากนั้น */
+addEventListener('orientationchange',()=>{ setTimeout(()=>{ paintPaper(); syncKB(); },250); });
 setTimeout(openWrite,260);
 })();
 
