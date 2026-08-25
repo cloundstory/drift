@@ -1,0 +1,239 @@
+<meta charset="utf-8">
+<title>drift port</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  /* พาเลตต์เดียวกับตัวแอปและกับเอกสารเฟส 2 */
+  --paper:#eee9de; --paper-2:#e5e2d8; --cool:#dfe2e6;
+  --ink:#333842; --ink-2:#63697a; --ink-3:#8b8f9c;
+  --rule:#d2ccbd; --rule-2:#e0dacb;
+  --seal:#a8574a; --seal-bg:#f0e4e0;
+  --have:#4f6b52; --have-bg:#e4ebe2;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#191c22; --paper-2:#202430; --cool:#171a20;
+    --ink:#e2ded3; --ink-2:#a2a7b6; --ink-3:#767c8c;
+    --rule:#343947; --rule-2:#282c37;
+    --seal:#d08a7c; --seal-bg:#2e2320;
+    --have:#8fb094; --have-bg:#222b23;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#191c22; --paper-2:#202430; --cool:#171a20;
+  --ink:#e2ded3; --ink-2:#a2a7b6; --ink-3:#767c8c;
+  --rule:#343947; --rule-2:#282c37;
+  --seal:#d08a7c; --seal-bg:#2e2320;
+  --have:#8fb094; --have-bg:#222b23;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper);
+  background-image:linear-gradient(168deg,var(--cool) 0%,var(--paper) 46%,var(--paper-2) 100%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif;
+  font-size:16px; line-height:1.78; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:35rem;margin:0 auto;padding:2.6rem 1.35rem 5rem;display:flex;flex-direction:column;gap:2.4rem}
+@media (min-width:60rem){.wrap{max-width:44rem;padding-left:3rem;padding-right:3rem}}
+
+.masthead{display:flex;flex-direction:column;gap:.5rem}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:'Noto Serif Thai',Georgia,serif;font-weight:600;font-size:1.9rem;line-height:1.4;margin:0;letter-spacing:-.01em}
+.standfirst{margin:.3rem 0 0;color:var(--ink-2);font-size:1rem;text-wrap:balance}
+.meta{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-3);
+  padding-top:.8rem;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:.4rem 1.1rem}
+
+h2{font-family:'Noto Serif Thai',Georgia,serif;font-weight:600;font-size:1.2rem;line-height:1.55;margin:0 0 .7rem;text-wrap:balance}
+h3{font-weight:600;font-size:.95rem;margin:1.5rem 0 .5rem}
+p{margin:0 0 .9rem} p:last-child{margin-bottom:0}
+em{font-style:normal;color:var(--seal);font-weight:500}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:.94em}
+code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--rule-2);padding:.1em .4em}
+
+/* ---------- แผนภาพสอง port ---------- */
+.diagram{display:block;width:100%;height:auto;color:var(--ink)}
+.dg-cap{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-3);margin-top:.5rem}
+
+/* ---------- ห้าจังหวะ ---------- */
+.flow{list-style:none;margin:0;padding:0;counter-reset:s}
+.flow li{position:relative;padding:0 0 1.5rem 2.2rem;counter-increment:s}
+.flow li:last-child{padding-bottom:0}
+/* จุดกลม + ตัวเลขอยู่ใน pseudo เดียวกัน เพื่อให้ ::after ว่างไว้ทำเส้นเชื่อม */
+.flow li::before{
+  content:counter(s);
+  position:absolute;left:0;top:.62rem;
+  width:1.06rem;height:1.06rem;border-radius:50%;
+  border:1px solid var(--ink-2);background:var(--paper);
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--ink-2);
+  display:flex;align-items:center;justify-content:center;
+}
+/* เส้นเชื่อมทีละช่วง ไม่ใช่เส้นเดียวยาวตลอด — ความสูงเนื้อหาเปลี่ยนแล้วยังจบตรงจุดเสมอ
+   1.9rem = ใต้ขอบล่างของจุด · ยาวจนถึงขอบบนของจุดถัดไปพอดี */
+.flow li:not(:last-child)::after{
+  content:'';position:absolute;left:.53rem;top:1.9rem;
+  width:1px;height:calc(100% - 1.28rem);background:var(--rule);
+}
+.flow b{display:block;font-weight:600;font-size:1rem;margin-bottom:.15rem}
+.flow p{font-size:.94rem;margin:0}
+.flow .tick{
+  display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.66rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:.05rem .4rem;margin-left:.45rem;vertical-align:.12em;
+  background:var(--have-bg);color:var(--have);
+}
+.flow .tick.new{background:var(--seal-bg);color:var(--seal)}
+
+/* ---------- ตาราง ---------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1rem 0}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:19rem}
+th,td{text-align:left;padding:.5rem .7rem .5rem 0;border-bottom:1px solid var(--rule-2);vertical-align:top}
+thead th{border-bottom:1px solid var(--rule);font-weight:500;font-size:.72rem;letter-spacing:.05em;
+  color:var(--ink-3);text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+tbody tr:last-child td{border-bottom:none}
+
+/* ---------- กล่อง ---------- */
+.note{border-left:2px solid var(--seal);background:var(--seal-bg);padding:.95rem 1.1rem;margin:1.2rem 0;font-size:.94rem}
+.note .tag{display:block;font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--seal);margin-bottom:.35rem}
+.note p{margin-bottom:.6rem}.note :last-child{margin-bottom:0}
+
+/* ---------- รายการมีเครื่องหมาย ---------- */
+.list{list-style:none;margin:0;padding:0}
+.list li{padding:.7rem 0 .7rem 1.7rem;border-bottom:1px solid var(--rule-2);position:relative;font-size:.94rem}
+.list li:last-child{border-bottom:none}
+.list li::before{content:'';position:absolute;left:.15rem;top:1.3rem;width:.42rem;height:.42rem;
+  border-radius:50%;background:var(--ink-3)}
+.list li.warn::before{background:var(--seal)}
+
+.close{border-top:1px solid var(--rule);padding-top:1.4rem;font-size:.9rem;color:var(--ink-2)}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="eyebrow">drift · ภาพรวมก่อนตัดสิน</span>
+    <h1>drift port</h1>
+    <p class="standfirst">ไม่ใช่ลิงก์ที่แทนจดหมายหนึ่งฉบับอีกต่อไป แต่เป็นที่อยู่ที่แทนคนหนึ่งคน</p>
+    <div class="meta"><span>25 ส.ค. 2569</span><span>ยังไม่ตัดสิน</span><span>อ่าน 4 นาที</span></div>
+  </header>
+
+  <section>
+    <svg class="diagram" viewBox="0 0 560 190" fill="none" aria-hidden="true">
+      <!-- ริ้วลมระหว่างสอง port -->
+      <g stroke="currentColor" fill="none" opacity=".28">
+        <path d="M108 108C180 92 236 78 300 74c58-4 96 4 148 16" stroke-width=".8"/>
+        <path d="M104 120C184 106 240 92 306 88c56-4 100 2 150 12" stroke-width=".8"/>
+        <path d="M116 96C186 80 244 66 306 62c60-4 98 6 142 16" stroke-width=".7"/>
+        <path d="M112 132C190 120 246 106 312 102c54-4 98 0 142 8" stroke-width=".7"/>
+      </g>
+      <!-- เส้นทางจดหมาย -->
+      <path d="M96 114C180 74 260 56 330 58c58 2 100 14 132 30" stroke="currentColor" stroke-width="1.4" opacity=".85"/>
+      <!-- จดหมายกลางทาง -->
+      <circle cx="286" cy="59" r="3.4" fill="currentColor"/>
+      <!-- port ต้นทาง -->
+      <circle cx="96" cy="114" r="8" stroke="currentColor" stroke-width="1.4" fill="var(--paper)"/>
+      <circle cx="96" cy="114" r="2.4" fill="currentColor"/>
+      <!-- port ปลายทาง -->
+      <circle cx="462" cy="88" r="8" stroke="currentColor" stroke-width="1.4" fill="var(--paper)"/>
+      <circle cx="462" cy="88" r="2.4" fill="currentColor"/>
+      <text x="96" y="146" text-anchor="middle" fill="currentColor" opacity=".62"
+            style="font:400 17px 'IBM Plex Mono',monospace">port</text>
+      <text x="462" y="120" text-anchor="middle" fill="currentColor" opacity=".62"
+            style="font:400 17px 'IBM Plex Mono',monospace">port</text>
+      <text x="280" y="176" text-anchor="middle" fill="currentColor" opacity=".45"
+            style="font:400 18px 'IBM Plex Mono',monospace">เว็บเป็นแค่ลมระหว่างสองจุดนี้</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>เรามี port อยู่แล้วสองในสาม</h2>
+    <p>ในโค้ดวันนี้ <code>me = {name, lat, lng, place}</code> — <em>ตัวตนที่มีชื่อและมีตำแหน่งจริงบนลูกโลก</em> บวกกับกล่องเข้า-ออกที่แยกกันด้วย <code>dir</code> และการเตือนเมื่อจดหมายถึง</p>
+    <p>สิ่งที่ขาดมีสองอย่างเท่านั้น: <strong>ที่อยู่ที่คนอื่นเขียนถึงได้</strong> กับ <strong>กุญแจ</strong></p>
+  </section>
+
+  <section>
+    <h2>ห้าจังหวะของผู้ใช้</h2>
+    <ol class="flow">
+      <li>
+        <b>เปิด port<span class="tick new">ใหม่</span></b>
+        <p>ตั้งชื่อ ปักหมุดที่ที่ตัวเองอยู่ ได้ที่อยู่หนึ่งอันกลับมา — ปักหมุดมีอยู่แล้วในหน้า “คลัง”</p>
+      </li>
+      <li>
+        <b>ให้ที่อยู่<span class="tick new">ใหม่</span></b>
+        <p>ส่งให้คนที่อยากติดต่อ <em>ครั้งเดียว</em> ไม่ใช่ทุกฉบับ — นี่คือจุดที่ความสะดวกเปลี่ยนไปทั้งหมด</p>
+      </li>
+      <li>
+        <b>เขียน<span class="tick">มีแล้ว</span></b>
+        <p>เลือกจากรายชื่อ port ที่รู้จัก <strong>ไม่ต้องพิมพ์เมืองปลายทางอีกต่อไป</strong> เพราะ port รู้ว่าตัวเองอยู่ไหน — ปลายทางจึงเป็น <em>คน</em> ไม่ใช่เมืองที่ผู้ส่งเดาเอง</p>
+      </li>
+      <li>
+        <b>ปล่อย<span class="tick">มีแล้ว</span></b>
+        <p>จดหมายเดินทางด้วยลมจริงจาก port หนึ่งไปอีก port — กลไก ภาพ เวลา อากาศ ทั้งหมดไม่เปลี่ยนสักอย่าง</p>
+      </li>
+      <li>
+        <b>ถึง<span class="tick new">ใหม่</span></b>
+        <p>จดหมายไปนอนอยู่ในกล่องของผู้รับ เปิดเมื่อไหร่ก็ได้ ไม่ต้องมีใครยื่นลิงก์ให้</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>อะไรเปลี่ยน อะไรไม่เปลี่ยน</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>ไม่เปลี่ยนเลย</th><th>เปลี่ยน</th></tr></thead>
+        <tbody>
+          <tr><td>การเดินทางด้วยลมจริง</td><td>ที่อยู่แทนลิงก์ต่อฉบับ</td></tr>
+          <tr><td>เวลาจริง · สภาพอากาศจริง</td><td>ปลายทางเป็นคน ไม่ใช่เมือง</td></tr>
+          <tr><td>งานภาพทั้งหมด · สามองก์</td><td>กล่องจดหมายอยู่ถาวร</td></tr>
+          <tr><td>การเคลือบ · ของที่ระลึก</td><td>ความยาว URL เลิกเป็นข้อจำกัด</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>สิ่งที่ port ปลดล็อก ซึ่งวันนี้เป็นไปไม่ได้เลย</h2>
+    <ul class="list">
+      <li><strong>ตอบกลับ</strong> — วันนี้ผู้รับตอบกลับไม่ได้ ต้องไปขอที่อยู่กันใหม่ พอมี port <em>จดหมายกลายเป็นการโต้ตอบจริง</em> ซึ่งเป็นหัวใจของคำว่าจดหมาย</li>
+      <li><strong>รู้ว่าฟ้าที่เขาเป็นยังไง</strong> — port มีพิกัด เราดึงอากาศอยู่แล้ว เปิดแอปแล้วเห็นได้เลยว่าตอนนี้ฝนตกที่ port ของเพื่อนหรือเปล่า <em>โดยไม่ต้องขอข้อมูลเพิ่มสักช่อง</em></li>
+      <li><strong>ลมระหว่างสอง port</strong> — บาง port ฤดูนี้ลมส่ง บาง port ลมต้าน ความสัมพันธ์ระหว่างคนสองคนมี <em>สภาพอากาศของมันเอง</em> ที่เปลี่ยนไปตามฤดู</li>
+      <li><strong>จดหมายกำลังมา</strong> — รู้ล่วงหน้าว่ามีฉบับหนึ่งกำลังเดินทางมาหา และเหลืออีกกี่ชั่วโมง ซึ่งคือการรอที่แอปนี้ตั้งใจให้เกิดตั้งแต่แรก</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>สิ่งที่ต้องยอมแลก</h2>
+    <ul class="list">
+      <li class="warn"><strong>เซิร์ฟเวอร์ต้องถือจดหมายจริง เลี่ยงไม่ได้</strong> ผู้รับไม่ได้ออนไลน์ตอนส่ง และไม่มีลิงก์ส่งมือต่อมืออีก — คำที่ซื่อสัตย์ที่สุดที่พูดได้คือ <em>“เราเก็บสิ่งที่เราอ่านไม่ออก”</em> ไม่ใช่ “เราไม่เก็บอะไรเลย”</li>
+      <li class="warn"><strong>กุญแจต้องกู้คืนได้ — ข้อนี้ฆ่าโปรเจกต์ได้</strong> ถ้ากุญแจอยู่แค่ในเบราว์เซอร์ กฎ 7 วันของซาฟารีจะลบมันทิ้ง แล้วจดหมายทุกฉบับที่คนนั้นเคยได้รับ <em>และฉบับที่กำลังจะมาถึง</em> จะเปิดไม่ได้ตลอดกาล</li>
+      <li class="warn"><strong>กล่องจดหมายมาพร้อมสแปม</strong> พอมีที่อยู่ ใครก็เขียนถึงเราได้ ทางแก้ที่ตรงกับคอนเซปที่สุดคือที่อยู่ต้องเดาไม่ได้และไม่มีสมุดรายชื่อ — ให้กันเองเท่านั้น เหมือนวันนี้ แต่ให้ครั้งเดียว</li>
+      <li class="warn"><strong>drift หยุดเป็นไฟล์ HTML ไฟล์เดียว</strong> วันนี้เปิดจาก <code>file://</code> ก็ใช้ได้ พอมี port ต้องมีโดเมน มีการ deploy มีระบบบัญชี — ข้ามไปขั้นสุดท้ายของบันไดเทคโนโลยีเลย</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>ขั้นครึ่งทางที่ทดสอบคอนเซปได้ก่อนลงทุน</h2>
+    <p><strong>สมุดที่อยู่ในเครื่อง</strong> — “ที่อยู่ port” เป็นลิงก์ที่ฝังชื่อ พิกัด และกุญแจสาธารณะไว้ ให้กันครั้งเดียว แล้วแอปจำไว้เป็นรายชื่อ</p>
+    <p>ได้อะไร: เลิกถามที่อยู่กันใหม่ทุกฉบับ · ปลายทางเป็นคนจริง · เริ่มเข้ารหัสได้เลย · <strong>ไม่ต้องมีเซิร์ฟเวอร์แม้แต่ตัวเดียว</strong></p>
+    <p>ยังไม่ได้อะไร: <em>ยังต้องส่งลิงก์จดหมายให้กันอยู่ดี</em> — ซึ่งคือข้อที่กอล์ฟบอกว่าทำให้คนไม่เล่น ขั้นนี้จึงแก้ได้ครึ่งเดียว แต่มันพิสูจน์ว่าคนยอมแลกที่อยู่กันไหม ก่อนจะจ่ายค่าเซิร์ฟเวอร์และภาระ PDPA</p>
+  </section>
+
+  <div class="note">
+    <span class="tag">คำถามที่ยังเปิดอยู่</span>
+    <p><strong>1. ลูกกุญแจอยู่ที่ใคร</strong> — ตัดสินแล้วเรื่องอื่นตามมาเองทั้งหมด</p>
+    <p><strong>2. port หนึ่งอันผูกกับหนึ่งคน หรือหนึ่งเครื่อง</strong> — เปิดจากคอมกับมือถือคือ port เดียวกันไหม</p>
+    <p><strong>3. ย้ายที่อยู่ได้ไหม</strong> — คนย้ายบ้าน ลมก็เปลี่ยน จดหมายเก่าที่กำลังเดินทางมาจะไปไหน</p>
+  </div>
+
+  <footer class="close">
+    <p>ผมยังไม่เขียนโค้ดอะไรทั้งนั้นครับ เอกสารนี้เป็นภาพรวมให้ดูก่อนตัดสิน · งานที่ค้างอยู่ (delta กับตาราง 15×9) <strong>ผมแนะนำให้หยุดไว้ก่อน</strong> เพราะถ้าไปทาง port มันคืองานที่ทำแล้วทิ้ง</p>
+  </footer>
+
+</div>
