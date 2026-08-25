@@ -259,6 +259,14 @@ textarea{min-height:200px;resize:vertical;line-height:2}
     <div class="note" id="vStat"></div>
     <div class="rule"></div>
     <button class="btn wide ghost" id="btnWipe" style="color:#a8574a">ล้างข้อมูลทั้งหมด</button>
+    <!-- เครดิตแหล่งข้อมูล — Open-Meteo แบบฟรีใช้สัญญาอนุญาต CC-BY 4.0 ซึ่งบังคับให้ต้องให้เครดิต
+         และอนุญาตเฉพาะการใช้ที่ไม่ใช่เชิงพาณิชย์ (ข้อ 65.4) -->
+    <div class="note" style="margin-top:16px;line-height:1.7">
+      ลมและอากาศทั้งหมดมาจาก <b style="font-weight:normal">Open-Meteo</b>
+      (<a href="https://open-meteo.com/" target="_blank" rel="noopener"
+          style="color:inherit">open-meteo.com</a>) · CC-BY 4.0<br>
+      ชายฝั่งจาก Natural Earth (public domain)
+    </div>
   </div>
 </section>
 
@@ -320,7 +328,13 @@ const CFG = {
 
 const RAD = Math.PI/180, DEG = 180/Math.PI, ER = 6371;
 const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me' };
-const KIND = ['clear','wind','drizzle','rain','storm'];
+/* ---------- คำเรียกอากาศ (ข้อ 65) ----------
+   เดิมมีแค่ 5 ระดับ และอะไรก็ตามที่กระโชกเกินเกณฑ์ถูกเรียกว่า "พายุ" หมด
+   กอล์ฟจับได้ว่าเส้นฉะเชิงเทรา→เลย แอปบอกว่ามีพายุ แต่แอปอากาศบอกว่าไม่มี
+   ตรวจแล้วทั้งคู่ถูก — สิ่งที่มีคือ *ฝนฟ้าคะนอง* (WMO 95) ซึ่งเป็นเรื่องปกติของบ่ายเมืองไทย
+   กระโชก 57-72 คือลมที่ตกจากใต้เมฆฝนฟ้าคะนอง แรงจริงแต่กินเวลาไม่กี่สิบนาที
+   เรียกว่า "พายุ" จึงเป็นการพูดเกินความจริง และทำให้คนไม่เชื่อแอปเมื่อเทียบกับของจริง */
+const KIND = ['clear','wind','drizzle','rain','gust','thunder','storm'];
 
 /* ---------- คณิตศาสตร์ทรงกลม (ยกจาก globe-study) ---------- */
 function toXYZ(latDeg,lngDeg){
@@ -428,7 +442,7 @@ function sanitizeRec(r){
     return [ _num(a[0],0,240,0.1), _num(a[1],0,48,0), spd,
              Math.round(_num(a[3],0,360,180)), _num(a[4],0,500,0),
              Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,2,0)),
-             Math.round(_num(a[7],0,400,spd)) ];
+             Math.round(_num(a[7],0,400,spd)), Math.round(_num(a[8],0,99,0)) ];
   });
   /* wf ต้องเป็นตัวอักษรในชุด base64 เท่านั้น — ตัวแปลกทำให้ถอดออกมาเป็น NaN แล้วลมหายทั้งสนาม */
   const wfOk = typeof r.wf==='string' && r.wf.length<=8000 && /^[A-Za-z0-9+/]*$/.test(r.wf);
@@ -607,7 +621,7 @@ async function fetchWxLive(pts){
   const lo=pts.map(p=>p.lng.toFixed(3)).join(',');
   const u='https://api.open-meteo.com/v1/forecast'
     +'?latitude='+la+'&longitude='+lo
-    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m'
+    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m,weather_code'
     +'&wind_speed_unit=kmh&forecast_days=4&timezone=UTC';
   /* คำขอที่ค้างจะค้างตลอดไป ผู้ใช้เห็นแค่ปุ่มกดไม่ได้ — ต้องมีเพดานเวลาเสมอ */
   const ac=new AbortController();
@@ -622,7 +636,7 @@ async function fetchWxLive(pts){
 }
 function sampleWx(loc,hoursFromNow){
   const h=loc&&loc.hourly;
-  if(!h||!h.time) return {spd:12,dir:180,pre:0,gst:18};
+  if(!h||!h.time) return {spd:12,dir:180,pre:0,gst:18,wc:0};
   /* หา offset ของ "ตอนนี้" จากเวลาแรกในชุด
      ชุดจาก API ห่างกัน 1 ชม. · ชุดจากแคชภูมิภาคห่างกัน 3 ชม. → ต้องอ่านระยะห่างจากข้อมูลเอง
      ไม่ใช่สมมติว่าเป็นราย 1 ชม. (ข้อ 58) */
@@ -636,7 +650,9 @@ function sampleWx(loc,hoursFromNow){
     pre: h.precipitation[idx] ?? 0,
     /* ไม่มีชั้นกระโชก (แคชรุ่นเก่า/แหล่งอื่น) = ถอยไปใช้ลมต่อเนื่องตรง ๆ
        ห้ามเดาด้วยตัวคูณ — วัดแล้วว่าอัตราส่วนกระจายตั้งแต่ 1.5 ถึง 8 (ข้อ 62) */
-    gst: h.wind_gusts_10m ? (h.wind_gusts_10m[idx] ?? spd) : spd
+    gst: h.wind_gusts_10m ? (h.wind_gusts_10m[idx] ?? spd) : spd,
+    /* รหัสอากาศ WMO — มีเฉพาะตอนยิงสด แคชภูมิภาคไม่ได้เก็บ (ไม่จำเป็น) */
+    wc: h.weather_code ? (h.weather_code[idx] ?? 0) : 0
   };
 }
 
@@ -685,7 +701,7 @@ function simulate(cpts, cwx, dist, ct, seedId){
       const w=sampleWx(cwx[wfMid(i)], at[i]);
       /* ปัดก่อนใช้ ไม่ใช่ปัดตอนเก็บ — ผู้รับมีแต่ค่าที่ปัดแล้ว ต้องคำนวณจากค่าเดียวกัน */
       W.push({spd:Math.round(w.spd), dir:Math.round(w.dir), pre:r2(w.pre),
-              gst:Math.round(w.gst)});
+              gst:Math.round(w.gst), wc:Math.round(w.wc||0)});
     }
     /* สนามลมเต็ม 4 ช่วงเวลา วางตามสัดส่วนของการเดินทาง (0, 1/3, 2/3, 1)
        ต้องเข้ารหัสแล้วถอดกลับก่อนใช้เสมอ ผู้ส่งจึงคำนวณจากค่าชุดเดียวกับผู้รับ */
@@ -725,7 +741,13 @@ function simulate(cpts, cwx, dist, ct, seedId){
     if(raw===2) severeIdx.push(i);
 
     let kind;
-    if(sev>0) kind=4;
+    /* ใช้ *รหัสอากาศจริง* ที่นักอุตุฯ กำหนดมา ไม่ใช่ตั้งชื่อเอาเองจากลม+ฝน
+       WMO 95-99 = ฝนฟ้าคะนอง · เป็นข้อมูลจริงจาก API ตัวเดียวกัน ขอมาฟรี
+       แคชภูมิภาคไม่มีรหัสนี้ (ไม่จำเป็น เพราะแคชใช้กับสนามลมเท่านั้น) ถอยไปเดาจากลม+ฝนได้ */
+    const thunder = w.wc>=95;
+    if(sev===2) kind=6;                      /* พายุจริง — กระโชกเกิน GUST_LOST */
+    else if(sev===1) kind = thunder ? 5 : 4; /* ฝนฟ้าคะนอง หรือ ลมกระโชกแรงเฉย ๆ */
+    else if(thunder) kind=5;                 /* ฟ้าคะนองแม้ลมยังไม่ถึงเกณฑ์ */
     else if(w.pre>=2.5) kind=3;
     else if(w.pre>=0.15) kind=2;
     else if(w.spd>=22) kind=1;
@@ -734,7 +756,7 @@ function simulate(cpts, cwx, dist, ct, seedId){
     /* เก็บค่าเต็มไว้ก่อน ยังไม่ปัด — ต้องยืดด้วยตัวคูณเวลาฐานให้เสร็จก่อน
        ไม่งั้นเส้นทางสั้นมาก ๆ จะถูกปัดเป็น 0 ตั้งแต่ยังไม่ได้ยืด แล้วคูณเท่าไหร่ก็ยังเป็น 0
        (เจอจริงกับกรุงเทพ-นนทบุรี 12 กม. ได้เวลารวม 0 ชั่วโมง) */
-    legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev, w.gst]);
+    legs.push([legT[i], hold, w.spd, w.dir, w.pre, kind, sev, w.gst, w.wc]);
     t+=legT[i]+hold;
   }
   /* ---------- พื้นเวลา (ข้อ 45.1) ----------
@@ -768,7 +790,12 @@ function simulate(cpts, cwx, dist, ct, seedId){
      แต่ยืดเฉพาะ "เวลาเดินทาง" ห้ามยืดเวลาจอดรอ — จดหมายที่เคลือบไม่ได้ทำให้พายุสงบช้าลง
      (บั๊กเดิม: คูณ k ทับทั้งสองช่อง จดหมายเคลือบเลยรอพายุนานกว่า 12% โดยไม่มีเหตุผล) */
   const kt = k * (ct>0 ? 1+CFG.CT_TIME : 1);
-  legs.forEach(l=>{ l[0]=r2(l[0]*kt); l[1]=r2(l[1]*k); });
+  /* ตัวคูณพื้นเวลายืดเฉพาะ *เวลาเดินทาง* ไม่ยืดเวลาจอดรอ (ข้อ 65)
+     ตัวคูณนี้มีไว้ทำให้การเดินทางระยะใกล้รู้สึกเป็นการเดินทาง ไม่ใช่แค่ไม่กี่นาที
+     แต่การรอให้ฝนฟ้าคะนองผ่านไปมีระยะเวลาจริงของมันเอง ไม่ได้ยาวขึ้นเพราะเส้นทางสั้น
+     ของเดิมคูณทั้งสองช่อง เส้นในประเทศ 428 กม. จึงกระโดดจาก 5 เป็น 22 ชม.
+     เพราะจอด 3.45 ชม. ถูกคูณ 4.93 เท่ากลายเป็น 17 ชม. — ดราม่าเกินความจริงไปมาก */
+  legs.forEach(l=>{ l[0]=r2(l[0]*kt); l[1]=r2(l[1]); });
   /* total ต้องเท่าผลรวมของ legs เป๊ะ — letterState() เดินตาม legs แต่ตัดสินว่าถึงจาก th */
   t = r2(legs.reduce((a,l)=>a+l[0]+l[1], 0));
   /* โอกาสหาย — roll ครั้งเดียวตอนส่ง (deterministic ฝังใน URL) */
@@ -1355,16 +1382,21 @@ function windWord(boost){
   return 'ลมย้อนกลับมาเกือบทั้งทาง';
 }
 function poemFor(sim){
-  const s=sim.legs.filter(l=>l[6]>0).length;
+  const rough=sim.legs.filter(l=>l[6]>0);
   const rain=sim.legs.filter(l=>l[5]===2||l[5]===3).length;
   let p=windWord(sim.boost);
   if(sim.worst===2) p+=' แต่กลางทางมีพายุใหญ่รออยู่';
-  else if(s>0) p+=' มีพายุขวางทาง '+s+' ช่วง จดหมายจะจอดรอจนลมสงบ';
+  else if(rough.length){
+    /* เรียกตามสิ่งที่เจอจริง ไม่เหมาโหลว่าเป็นฝนฟ้าคะนองทั้งหมด
+       ช่วงเดียวกันอาจเป็นแค่ลมกระโชกโดยไม่มีฟ้าคะนองก็ได้ — รหัสอากาศเป็นคนบอก */
+    const word = rough.some(l=>l[5]===5) ? 'ฝนฟ้าคะนอง' : 'ลมกระโชกแรง';
+    p+=' มี'+word+'ขวางทาง '+rough.length+' ช่วง จดหมายจะหลบรอจนลมสงบ';
+  }
   else if(rain>2) p+=' ระหว่างทางฝนตกเป็นระยะ';
   else p+=' ฟ้าเปิดตลอดทาง';
   return p+'.';
 }
-function kindWord(k){ return ['ฟ้าเปิด','ลมพัด','ฝนปรอย','ฝนหนัก','พายุ'][k]; }
+function kindWord(k){ return ['ฟ้าเปิด','ลมพัด','ฝนปรอย','ฝนหนัก','ลมกระโชกแรง','ฝนฟ้าคะนอง','พายุ'][k]; }
 
 /* ============================================================
    งานวาด — Canvas 2D, procedural line-art
@@ -1496,7 +1528,13 @@ function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale){
   else if(kind===1) wxWind(ctx,cx,cy,t,intensity,dir,scale);
   else if(kind===2) wxDrizzle(ctx,cx,cy,t,intensity,lean,scale);
   else if(kind===3) wxRain(ctx,cx,cy,t,intensity,lean,scale);
-  else wxStorm(ctx,cx,cy,t,intensity,true,scale);
+  /* 4 ลมกระโชกแรง · 5 ฝนฟ้าคะนอง · 6 พายุ — ใช้ภาพก้นหอยเหมือนกันแต่ความเข้มต่างกัน
+     ความเข้มมาจาก stormIntensity(กระโชก) อยู่แล้ว จึงไล่ระดับเองตามความแรงจริง
+     ฝนฟ้าคะนองยังต้องเห็นเม็ดฝนด้วย ไม่งั้นจะอ่านเป็นลมล้วน */
+  else{
+    if(kind===5) wxRain(ctx,cx,cy,t,intensity*0.8,lean,scale);
+    wxStorm(ctx,cx,cy,t,intensity,true,scale);
+  }
 }
 
 /* ---------- ชายฝั่งโลก ----------
@@ -2575,7 +2613,7 @@ function refreshDock(){
     let eta;
     if(st.gone) eta='สายลมพัดหลง';
     else if(st.arrived) eta = L.dir==='in' ? 'drifted in · เปิดอ่าน' : 'drifted in';
-    else if(st.parked) eta='จอดรอพายุสงบ';
+    else if(st.parked) eta='หลบลมกระโชก';
     else eta='drifting · อีก '+fmtDur(st.remain);
     b.innerHTML='<span class="who">'+esc(L.dir==='in'?'จาก '+L.f.n:'ถึง '+L.t.n)+'</span><span class="eta">'+eta+'</span>';
     b.onclick=()=>{
@@ -2724,6 +2762,11 @@ function showForecast(){
     const left=ctLeft();
     const wrap=document.createElement('div');
     if(sim.raw===2) wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามีพายุใหญ่ — เคลือบหนาจะช่วยให้จดหมายไม่หลงทาง</div>';
+    else if(sim.worst===1){
+      const th=sim.legs.some(l=>l[5]===5);
+      wrap.innerHTML='<div class="warn">มี'+(th?'ฝนฟ้าคะนอง':'ลมกระโชกแรง')
+        +'ระหว่างทาง — '+(th?'เคลือบกันน้ำจะกันคราบฝนได้':'จดหมายจะหลบรอจนลมสงบ')+'</div>';
+    }
     const mk=(ct,title,desc,cost)=>{
       const b=document.createElement('button');
       b.className='pick'+(p.ct===ct?' on':'');
@@ -2865,7 +2908,7 @@ function buildLog(L,st){
     /* spd/gst มาจากลิงก์ของผู้ส่ง = ข้อมูลของคนอื่น ต้อง esc ก่อนต่อเข้า innerHTML เสมอ (ข้อ 57.1)
        ตอนพายุต้องรายงาน "กระโชก" เพราะนั่นคือค่าที่ตัดสินว่าเป็นพายุ (ข้อ 62)
        รายงานลมต่อเนื่องตรงนี้จะกลายเป็นตัวเลขที่ขัดกับคำว่าพายุที่อยู่ข้าง ๆ */
-    if(sev>0) txt='พายุ ลมกระโชก '+esc(gst??spd)+' กม./ชม. — จอดรอ '+fmtDur(hold);
+    if(sev>0) txt=kindWord(kind)+' ลมกระโชก '+esc(gst??spd)+' กม./ชม. — หลบรอ '+fmtDur(hold);
     else if(kind>=2) txt=(kind===3?'ฝนหนัก':'ฝนปรอย');
     else if(kind===1) txt='ลมพัด '+esc(spd)+' กม./ชม.';
     else txt='ฟ้าเปิด';
