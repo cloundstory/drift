@@ -1,12 +1,13 @@
-<!doctype html>
-<html lang="th">
-<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#e4e3e0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>จดหมายสายลม</title>
+<title>Weather on cloth</title>
+
+
+
+
+
+
+
 <style>
 /* ---------- Noto Serif Thai ฝังในไฟล์ (ข้อ 61.1) ----------
    ไทยกับอังกฤษต้องมาจากฟอนต์เดียวกัน ไม่งั้นน้ำหนักเส้นกับสัดส่วนจะไม่ตรงกัน
@@ -146,8 +147,7 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
-</head>
-<body>
+
 <canvas id="stage"></canvas>
 <div class="hint" id="hint">ยังไม่มีจดหมายอยู่กลางลม<br><span style="opacity:.6">ปัดเพื่อหมุนโลก</span></div>
 
@@ -3790,5 +3790,84 @@ notifyArrivals();
 setInterval(()=>{ if(document.hidden) return; notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
 
 </script>
-</body>
-</html>
+
+<script>
+
+/* ============================================================
+   ลูกโลกของ drift สำหรับดูบนมือถือ (ข้อ 67, 68)
+   อากาศเป็นสนามในโลก ไม่ใช่ป้ายกำกับ · แผ่นดินเป็นผืนผ้า ไม่ใช่ตัวเอก
+   จดหมายฝังไว้ในไฟล์ จึงเปิดได้โดยไม่ต้องมีเซิร์ฟเวอร์และไม่ต้องต่อเน็ต
+   ============================================================ */
+(function(){
+'use strict';
+const $$=s=>document.querySelector(s);
+const BAKED = {"id":"sky-demo","dir":"out","f":{"n":"กอล์ฟ","la":13.6904,"lo":101.0779,"p":"ฉะเชิงเทรา, ไทย"},"t":{"n":"ผู้รับ","la":49.28,"lo":-123.12,"p":"Vancouver, Canada"},"s":1787599765135,"th":27.97,"ct":0,"lg":[[2.26,0,15,256,0,0,0,32,3],[2.55,0,7,271,0.3,5,0,26,95],[2.55,0,15,52,0.1,0,0,41,51],[2.26,0,12,183,0,0,0,27,1],[2.26,0,12,263,0,0,0,20,3],[2.26,0,5,122,0.5,2,0,11,53],[2.55,0,12,145,0,0,0,17,1],[1.98,0,6,117,0,0,0,9,0],[2.26,0,11,289,0,0,0,23,1],[2.55,0,24,242,0.1,1,0,44,51],[2.55,0,24,243,0.2,2,0,30,51],[1.94,0,24,325,0,1,0,31,2]],"lo":-1,"wf":"4InHzItOoFvJqPoNkIlCvEZEORUUUQVBZFkIRCIDUagWlJrPlJlHXIeIeQRSVE/BGEaGoDcIDJmEYJpOrJvErKjIWSVD4CxFdL2BoEaGSWBNfMdE6PuTtEjJUEGCPExDaGSBcCKD0MZHTNOJNMsNmF/EJGIC/EqCeN3HpF9LnJmGGKLOeFfN9JVCJJ4CZFSG3EqGYJ9KpDXKPSbGMIMHVDMG/GKCKEHFOFTRHQfCxNCKyFMMIIVCZEBDNBoDDF1C9CuKpLkQROYKRNMFJC+ECCTDrF0L3I5GtMsKtIHEBBZNKGUItHLBEDtH2W0JrRlEpM9LHDpHCNHGVCWFCDAF2TzQ/RWKdE5F7K3HEEJJZC6HLCMDqK5Q+SVKhHOLXFvD0EtNfHURsPaD6I6QxOjQZKOHQF+DfG9OaQeOSHlKqOqKjBRGTFBLUDhDfLePeLYPLMNJmHyFuQoEeFoPnGeCYC6CZFXOUUUPWBXDgGRAwCXTwUkJuOmJqHaGeDURUVYE9BnCpCdBJB7IdLsKqL0KsMmHiJRSVGBBwI+G8C/CRDbk3JbJaI8PsNmEcJRHHAuB+g+DaIIJkIWJdJTONIEOnGrD+FQINEGEmCSHxEyHtHtDvENLNOcEiM6KWGyF4EfHOC5DZDQBcOnIdKPLdLPILE2EeC+EHFPAoE+GcLCUhEeOEIwKOMDJTFeBGCIBHDqF7CRHeGdJeTSKWMQPKFHEbDADLEuHoEsDpH0HtNrFMG/DNNKATEtGIBaCqJgS2PyEsByH5PYKpIGNHFYBRDGA9GtP1C8RuJmGcB5N8CZMHGdCkB0FgDJHxNvPvSeDKINHpDyH0K5EaH/KNGZC2PBOvPfENLMJeF7DWL0OiLQNkHbHzGxCZDYEPIPJcDzDjWgJaNOKRJnJ0HtOrFnFoOpHiJpFyEWIXQSRVTRGZE6EUDvCWLoSnJuKnLoHZJbMWTVPWAyBTEwFkFXG/EdMvKsMwQsLoJiMQRVK+EuHCH4EBFWFMilJkHTISRuNsELJTFIDnEfW+FiMLKFBdKbGOLLFGPoE0E9GZLND8EzJ8G6IzQlETE5FOLQMkDYK/FtEiF7FrGOGFFDCYFBTmHgIPLbJNMMJtJlDoEGGODLDAFgK9LpKmQBHsNNGSEoLmFgB6CnGvCwEEJUMZIdQRJXMRLMHPCpDhDlLtItJiCmCuLsNuGMJMHGOKEZH3DDEeItJxKrOzDlDiKxKLKxJEMICoGHGKFpPtNjEwOpHSIaEPEHE1HCGhGjIOIkGLElM0MpExHcH+F6FcCoEGHTSESCORFPQ4F5INIbLHGcD+KoMsLfNLMhRgFmFnIwFUEkG+GeCwDmMxIeLQLOAEANAAEEAAFLFEAAAAAAAAFAAAAHAAPAAAAAAAAAEAAFEAAAAAAHFHAAAAAIAAAAAFAWAHAAAEEAFANAAFAAAAEAAEALAJEAAAAAAAAAAAAAAAAAAAAAAJAAAAEAAAAA","bd":"ลมวันนี้พัดไปทางนั้นพอดี ฉันเลยฝากมันไป"};
+
+store.letters = () => [BAKED];
+store.saveAll = () => {};
+store.put     = r => r;
+store.me      = () => ({ name:BAKED.f.n, lat:BAKED.f.la, lng:BAKED.f.lo, place:BAKED.f.p });
+store.setMe   = () => {};
+
+const css=document.createElement('style');
+css.textContent=`
+  #sd{position:fixed;left:0;right:0;bottom:0;z-index:30;
+      padding:13px 16px calc(env(safe-area-inset-bottom) + 14px);
+      background:linear-gradient(to top,rgba(238,233,222,.97),rgba(238,233,222,.85) 68%,rgba(238,233,222,0));
+      display:flex;flex-direction:column;gap:10px;
+      font-family:Georgia,"Times New Roman","Noto Serif Thai",serif}
+  #sd .hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  #sd .ttl{font-size:12px;letter-spacing:.30em;color:var(--faint)}
+  #sd .rd{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;text-align:right}
+  #sd .rw{display:flex;align-items:center;gap:12px}
+  #sd .lb{flex:0 0 58px;font-size:12px;letter-spacing:.06em;color:var(--dim)}
+  #sd input[type=range]{flex:1;height:30px;accent-color:var(--gold);background:none;
+      -webkit-appearance:none;appearance:none}
+  #sd input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--line)}
+  #sd input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+      margin-top:-13px;border-radius:50%;background:#fbf9f4;border:1px solid var(--line);
+      box-shadow:0 1px 3px rgba(51,51,58,.18)}
+  #sd input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
+      background:#fbf9f4;border:1px solid var(--line)}
+  #sd .nt{font-size:11.5px;line-height:1.55;color:var(--faint)}
+  #dock,#play,.tools{display:none !important}
+`;
+document.head.appendChild(css);
+
+const sd=document.createElement('div');
+sd.id='sd';
+sd.innerHTML=
+  '<div class="hd"><span class="ttl">อากาศบนผืนผ้า</span><span class="rd" id="sdRead"></span></div>'
++ '<div class="rw"><span class="lb">เข้าใกล้</span>'
++   '<input type="range" id="sdZ" min="0" max="100" value="20" aria-label="ระยะเข้าใกล้"></div>'
++ '<div class="rw"><span class="lb">เวลา</span>'
++   '<input type="range" id="sdT" min="0" max="100" value="30" aria-label="เวลาระหว่างเดินทาง"></div>'
++ '<p class="nt">ลากนิ้วบนโลกเพื่อหมุน · แผ่นดินถูกลดลงให้เป็นแค่ผืนผ้า '
++ 'อากาศจึงเป็นสิ่งที่ดังที่สุด · จุดวงกลมสองจุดคือผู้ส่งกับผู้รับ</p>';
+document.body.appendChild(sd);
+
+const $z=sd.querySelector('#sdZ'), $t=sd.querySelector('#sdT'), $r=sd.querySelector('#sdRead');
+function applyZoom(){
+  const z=1+Math.pow(+$z.value/100,2.2)*30;
+  G.zTarget=z;
+  const st=letterState(BAKED, BAKED.s+(PREVIEW?PREVIEW.h:0)*3600000);
+  G.focus(posAt(BAKED,st.prog));
+  readout();
+}
+function applyTime(){ if(PREVIEW) PREVIEW.h=BAKED.th*(+$t.value/100); readout(); }
+function readout(){
+  const st=letterState(BAKED, BAKED.s+(PREVIEW?PREVIEW.h:0)*3600000);
+  const lg=BAKED.lg[Math.min(BAKED.lg.length-1,st.legIdx)];
+  $r.textContent=kindWord(lg[5])+' · '+(st.arrived?'ถึงแล้ว':'อีก '+fmtDur(st.remain));
+}
+$z.addEventListener('input',applyZoom);
+$t.addEventListener('input',applyTime);
+
+selected=BAKED.id;
+try{ previewOn(BAKED); }catch(e){}
+applyTime(); applyZoom();
+setTimeout(()=>{ sizeStage(); applyZoom(); },60);
+addEventListener('resize',()=>setTimeout(readout,120));
+})();
+
+</script>
