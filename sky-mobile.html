@@ -2277,6 +2277,11 @@ const G = {
      ผลคือได้สนามต่อเนื่องที่ไม่มีรอยต่อ ซึ่งคือสิ่งที่ "ม่าน" หมายถึงจริง ๆ */
   clouds(ctx,marks,alpha){
     if(!marks||!marks.cloud||!marks.cloud.length) return;
+    /* ⚠️ ความทึบตอนวางผืนเมฆลง — ต้องเป็นค่า *เดียว* ทั้งทางแคชโดนและแคชพลาด (ข้อ 73)
+       ของเดิมเขียนเลขไว้สองที่ พอข้อ 71 เพิ่มความครึ้มแล้วแก้ที่เดียว
+       ทางแคชโดนเลยยังวางที่ 0.62 ส่วนทางที่วาดใหม่วางที่ 0.86
+       กล้องสั่นนิดเดียว กุญแจก็สลับโดน-พลาดสลับกันทุกเฟรม → เมฆทั้งผืนกระพริบพร้อมกัน */
+    const CLOUD_A=0.86;
     const dpr=Math.min(devicePixelRatio||1,2);
     if(!this._clcv) this._clcv=document.createElement('canvas');
     const cv=this._clcv;
@@ -2288,7 +2293,7 @@ const G = {
     const key=[Math.round(this.rotY*260),Math.round(this.rotX*260),
                Math.round(this.zoom*120),this.W,this.H,marks.length,marks.cloud.length].join(',');
     if(this._clkey===key){
-      if(this._clhas){ ctx.save(); ctx.globalAlpha=Math.min(1,alpha*0.62);
+      if(this._clhas){ ctx.save(); ctx.globalAlpha=Math.min(1,alpha*CLOUD_A);
         ctx.drawImage(cv,0,0,this.W,this.H); ctx.restore(); }
       return;
     }
@@ -2343,7 +2348,7 @@ const G = {
     m.fillStyle=this._hpat;
     m.fillRect(0,0,this.W,this.H);
     ctx.save();
-    ctx.globalAlpha=Math.min(1,alpha*0.86);
+    ctx.globalAlpha=Math.min(1,alpha*CLOUD_A);
     ctx.drawImage(cv,0,0,this.W,this.H);
     ctx.restore();
   },
