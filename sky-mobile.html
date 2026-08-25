@@ -1040,10 +1040,12 @@ function rainMarks(L,tf){
     if(cr!==0) p=destPoint(p.lat,p.lng,(pts.brg+90)%360,cr);
     const mm=rainAt(f,p.lat,p.lng,bucket/6);
     if(mm<0.03) continue;
-    /* รัศมีเป็นระยะบนผิวโลก จึงโตตามซูมเองโดยไม่ต้องคูณอะไร */
+    /* เก็บเป็น *รัศมีเชิงมุม* บนทรงกลม ไม่ใช่จุดขอบสองจุดแล้ววัดระยะบนจอ (ข้อ 72)
+       ของเดิมวัดจากจุดที่ออฟเซ็ตไปทางตะวันออก ซึ่งพอหมุนจนแนวนั้นชี้เข้าหาศูนย์กลางโลก
+       ระยะที่วัดได้จะหดตามไปด้วย — หย่อมเดียวกันเลยเปลี่ยนขนาดตามมุมกล้อง
+       รัศมีเชิงมุมเป็นสมบัติของหย่อมเอง ไม่ขึ้นกับว่ามองจากไหน */
     const rKm=half*2/NC*1.55;
-    const e=destPoint(p.lat,p.lng,(pts.brg+90)%360,rKm);
-    cl.push({a:toXYZ(p.lat,p.lng), e:toXYZ(e.lat,e.lng), mm});
+    cl.push({a:toXYZ(p.lat,p.lng), rho:rKm/ER, mm});
   }
   out.cloud=cl;
   if(_rainMarks.size>40) _rainMarks.clear();
@@ -2300,18 +2302,35 @@ const G = {
     let any=false;
     for(const c of marks.cloud){
       const r0=this.rotate(c.a); if(r0.z<0.03) continue;
-      const p0=this.project(r0), pe=this.project(this.rotate(c.e));
-      const rad=Math.hypot(pe.x-p0.x,pe.y-p0.y);
-      if(rad<2||rad>this.R*2.6) continue;
-      if(p0.x<-rad||p0.x>this.W+rad||p0.y<-rad||p0.y>this.H+rad) continue;
+      const p0=this.project(r0);
+      /* ---------- บีบตามความโค้งของโลก (ข้อ 72) ----------
+         หย่อมกลมบนผิวทรงกลม เมื่อฉายแบบ orthographic ได้ *วงรี* ไม่ใช่วงกลม
+         กว้างเต็มตามแนวขวาง แต่แบนลงตามแนวเข้าหาศูนย์กลางโลกด้วยตัวคูณ z
+         พอเข้าใกล้ขอบโลก z→0 มันจึงแบนราบไปกับผิว เหมือนทุกอย่างที่วาดบนทรงกลม
+         ของเดิมวาดเป็นวงกลมเสมอ ตรงที่ทุกอย่างแบน จึงมีเมฆอย่างเดียวที่ยังกลม = ปุยลอย */
+      const rt=this.R*Math.sin(c.rho), rr=rt*r0.z;
+      if(rt<2||rt>this.R*2.6) continue;
+      if(p0.x<-rt||p0.x>this.W+rt||p0.y<-rt||p0.y>this.H+rt) continue;
       const depth=.4+.6*Math.sqrt(r0.z);
       const a=depth*Math.min(1,Math.pow(c.mm/2.6,0.72));
       if(a<=.02) continue;
       m.globalAlpha=a; any=true;
-      m.drawImage(sp,p0.x-rad,p0.y-rad,rad*2,rad*2);
+      m.save();
+      m.translate(p0.x,p0.y);
+      m.rotate(Math.atan2(p0.y-this.CY,p0.x-this.CX));   /* แกน x ท้องถิ่น = แนวรัศมีของโลก */
+      m.drawImage(sp,-rr,-rt,rr*2,rt*2);
+      m.restore();
     }
     this._clhas=any;
     if(!any) return;
+    /* ---------- ตัดกับเส้นขอบโลก (ข้อ 72) ----------
+       project เป็นแบบ orthographic เส้นขอบโลกจึงคือวงกลมรัศมี R พอดี
+       อะไรที่ล้นออกไปนอกวงนั้น ตามนิยามแล้วไม่ได้อยู่บนผืนผ้า มันลอยอยู่ *หน้า* ผ้า
+       แผ่นดินกับริ้วลมจบที่ขอบนี้อยู่แล้วเพราะมันเป็นจุดบนทรงกลม เมฆเป็นสไปรต์จึงไม่จบเอง */
+    m.globalCompositeOperation='destination-in';
+    m.globalAlpha=1;
+    m.fillStyle='#000';
+    m.beginPath(); m.arc(this.CX,this.CY,this.R,0,6.2832); m.fill();
     /* ย้อมสองชั้น: โทนเรียบเป็นเนื้อเมฆ แล้วลายดินสอทับเฉพาะตรงที่มีเมฆ
        ถ้ามีแต่ลายจะโปร่งเกินไป ถ้ามีแต่โทนจะเป็นหมอกพ่นสี ไม่ใช่งานเขียน */
     m.globalCompositeOperation='source-in';
