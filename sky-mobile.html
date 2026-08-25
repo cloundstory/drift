@@ -2213,6 +2213,43 @@ const G = {
      ต้องวาด *หลัง* ลบความทึบของหมอก เพราะกอล์ฟตัดสินให้เห็นอากาศข้างหน้าได้
      (ข้อ 2 อยากให้หมอกปิดอนาคต แต่ข้อ 67 ว่าจดหมายต้องเดินทางไปหาอากาศ
       ถ้าอากาศถูกบัง มันก็กลับไปเป็นสิ่งที่เกิดขึ้นคู่ไปกับจดหมายเหมือนเดิม) */
+  /* ---------- ลายแรเงาดินสอ (ข้อ 71) ----------
+     กอล์ฟ 25 ส.ค.: "อยากให้มีลายเส้นดินสอแรเงาเข้ม ๆ ด้วย"
+
+     เข้ากับโครงพอดี เพราะเมฆถูกประกอบด้วย *หน้ากาก* อยู่แล้ว (ข้อ 70.3)
+     จึงเปลี่ยนจากย้อมสีเรียบเป็นย้อมด้วยลายเส้น — รูปทรงมาจากข้อมูล เนื้อมาจากดินสอ
+     ไทล์ใหญ่ 72px และมีหลายมุมหลายความยาว เพื่อไม่ให้เห็นรอยซ้ำของไทล์ */
+  _hatch(){
+    if(this._hp) return this._hp;
+    const N=72, c=document.createElement('canvas'); c.width=c.height=N;
+    const g=c.getContext('2d');
+    g.lineCap='round';
+    const rnd=(n)=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+    for(let i=0;i<38;i++){
+      const a=(-34+rnd(i)*22)*Math.PI/180;      /* เอียงทางเดียวเป็นหลัก เหมือนมือคนถนัดขวา */
+      const x=rnd(i*3.1)*N, y=rnd(i*7.7)*N;
+      const len=N*(0.30+rnd(i*5.3)*0.55);
+      g.strokeStyle='rgba(46,50,60,'+(0.20+rnd(i*11.1)*0.34).toFixed(3)+')';
+      g.lineWidth=0.7+rnd(i*13.7)*1.1;
+      g.beginPath();
+      g.moveTo(x-Math.cos(a)*len/2, y-Math.sin(a)*len/2);
+      g.lineTo(x+Math.cos(a)*len/2, y+Math.sin(a)*len/2);
+      g.stroke();
+    }
+    /* เส้นสวนทางบาง ๆ อีกชั้น — แรเงาจริงมีสองทิศทับกัน ไม่ได้ลากทางเดียวล้วน */
+    for(let i=0;i<14;i++){
+      const a=(38+rnd(i*2.7)*18)*Math.PI/180;
+      const x=rnd(i*4.9)*N, y=rnd(i*9.3)*N;
+      const len=N*(0.22+rnd(i*6.1)*0.35);
+      g.strokeStyle='rgba(46,50,60,'+(0.10+rnd(i*8.3)*0.16).toFixed(3)+')';
+      g.lineWidth=0.6+rnd(i*3.3)*0.7;
+      g.beginPath();
+      g.moveTo(x-Math.cos(a)*len/2, y-Math.sin(a)*len/2);
+      g.lineTo(x+Math.cos(a)*len/2, y+Math.sin(a)*len/2);
+      g.stroke();
+    }
+    this._hp=c; return c;
+  },
   /* หยดนุ่มสำเร็จรูป — ขาวล้วน ใช้เป็น *ความเข้ม* ไม่ใช่สี
      สร้างครั้งเดียวแล้ว drawImage ซ้ำ ถ้าสร้าง gradient ใหม่ทุกจุดทุกเฟรม
      จะเสียเวลาไปกับการสร้างวัตถุมากกว่าการวาด */
@@ -2275,13 +2312,19 @@ const G = {
     }
     this._clhas=any;
     if(!any) return;
-    /* ย้อมสีทีเดียว — เมฆกับหมอกต้องอ่านเป็นวัสดุเดียวกัน จึงใช้โทนเดียวกับหมอก */
+    /* ย้อมสองชั้น: โทนเรียบเป็นเนื้อเมฆ แล้วลายดินสอทับเฉพาะตรงที่มีเมฆ
+       ถ้ามีแต่ลายจะโปร่งเกินไป ถ้ามีแต่โทนจะเป็นหมอกพ่นสี ไม่ใช่งานเขียน */
     m.globalCompositeOperation='source-in';
     m.globalAlpha=1;
-    m.fillStyle='rgba(78,84,98,1)';
+    m.fillStyle='rgba(74,80,94,1)';
+    m.fillRect(0,0,this.W,this.H);
+    m.globalCompositeOperation='source-atop';
+    if(!this._hpat) this._hpat=m.createPattern(this._hatch(),'repeat');
+    m.globalAlpha=0.92;
+    m.fillStyle=this._hpat;
     m.fillRect(0,0,this.W,this.H);
     ctx.save();
-    ctx.globalAlpha=Math.min(1,alpha*0.62);
+    ctx.globalAlpha=Math.min(1,alpha*0.86);
     ctx.drawImage(cv,0,0,this.W,this.H);
     ctx.restore();
   },
@@ -2294,29 +2337,58 @@ const G = {
      จังหวะคำนวณจากดัชนีช่วง คาบไม่ลงตัวกัน จึงไม่วาบพร้อมกันและคำนวณซ้ำได้ */
   bolts(ctx,L,st){
     if(!L.lg) return;
+    /* ---------- จังหวะฟ้าแลบ (ข้อ 71) ----------
+       กอล์ฟ 25 ส.ค.: "มันต้องไม่คงที่ด้วย มันจะแปลกถ้าแลบทุก ๆ 5 วินาที"
+
+       ถูก — คาบคงที่คือนาฬิกา ไม่ใช่ฟ้าแลบ ของเดิมวาบทุก 4.9 วินาทีเป๊ะ
+
+       ห้ามใช้ Math.random() เพราะจะกะพริบไม่ต่อเนื่องระหว่างเฟรม
+       ใช้แฮชคงที่จากดัชนีรอบแทน: แต่ละรอบ 2.6 วินาที
+       - บางรอบไม่มีวาบเลย (ราว 45%) ช่องว่างจึงเป็น 2.6, 5.2, 7.8, 10.4 วินาที ไม่ซ้ำแบบ
+       - ตำแหน่งในรอบก็สุ่ม วาบจึงไม่มาตรงจังหวะเดิม
+       - รอบที่แล้วมีวาบ รอบนี้มีโอกาสมากขึ้น — พายุจริงแลบเป็นชุด ไม่ได้แลบทีละครั้งห่าง ๆ */
+    const hs=(n)=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+    const CYC=2.6;
     for(let i=0;i<L.lg.length;i++){
       const wc=L.lg[i][8]||0;
       if(wc<95) continue;
       const p=this.pipeV(posVAt(L,(i+0.5)/L.lg.length));
       if(p.z<0.05) continue;
-      const cyc=4.6, u=T/cyc+i*0.31;
-      const ph=u-Math.floor(u), idx=Math.floor(u);
-      const off=(Math.sin(idx*12.9898+i)*0.5+0.5)*0.55;
-      const d=ph-off;
-      if(d<0||d>0.16) continue;
-      const e=d/0.16;
-      /* วาบซ้ำในวาบเดียวแบบของจริง */
-      const flash=Math.max(Math.exp(-e*14), Math.exp(-Math.abs(e-0.34)*22)*0.62);
+      const u=T/CYC, idx=Math.floor(u), ph=u-idx;
+      let flash=0, seed=0;
+      /* ดูรอบนี้และรอบก่อน เพราะวาบที่เริ่มปลายรอบก่อนอาจยังไม่จบ */
+      for(let d=0;d<=1;d++){
+        const k=idx-d, kk=k*7.1+i*131.7;
+        const prevLit = hs((k-1)*7.1+i*131.7) < 0.55;
+        if(hs(kk) >= (prevLit?0.78:0.55)) continue;   /* รอบนี้ไม่มีวาบ */
+        const at=hs(kk*3.7)*0.82;                      /* วาบตรงไหนในรอบ */
+        const el=(ph+d)-at;
+        if(el<0||el>0.30) continue;
+        const e=el/0.30;
+        /* วาบซ้ำในวาบเดียว จำนวนครั้งไม่เท่ากันทุกที */
+        const dbl=hs(kk*5.3)>0.42;
+        let f=Math.exp(-e*11);
+        if(dbl) f=Math.max(f, Math.exp(-Math.abs(e-0.30)*17)*0.70);
+        if(f>flash){ flash=f; seed=kk; }
+      }
       if(flash<0.03) continue;
-      /* ฟ้าแลบจริงส่องสว่างทั้งก้อนเมฆ ไม่ใช่จุดเดียว รัศมีจึงต้องพอ ๆ กับหย่อมเมฆ */
-      const r=Math.max(22, this.R*0.14);
+      /* ---------- แสงสองชั้น ----------
+         ชั้นกว้างมากและจาง = ทั้งก้อนเมฆสว่างขึ้น ซึ่งคือสิ่งที่ตาจับได้จริง
+         ชั้นแคบและสว่าง = จุดที่แลบ · มีแต่ชั้นแคบจะอ่านเป็นดวงไฟ ไม่ใช่ฟ้าแลบ */
+      const rw=Math.max(70, this.R*0.46);
+      const gw=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rw);
+      gw.addColorStop(0,'rgba(255,251,238,'+(0.44*flash).toFixed(3)+')');
+      gw.addColorStop(.55,'rgba(255,251,240,'+(0.16*flash).toFixed(3)+')');
+      gw.addColorStop(1,'rgba(255,251,240,0)');
+      ctx.save();
+      ctx.fillStyle=gw; ctx.beginPath(); ctx.arc(p.x,p.y,rw,0,Math.PI*2); ctx.fill();
+      const r=Math.max(26, this.R*0.17);
       const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-      g.addColorStop(0,'rgba(255,252,242,'+(0.92*flash).toFixed(3)+')');
-      g.addColorStop(.30,'rgba(255,251,240,'+(0.52*flash).toFixed(3)+')');
-      g.addColorStop(.62,'rgba(255,250,238,'+(0.20*flash).toFixed(3)+')');
-      g.addColorStop(1,'rgba(255,250,238,0)');
-      ctx.save(); ctx.fillStyle=g;
-      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+      g.addColorStop(0,'rgba(255,254,248,'+Math.min(1,1.05*flash).toFixed(3)+')');
+      g.addColorStop(.26,'rgba(255,252,242,'+(0.66*flash).toFixed(3)+')');
+      g.addColorStop(.62,'rgba(255,251,240,'+(0.24*flash).toFixed(3)+')');
+      g.addColorStop(1,'rgba(255,251,240,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
       ctx.restore();
     }
   },
