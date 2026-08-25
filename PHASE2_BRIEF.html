@@ -1,0 +1,338 @@
+<meta charset="utf-8">
+<title>จดหมายเก็บไว้ที่ไหน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  /* พาเลตต์มาจากตัวแอปเอง ไม่ได้คิดใหม่ — พื้นกระดาษ #eee9de กับหมึก rgba(84,90,104) */
+  --paper:#eee9de;
+  --paper-2:#e5e2d8;
+  --cool:#dfe2e6;
+  --ink:#333842;
+  --ink-2:#63697a;
+  --ink-3:#8b8f9c;
+  --rule:#d2ccbd;
+  --rule-2:#e0dacb;
+  --seal:#a8574a;
+  --seal-bg:#f0e4e0;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#191c22;
+    --paper-2:#202430;
+    --cool:#171a20;
+    --ink:#e2ded3;
+    --ink-2:#a2a7b6;
+    --ink-3:#767c8c;
+    --rule:#343947;
+    --rule-2:#282c37;
+    --seal:#d08a7c;
+    --seal-bg:#2e2320;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#191c22;
+  --paper-2:#202430;
+  --cool:#171a20;
+  --ink:#e2ded3;
+  --ink-2:#a2a7b6;
+  --ink-3:#767c8c;
+  --rule:#343947;
+  --rule-2:#282c37;
+  --seal:#d08a7c;
+  --seal-bg:#2e2320;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:linear-gradient(168deg,var(--cool) 0%,var(--paper) 46%,var(--paper-2) 100%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.78;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{
+  max-width:35rem;
+  margin:0 auto;
+  padding:2.6rem 1.35rem 5rem;
+  display:flex;
+  flex-direction:column;
+  gap:2.4rem;
+}
+@media (min-width:60rem){
+  .wrap{max-width:44rem;padding-left:3rem;padding-right:3rem}
+}
+
+/* ---------- หัวเรื่อง ---------- */
+.masthead{display:flex;flex-direction:column;gap:.55rem}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);
+}
+h1{
+  font-family:'Noto Serif Thai',Georgia,serif;
+  font-weight:600;font-size:1.85rem;line-height:1.45;
+  margin:0;text-wrap:balance;letter-spacing:-.005em;
+}
+.standfirst{margin:.35rem 0 0;color:var(--ink-2);font-size:1rem}
+.meta{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.72rem;color:var(--ink-3);
+  padding-top:.8rem;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;
+}
+
+/* ---------- ริ้วลมคั่น ---------- */
+.gust{display:block;width:100%;height:26px;color:var(--ink-3);opacity:.5}
+
+/* ---------- สี่คำตอบ ---------- */
+.answers{display:flex;flex-direction:column;gap:2.1rem;margin:0;padding:0;list-style:none;counter-reset:a}
+.answers > li{counter-increment:a;position:relative;padding-top:.2rem}
+.answers > li::before{
+  content:counter(a);
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;font-weight:500;
+  color:var(--seal);
+  display:block;margin-bottom:.3rem;letter-spacing:.1em;
+}
+@media (min-width:60rem){
+  .answers > li{padding-left:3.2rem}
+  .answers > li::before{position:absolute;left:0;top:.55rem;margin:0}
+}
+h2{
+  font-family:'Noto Serif Thai',Georgia,serif;
+  font-weight:600;font-size:1.16rem;line-height:1.6;
+  margin:0 0 .55rem;text-wrap:balance;
+}
+h3{
+  font-family:'IBM Plex Sans Thai',sans-serif;
+  font-weight:600;font-size:.94rem;margin:1.5rem 0 .5rem;color:var(--ink);
+}
+p{margin:0 0 .9rem}
+p:last-child{margin-bottom:0}
+strong{font-weight:600}
+em{font-style:normal;color:var(--seal);font-weight:500}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:.94em}
+
+/* ---------- ตาราง ---------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1rem 0}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:20rem}
+caption{
+  text-align:left;font-size:.76rem;color:var(--ink-3);
+  font-family:'IBM Plex Mono',monospace;padding-bottom:.55rem;
+}
+th,td{
+  text-align:left;padding:.5rem .7rem .5rem 0;
+  border-bottom:1px solid var(--rule-2);vertical-align:top;
+}
+thead th{
+  border-bottom:1px solid var(--rule);
+  font-weight:500;font-size:.74rem;letter-spacing:.05em;
+  color:var(--ink-3);text-transform:uppercase;
+  font-family:'IBM Plex Mono',monospace;
+}
+td.n,th.n{
+  text-align:right;font-family:'IBM Plex Mono',monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:0;
+}
+tbody tr:last-child td{border-bottom:none}
+tr.hi td{color:var(--seal);font-weight:500}
+
+/* ---------- กล่องเน้น ---------- */
+.note{
+  border-left:2px solid var(--seal);
+  background:var(--seal-bg);
+  padding:.95rem 1.1rem;
+  margin:1.2rem 0;
+  font-size:.94rem;
+}
+.note p{margin-bottom:.6rem}
+.note :last-child{margin-bottom:0}
+.note .tag{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--seal);margin-bottom:.35rem;
+}
+
+/* ---------- สามชั้นของบันได ---------- */
+.rungs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1.15rem;counter-reset:r}
+.rungs li{
+  counter-increment:r;
+  border-left:1px solid var(--rule);
+  padding:.1rem 0 .1rem 1rem;
+}
+.rung-name{
+  display:block;font-weight:600;font-size:.98rem;
+}
+.rung-name::before{
+  content:counter(r) '.';
+  font-family:'IBM Plex Mono',monospace;font-weight:400;
+  color:var(--ink-3);margin-right:.45rem;font-size:.85em;
+}
+.rung-cost{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:.73rem;color:var(--ink-3);margin:.1rem 0 .35rem;
+}
+.rungs p{font-size:.92rem;margin:0}
+
+/* ---------- รายการตรวจ ---------- */
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.check li{
+  padding:.7rem 0 .7rem 1.6rem;
+  border-bottom:1px solid var(--rule-2);
+  position:relative;font-size:.94rem;
+}
+.check li:last-child{border-bottom:none}
+.check li::before{
+  content:'';position:absolute;left:0;top:1.28rem;
+  width:.62rem;height:.62rem;border:1px solid var(--ink-3);
+}
+
+/* ---------- ปิดท้าย ---------- */
+.close{
+  border-top:1px solid var(--rule);
+  padding-top:1.4rem;font-size:.88rem;color:var(--ink-2);
+}
+.close a{color:var(--seal)}
+a{color:var(--seal);text-underline-offset:.2em}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="eyebrow">drift · เอกสารตัดสิน</span>
+    <h1>จดหมายเก็บไว้ที่ไหน</h1>
+    <p class="standfirst">เฟส 2 แก้ปัญหาความยาวลิงก์ได้จริง แต่สิ่งที่มันเปลี่ยนไม่ใช่ความยาวลิงก์</p>
+    <div class="meta">
+      <span>25 ส.ค. 2569</span><span>ต่อจากข้อ 74–75</span><span>อ่าน 3 นาที</span>
+    </div>
+  </header>
+
+  <svg class="gust" viewBox="0 0 560 26" fill="none" aria-hidden="true" preserveAspectRatio="none">
+    <path d="M0 15C60 15 84 7 132 7c40 0 52 10 96 10 46 0 62-12 108-12 40 0 56 11 100 11 42 0 60-9 124-9" stroke="currentColor" stroke-width="1"/>
+    <path d="M28 21c52 0 72-6 116-6 38 0 50 8 92 8 44 0 60-10 104-10 38 0 54 9 96 9" stroke="currentColor" stroke-width=".7" opacity=".62"/>
+    <path d="M96 4c40 0 54 5 92 5 40 0 54-7 96-7" stroke="currentColor" stroke-width=".7" opacity=".4"/>
+  </svg>
+
+  <ol class="answers">
+
+    <li>
+      <h2>ปัญหาคืออะไร</h2>
+      <p>สนามลมกิน <span class="num">1,518</span> จาก <span class="num">2,102</span> ตัวอักษรของลิงก์ = <strong>72%</strong> ส่วนตัวจดหมายเองแทบไม่มีราคา</p>
+      <p>ผลคือแอปบอกผู้ใช้ว่าเขียนได้ <span class="num">1,100</span> ตัวอักษร แล้วเงียบ ๆ สร้างลิงก์ที่ยาวเกินกว่าที่แอปแชทหลายตัวจะไม่ตัด</p>
+
+      <div class="scroll">
+        <table>
+          <caption>กรุงเทพ → แวนคูเวอร์ · ตัวหนังสือไทยไม่ซ้ำ (กรณีแย่สุด)</caption>
+          <thead><tr><th>ความยาวจดหมาย</th><th class="n">ลิงก์ทั้งเส้น</th></tr></thead>
+          <tbody>
+            <tr><td>ไม่มีเนื้อความ</td><td class="n">2,002</td></tr>
+            <tr><td>300 ตัว</td><td class="n">2,660</td></tr>
+            <tr><td>600 ตัว</td><td class="n">3,194</td></tr>
+            <tr class="hi"><td>1,100 ตัว — เพดานของแอปเอง</td><td class="n">4,029</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>เพดานที่จริงคือราว <strong>ไทย 150–250 ตัว</strong> บนเส้นทางไกล ไม่ใช่ 1,100</p>
+      <p><strong>มี backend เมื่อไหร่ ปัญหานี้หายทั้งหมด</strong> ลิงก์กลายเป็น <span class="num">drift.app/l/x7k2m9</span> ยาวคงที่ราว 20 ตัวอักษร ไม่ว่าสนามลมจะใหญ่แค่ไหน</p>
+    </li>
+
+    <li>
+      <h2>เสียเท่าไหร่</h2>
+      <p>ค่า hosting ไม่ใช่ราคาจริง <strong>ราคาจริงคือ PDPA</strong></p>
+      <p>วันนี้ drift ไม่เก็บอะไรของใครเลย จดหมายอยู่ในเบราว์เซอร์ผู้ส่งกับในลิงก์เท่านั้น มีเซิร์ฟเวอร์เมื่อไหร่ = เราถือจดหมายส่วนตัวของคนอื่น พร้อมชื่อผู้ส่ง ผู้รับ และสถานที่ <strong>กลายเป็นผู้ควบคุมข้อมูลส่วนบุคคลทันที</strong></p>
+      <p>ภาระที่ตามมาทันที: แจ้งเหตุข้อมูลรั่วต่อ สคส. ภายใน <span class="num">72</span> ชั่วโมง (ยืดได้ถึง <span class="num">15</span> วันถ้ามีเหตุผลอันสมควร) และถ้าเสี่ยงสูงต้องแจ้งเจ้าของข้อมูลด้วย</p>
+
+      <div class="note">
+        <span class="tag">ทางออกที่เข้ากับ drift พอดี</span>
+        <p><strong>เข้ารหัสในเบราว์เซอร์ แล้วเก็บกุญแจไว้หลัง <span class="num">#</span></strong> — เซิร์ฟเวอร์เก็บแต่ข้อความที่อ่านไม่ออก</p>
+        <p>เราพิสูจน์ไปแล้วในโปรเจกต์นี้ว่า <em>ส่วนที่อยู่หลัง # ไม่เคยถูกส่งไปหาเซิร์ฟเวอร์</em> นั่นคือเหตุผลที่ payload ทั้งก้อนอยู่ตรงนั้นตั้งแต่แรก ลิงก์จึงเป็น <span class="num">drift.app/l/x7k2m9#กุญแจ</span> โดยเซิร์ฟเวอร์เห็นแค่ <span class="num">x7k2m9</span></p>
+        <p>กฎเปิดช่องไว้ว่า ถ้าเหตุนั้น <strong>ไม่มีความเสี่ยงต่อสิทธิและเสรีภาพ</strong> ก็ไม่ต้องแจ้ง — ข้อความที่ถอดไม่ได้น่าจะเข้าข่าย <strong>แต่ข้อนี้ต้องให้ทนายยืนยัน ไม่ใช่ผมประเมิน</strong> และมันคือคำถามเดียวที่ตัดสินว่าเฟส 2 หนักหรือเบา</p>
+      </div>
+    </li>
+
+    <li>
+      <h2>ได้อะไร เมื่อไหร่</h2>
+      <p>ไม่ใช่แค่ลิงก์สั้น — <strong>งบที่ปลดล็อกคือสิ่งที่ข้อ 74 บอกว่าทำไม่ได้</strong></p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>ได้อะไร</th><th>วันนี้ติดตรงไหน</th></tr></thead>
+          <tbody>
+            <tr><td>จดหมายยาวเต็มเพดาน</td><td>งบเหลือ 150–250 ตัว</td></tr>
+            <tr><td><strong>เมฆครึ้มที่ไม่มีฝน</strong></td><td>ไม่มีที่เก็บอีกชั้น</td></tr>
+            <tr><td>สนามลมละเอียดขึ้น</td><td>ทุกจุดคือตัวอักษร</td></tr>
+            <tr><td>หิมะ · หมอก · ฝนแข็งตัว</td><td><strong>ฟรีอยู่แล้ว</strong> ไม่ต้องรอ</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>สามชั้นตามบันไดของเราเอง</h3>
+      <ol class="rungs">
+        <li>
+          <span class="rung-name">อยู่กับ URL ต่อ</span>
+          <span class="rung-cost">ภาระ — ไม่มีเลย</span>
+          <p>จดหมายยาวไม่ได้บนเส้นทางไกล นอกนั้นไม่ติดอะไร</p>
+        </li>
+        <li>
+          <span class="rung-name">Apps Script + Sheets</span>
+          <span class="rung-cost">ภาระ — บัญชี Google ที่มีอยู่แล้ว</span>
+          <p>ขั้นถัดไปตามบันไดของเราเอง แต่เจอข้อติด: <strong>POST จากเบราว์เซอร์ชน CORS preflight</strong> เลี่ยงได้ด้วยการส่งเป็น <span class="num">text/plain</span> ซึ่งไม่ต้อง preflight — <strong>ต้องทดสอบจริงก่อนเชื่อ</strong></p>
+        </li>
+        <li>
+          <span class="rung-name">backend จริง</span>
+          <span class="rung-cost">ภาระ — ค่าเช่า + คนดูแล + PDPA เต็มรูป</span>
+          <p>กฎของเราเองบอกว่าเป็นทางเลือกสุดท้าย</p>
+        </li>
+      </ol>
+    </li>
+
+    <li>
+      <h2>ไม่ทำแล้วเกิดอะไร</h2>
+      <p>เส้นทางในประเทศไม่มีปัญหาเลย — เชียงใหม่ <span class="num">1,012</span> ตัวอักษร ยังเหลือที่เยอะ ปัญหาอยู่ที่เส้นทางไกลกับจดหมายยาวเท่านั้น</p>
+      <p>ถ้าไม่ทำอะไรเลย สิ่งที่แย่ที่สุดไม่ใช่ลิงก์ยาว แต่คือ <strong>แอปโกหกผู้ใช้เรื่องเพดาน</strong> ซึ่งแก้ได้โดยไม่ต้องรอเฟส 2 และไม่ต้องแตะรูปแบบข้อมูล</p>
+
+      <div class="note">
+        <span class="tag">ทำได้เลยไม่ว่าจะเลือกทางไหน</span>
+        <p>ตัวนับตอนนี้แสดง <span class="num">n / 1100</span> ซึ่ง <strong>ผิดทั้งสองทาง</strong> — เชียงใหม่มีที่เหลือมากกว่านั้น แวนคูเวอร์มีน้อยกว่ามาก</p>
+        <p>เปลี่ยนเป็นคำนวณความยาวลิงก์จริงของเส้นทางนั้นสด ๆ แล้วบอกที่เหลือตามจริง ไม่แตะ <span class="num">WF.VER</span> ไม่มีอายุการใช้งาน และถ้าเฟส 2 มาเมื่อไหร่ ตัวเลขก็แค่โตขึ้นเอง</p>
+      </div>
+    </li>
+
+  </ol>
+
+  <svg class="gust" viewBox="0 0 560 26" fill="none" aria-hidden="true" preserveAspectRatio="none">
+    <path d="M560 13C500 13 476 20 428 20c-40 0-52-9-96-9-46 0-62 11-108 11-40 0-56-10-100-10-42 0-60 8-124 8" stroke="currentColor" stroke-width="1"/>
+    <path d="M532 6c-52 0-72 5-116 5-38 0-50-7-92-7-44 0-60 9-104 9-38 0-54-8-96-8" stroke="currentColor" stroke-width=".7" opacity=".62"/>
+  </svg>
+
+  <section>
+    <h2>สิ่งที่ drift จะเสียไป ถ้าไม่ระวัง</h2>
+    <p>“ทุกอย่างที่ผู้รับต้องใช้อยู่ในลิงก์” ไม่ได้เป็นแค่ข้อจำกัดทางวิศวกรรม มันคือเหตุผลที่จดหมาย drift <strong>เรียกคืนไม่ได้ หมดอายุไม่ได้ ถูกถอดไม่ได้</strong> และไม่ขึ้นกับว่าใครยังจ่ายค่าเซิร์ฟเวอร์อยู่หรือเปล่า</p>
+    <p>ลิงก์ที่ใช้ได้ตลอดไป กับลิงก์ที่ใช้ได้เท่าที่เซิร์ฟเวอร์ยังอยู่ — เป็นของคนละชนิดกัน</p>
+    <p><strong>ทางที่รักษาไว้ได้:</strong> ให้ URL แบบเต็มยังเป็นรูปแบบหลักเหมือนเดิม แล้วลิงก์สั้นเป็นแค่ <em>ทางเลือกสำหรับจดหมายยาว</em> ไม่ใช่ตัวแทน — จดหมายจึงไม่ตายถ้าเซิร์ฟเวอร์ตาย</p>
+  </section>
+
+  <section>
+    <h2>ต้องมีคำตอบก่อนเริ่ม</h2>
+    <ul class="check">
+      <li>ทนายยืนยันไหมว่า ข้อความที่เราถอดไม่ได้ ทำให้ภาระ PDPA เบาลงจริง</li>
+      <li>บัญชี hosting อยู่ในชื่อใคร และถ้าเลิกทำ จดหมายที่ส่งไปแล้วจะเป็นอย่างไร</li>
+      <li>เก็บนานแค่ไหน — ตลอดไป หรือมีวันหมดอายุ</li>
+      <li>ผู้ใช้ขอลบจดหมายอย่างไร ในเมื่อเราอ่านไม่ออกว่าฉบับไหนเป็นของใคร</li>
+      <li>Apps Script รับ POST จากเบราว์เซอร์ได้จริงไหม — ทดสอบก่อน อย่าเชื่อเอกสาร</li>
+    </ul>
+  </section>
+
+  <footer class="close">
+    <p><strong>ข้อเสนอของผม:</strong> แก้ตัวนับให้บอกความจริงก่อน เพราะมันถูกไม่ว่าเฟส 2 จะมาหรือไม่มา แล้วค่อยตัดสินเรื่องเซิร์ฟเวอร์เมื่อมีคำตอบเรื่องทนาย — ระหว่างนั้นเส้นทางในประเทศซึ่งเป็นการใช้งานจริงส่วนใหญ่ ไม่ได้ติดอะไรเลย</p>
+    <p style="margin-top:.9rem;color:var(--ink-3);font-size:.82rem">ตัวเลขทั้งหมดวัดจากลิงก์จริงในเครื่อง ไม่ใช่ประมาณ · ข้อกำหนดการแจ้งเหตุอ้างจากคำชี้แจงของ สคส. ที่เผยแพร่ต่อสาธารณะ ควรตรวจกับแหล่งทางการอีกครั้งก่อนใช้ตัดสินใจจริง</p>
+  </footer>
+
+</div>
