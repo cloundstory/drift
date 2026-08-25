@@ -180,9 +180,15 @@ function drawFog(ctx,list){
   /* ⚠️ ต้องดูดสีจาก *จอที่วาดไปแล้ว* ไม่ใช่จาก G._cv
      เพราะ _cv คือผืนโลกก่อนที่หมอกของแอปจะลบความทึบออก มันเข้มกว่าที่ตาเห็นมาก
      ดูดจากตรงนั้นแล้วเอามาทา = ได้ก้อนดำ ซึ่งตรงข้ามกับที่หมอกควรทำ */
-  const dpr=Math.min(devicePixelRatio||1,2);
-  const sc=ctx.canvas.getContext('2d',{willReadFrequently:true});
-  const key=G._key||'';
+  /* ⚠️ ห้ามอ่านพิกเซลกลับจาก canvas ในลูปวาด — วัดจริงแล้ว 58 จุดกิน 25.4ms
+     (วาดอย่างเดียว 3ms · วาดแล้วอ่าน 28.4ms) เพราะการอ่านบังคับให้ GPU
+     ล้างงานที่ค้างอยู่ให้เสร็จก่อน CPU จึงต้องรอ
+
+     ตอนแรกผมวัดได้ 0.2ms แล้วสรุปว่าไม่แพง — **นั่นคือการวัดที่ผิด**
+     เพราะวัดตอนไม่มีงานวาดค้างอยู่ ต้นทุนจริงโผล่เฉพาะตอนมีงานค้าง
+
+     สุ่มโทนผิวโลกด้านสว่างหลายจุดแล้วพบว่าอยู่ราว 200-218 ทุกจุด
+     ใช้ค่าคงที่แล้วหรี่ตามความลึกจึงพอ ไม่ต้องอ่านเลยสักครั้ง */
   ctx.save();
   for(const b of list){
     const r0=G.rotate(b.a); if(r0.z<0.06) continue;
@@ -191,25 +197,11 @@ function drawFog(ctx,list){
     if(rad<2) continue;
     if(p.x<-rad||p.x>G.W+rad||p.y<-rad||p.y>G.H+rad) continue;
     const br=0.55+0.45*Math.sin(T*0.42+b.ph);
-    const a=b.w*br*(0.35+0.65*Math.sqrt(r0.z))*0.62;
+    const dep=0.35+0.65*Math.sqrt(r0.z);
+    const a=b.w*br*dep*0.62;
     if(a<=.03) continue;
-    /* ⚠️ getImageData คืนสี *ก่อนผสมกับพื้นหลังหน้าเว็บ*
-       พิกเซลที่ alpha ต่ำจึงคืนสีหมึกเข้ม ไม่ใช่สีที่ตาเห็นจริง ต้องผสมกับสีกระดาษเองก่อน
-
-       และอ่านครั้งเดียวต่อการขยับกล้อง ไม่ใช่ทุกเฟรม —
-       การอ่านพิกเซลกลับจาก canvas บังคับให้ GPU กับ CPU รอกัน
-       บนเครื่องจริงมันแพงกว่าที่วัดได้ในเครื่องทดสอบมาก */
-    if(b._k!==key){
-      b._k=key; b._tone='rgba(226,224,216,';
-      try{
-        const px=sc.getImageData(Math.round(p.x*dpr),Math.round(p.y*dpr),1,1).data;
-        const al=px[3]/255;
-        b._tone='rgba('+Math.round(px[0]*al+PAPER[0]*(1-al))+','
-                       +Math.round(px[1]*al+PAPER[1]*(1-al))+','
-                       +Math.round(px[2]*al+PAPER[2]*(1-al))+',';
-      }catch(e){}
-    }
-    const tone=b._tone;
+    const k=0.80+0.20*dep;
+    const tone='rgba('+Math.round(212*k)+','+Math.round(208*k)+','+Math.round(200*k)+',';
     const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
     g.addColorStop(0,tone+a.toFixed(3)+')');
     g.addColorStop(0.55,tone+(a*0.5).toFixed(3)+')');
