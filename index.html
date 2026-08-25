@@ -551,22 +551,55 @@ function wcSeries(t,d,lat,lng){
   return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre,
                   wind_gusts_10m:gst}};
 }
-/* ดึงพยากรณ์ทุกจุดบนเส้นทางในคำขอเดียว (Open-Meteo รับหลายพิกัดได้)
-   ลองแคชภูมิภาคก่อนเสมอ ไม่ได้ค่อยยิงตรง */
+/* ดึงพยากรณ์ให้ทุกจุด — แต่ *แยกแหล่ง* ตามชนิดของสิ่งที่จะเอาไปใช้ (ข้อ 64)
+
+   สนามลม 225 จุด → แคชภูมิภาคพอ เพราะ drift อ่านทิศและความเร็วลมต่อเนื่อง
+   ซึ่งเป็นสนามกว้าง เกลี่ยข้ามกริด 1° แล้วยังถูกอยู่
+
+   จุดบนเส้นทาง 13 จุด → **ต้องยิงสด** เพราะเป็นตัวตัดสินอากาศ พายุ ฝน และเวลา
+   ลมกระโชกเป็นปรากฏการณ์เฉพาะจุดจากเมฆฝนฟ้าคะนอง กว้างไม่กี่สิบกิโลเมตรและกินเวลาสั้น
+   แคชกริด 1° (~111 กม.) ทุก 3 ชม. แล้วเกลี่ยค่าระหว่างจุด = ยอดหายเกลี้ยง
+
+   วัดจริงเส้นฉะเชิงเทรา→เลย 25 ส.ค.: ของจริงกระโชกสูงสุด 72 กม./ชม. มีฝนฟ้าคะนอง 11 จาก 13 จุด
+   แต่แคชเห็นแค่ 46 (64%) แอปจึงรายงานว่า "ฟ้าเปิดตลอดทาง" ทั้งที่มีพายุอยู่จริง
+   กอล์ฟจับได้เพราะเทียบกับความจริง — บั๊กนี้เกิดตอนย้ายเกณฑ์พายุไปใช้กระโชก (ข้อ 62)
+   โดยไม่ได้ตรวจว่าแคชรับไหวไหม
+
+   13 พิกัดต่อการส่งหนึ่งครั้งคือราคาที่ถูกมาก เทียบกับการรายงานอากาศผิด */
 async function fetchWx(pts){
+  const nRoute=CFG.SEGS+1;
+  const cut=Math.max(0, pts.length-nRoute);
+  const field=pts.slice(0,cut), route=pts.slice(cut);
+  let fieldWx=null, src='';
   try{
     const man=await wcManifest();
-    if(man){
-      const t=wcPick(man,pts);
+    if(man && field.length){
+      const t=wcPick(man,field);
       if(t){
         const d=await wcLoad(man,t);
-        WX_SRC='cache:'+t.id;
-        return pts.map(p=>wcSeries(t,d,p.lat,p.lng));
+        fieldWx=field.map(p=>wcSeries(t,d,p.lat,p.lng));
+        src='cache:'+t.id;
       }
     }
-  }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ — ถอยไปยิงตรง */ }
-  WX_SRC='api';
-  return fetchWxLive(pts);
+  }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ */ }
+  try{
+    const routeWx=await fetchWxLive(route);
+    if(!fieldWx){
+      /* ไม่มีแคช — ยิงสดทั้งหมด ยังถูกต้องเสมอ แค่ใช้โควตามากกว่า */
+      const all=await fetchWxLive(pts);
+      WX_SRC='api'; return all;
+    }
+    WX_SRC=src+'+api'; return fieldWx.concat(routeWx);
+  }catch(e){
+    /* ยิงสดไม่ได้ (ออฟไลน์) — ถอยไปใช้แคชทั้งหมด
+       ต้องบอกให้รู้ว่าอากาศอาจอ่อนกว่าความจริง ไม่ใช่เงียบ ๆ แล้วปล่อยให้เชื่อ */
+    if(fieldWx){
+      const man=await wcManifest(); const t=wcPick(man,pts);
+      if(t){ const d=await wcLoad(man,t);
+        WX_SRC='cache-only'; return pts.map(p=>wcSeries(t,d,p.lat,p.lng)); }
+    }
+    throw e;
+  }
 }
 let WX_SRC='';
 async function fetchWxLive(pts){
