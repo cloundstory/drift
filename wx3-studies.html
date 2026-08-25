@@ -119,8 +119,9 @@ tbody tr:last-child td{border-bottom:none}
       <span class="legend">ของใหม่</span>
       <h2>หมอกจริง</h2>
       <div class="wmo">WMO 45, 48 · ยังไม่เคยวาด</div>
-      <p><strong>หมอกไม่ได้เพิ่มรอย มันลบรอย</strong> — สิ่งที่อยู่ข้างใต้จางหายไป เส้นชายฝั่งและเส้นกริดที่เคยอ่านออกกลายเป็นเงาราง ๆ</p>
-      <p>นี่เป็นที่เดียวที่ <em>ขอบฟุ้งเป็นสิ่งที่ถูกต้อง</em> — เพราะหมอกไม่มีขอบจริง ๆ ต่างจากเมฆที่เราต้องดิ้นรนสร้างขอบให้มัน · ⚠️ ต้องแยกจากม่านหมอกของแอปที่ทำหน้าที่ปิดอนาคต (ข้อ 2)</p>
+      <p><strong>หมอกคือยางลบ</strong> — เมฆคือดินสอที่ถูกวางลง หมอกคือดินสอที่ถูก <em>ยกออก</em> เครื่องมือตระกูลเดียวกัน คนละทิศทาง และเป็นช่องทางที่ยังไม่มีใครใช้</p>
+      <p>ผลจึงไม่ใช่ฟิล์มขาวทับของ แต่เป็น <strong>ชายฝั่งที่หายไปเป็นหย่อม</strong> — บางท่อนยังเข้มเต็ม บางท่อนละลายกลับไปเป็นกระดาษเปล่า และหย่อมที่หายก็เลื่อนไปเรื่อย ๆ</p>
+      <p>นี่เป็นที่เดียวที่ <em>ขอบฟุ้งเป็นสิ่งที่ถูกต้อง</em> เพราะหมอกไม่มีขอบจริง ๆ ต่างจากเมฆที่เราต้องดิ้นรนสร้างขอบให้ · ⚠️ ต้องแยกจากม่านหมอกของแอปที่ทำหน้าที่ปิดอนาคต (ข้อ 2)</p>
     </div>
 
     <div class="card">
@@ -142,7 +143,7 @@ tbody tr:last-child td{border-bottom:none}
         <tbody>
           <tr><td><strong>ฝน</strong></td><td>ขีดเข้มลงบนกระดาษ</td><td>ตรง ตามลม</td><td>ปานกลาง</td></tr>
           <tr><td><strong>หิมะ</strong></td><td><em>จุดสว่าง</em> ยกกระดาษขึ้น</td><td><em>ส่ายไปมา</em></td><td><em>ช้ามาก</em></td></tr>
-          <tr><td><strong>หมอก</strong></td><td><em>ไม่มีรอย — ลบของเดิม</em></td><td>ไม่เคลื่อน</td><td>หายใจช้า ๆ</td></tr>
+          <tr><td><strong>หมอก</strong></td><td><em>ยางลบ — ยกหมึกออก</em></td><td>หย่อมที่หายเลื่อนช้ามาก</td><td>หายใจ</td></tr>
           <tr><td><strong>น้ำแข็ง</strong></td><td>ขีด + <em>ประกาย + รอยแตกที่ค้างไว้</em></td><td>ตรงสนิท</td><td><em>เร็ว</em></td></tr>
         </tbody>
       </table>
@@ -230,7 +231,7 @@ function land(g,W,H,a){
 const TICKS=[];
 function make(cv,mode){
   const g=cv.getContext('2d');
-  let W=0,H=0,base=null,parts=[],dpr=1;
+  let W=0,H=0,base=null,parts=[],dpr=1,ink=null,scratch=null;
   function build(){
     dpr=Math.min(devicePixelRatio||1,2);
     W=cv.clientWidth; H=cv.clientHeight;
@@ -246,7 +247,22 @@ function make(cv,mode){
     const pg=b.createLinearGradient(0,0,W*0.35,H);
     pg.addColorStop(0,'#dfe2e6'); pg.addColorStop(1,'#eee9de');
     b.fillStyle=pg; b.fillRect(0,0,W,H);
-    if(mode==='fog') land(b,W,H,0.55);
+    if(mode==='fog'){
+      /* ---------- หมอกคือ *ยางลบ* ไม่ใช่สีขาวที่ทาทับ ----------
+         เมฆคือดินสอที่ถูกวางลง · หมอกคือดินสอที่ถูก *ยกออก*
+         เครื่องมือตระกูลเดียวกัน คนละทิศทาง — และเป็นช่องทางที่ยังไม่มีใครใช้
+
+         จึงต้องเก็บหมึกไว้คนละผืนกับกระดาษ ถึงจะลบหมึกได้โดยที่กระดาษยังอยู่
+         ถ้าลบบนผืนเดียวกัน กระดาษจะโหว่เป็นรูทะลุไปเห็นพื้นหน้าเว็บ */
+      ink=document.createElement('canvas');
+      ink.width=cv.width; ink.height=cv.height;
+      const k=ink.getContext('2d'); k.setTransform(dpr,0,0,dpr,0,0);
+      /* ⚠️ ชั้นหมึกของหมอกมีแค่ *แผ่นดิน* — ห้ามมีลายเส้นแรเงา
+         หมอกไม่ใช่สิ่งที่ถูกวาด มันคือสิ่งที่ทำให้ของอื่นถูกวาดไม่ครบ */
+      land(k,W,H,0.68);
+      scratch=document.createElement('canvas');
+      scratch.width=cv.width; scratch.height=cv.height;
+    }
     else cloud(b,W,H, mode==='snow'?31:mode==='ice'?57:3, mode!=='snow', mode);
     parts=[];
     const NP = mode==='snow'?210 : mode==='ice'?70 : mode==='rain'?80 : 0;
@@ -267,16 +283,42 @@ function make(cv,mode){
     g.drawImage(base,0,0,W,H);
 
     if(mode==='fog'){
-      /* หมอกไม่เพิ่มรอย — มันลบของเดิม · หายใจช้า ๆ */
-      const br=0.62+0.16*Math.sin(T*0.55);
-      for(let i=0;i<7;i++){
-        const cx=W*(0.12+0.13*i)+Math.sin(T*0.22+i)*W*0.05;
-        const cy=H*(0.34+0.22*Math.sin(i*1.7))+Math.cos(T*0.19+i*0.8)*H*0.05;
-        const r=Math.min(W,H)*(0.36+0.12*hs(i*9.1));
+      const k=scratch.getContext('2d');
+      k.setTransform(1,0,0,1,0,0);
+      k.clearRect(0,0,scratch.width,scratch.height);
+      k.drawImage(ink,0,0);
+      k.setTransform(dpr,0,0,dpr,0,0);
+      /* ยกหมึกออก — ไม่ใช่ทาสีขาวทับ ผลคือกระดาษเปล่าจริง ไม่ใช่ฟิล์มขาว */
+      k.globalCompositeOperation='destination-out';
+      const br=0.72+0.28*Math.sin(T*0.5);
+      /* ⚠️ ยางลบของหมอกต้อง *ไม่มีลาย* — ถ้าลบเป็นเส้น รอยลบจะมีลายเส้นไปด้วย
+         ซึ่งพาเรากลับไปหาภาษาของเมฆอีก · หมอกลบแบบ *เลอะ* ขอบไม่มีที่สิ้นสุด
+         ใช้หัวแปรงกลมนุ่ม วางตามสนาม noise ที่เลื่อนช้ามากและหายใจ */
+      const GX=Math.round(W/9), GY=Math.round(H/9);
+      for(let i=0;i<GX;i++) for(let j=0;j<GY;j++){
+        const x=(i+0.5)/GX*W, y=(j+0.5)/GY*H;
+        const m=fbm(x/W+T*0.010, y/H-T*0.007, 61);
+        const d=(m-0.30)*2.6*br;
+        if(d<=0.03) continue;
+        const r=Math.min(W,H)*0.13;
+        const rg=k.createRadialGradient(x,y,0,x,y,r);
+        const a=Math.min(0.95,d*0.62);
+        rg.addColorStop(0,'rgba(0,0,0,'+a.toFixed(3)+')');
+        rg.addColorStop(0.55,'rgba(0,0,0,'+(a*0.45).toFixed(3)+')');
+        rg.addColorStop(1,'rgba(0,0,0,0)');
+        k.fillStyle=rg; k.beginPath(); k.arc(x,y,r,0,6.2832); k.fill();
+      }
+      k.globalCompositeOperation='source-over';
+      g.drawImage(scratch,0,0,W,H);
+      /* ฟิล์มบาง ๆ ที่เหลือ — หมอกจริงกระเจิงแสงอยู่บ้าง แต่ต้องเบามาก
+         ถ้าหนากว่านี้มันจะกลับไปเป็นคราบขาวทับของเหมือนเดิม */
+      for(let i=0;i<5;i++){
+        const cx=W*(0.16+0.18*i)+Math.sin(T*0.2+i)*W*0.04;
+        const cy=H*(0.36+0.2*Math.sin(i*1.7))+Math.cos(T*0.17+i*0.8)*H*0.04;
+        const r=Math.min(W,H)*(0.34+0.12*hs(i*9.1));
         const rg=g.createRadialGradient(cx,cy,0,cx,cy,r);
-        rg.addColorStop(0,'rgba(238,235,226,'+(0.26*br).toFixed(3)+')');
-        rg.addColorStop(0.6,'rgba(238,235,226,'+(0.13*br).toFixed(3)+')');
-        rg.addColorStop(1,'rgba(238,235,226,0)');
+        rg.addColorStop(0,'rgba(246,243,236,'+(0.20*br).toFixed(3)+')');
+        rg.addColorStop(1,'rgba(244,241,233,0)');
         g.fillStyle=rg; g.beginPath(); g.arc(cx,cy,r,0,6.2832); g.fill();
       }
       if(!forced) requestAnimationFrame(frame);
