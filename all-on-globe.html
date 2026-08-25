@@ -4294,7 +4294,11 @@ const at=(tr,u)=>{
 };
 const ss=(e,a,b)=>{ const x=Math.max(0,Math.min(1,(e-a)/(b-a))); return x*x*(3-2*x); };
 
+/* ⚠️ ต้องจัดกลุ่มตามความเข้มก่อนวาด แบบเดียวกับ streams และ hatchClouds
+   วาดทีละเม็ด = beginPath/fill หลายร้อยครั้งต่อเฟรม ซึ่งเป็นต้นเหตุของอาการกระตุก
+   จัดกลุ่มแล้วเหลือ fill ไม่กี่ครั้ง ภาพเหมือนเดิมทุกประการ */
 function drawSnow(ctx,list){
+  const B=new Map();
   for(const t of list){
     const u=(T*t.sp+t.ph)%1;
     const life=ss(u,0,0.3)*(1-ss(u,0.55,1));
@@ -4305,10 +4309,17 @@ function drawSnow(ctx,list){
     const depth=.45+.55*Math.sqrt(r0.z);
     const a=life*depth*t.w*0.95;
     if(a<=.02) continue;
-    const rad=0.85+0.85*t.w;
-    ctx.fillStyle='rgba(255,254,250,'+a.toFixed(3)+')';
-    ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.2832); ctx.fill();
+    const ai=Math.min(23,Math.round(a*24));
+    let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
+    arr.push(p.x,p.y,0.85+0.85*t.w);
   }
+  B.forEach((arr,ai)=>{
+    ctx.fillStyle='rgba(255,254,250,'+(ai/24).toFixed(3)+')';
+    ctx.beginPath();
+    for(let i=0;i<arr.length;i+=3){ ctx.moveTo(arr[i]+arr[i+2],arr[i+1]);
+      ctx.arc(arr[i],arr[i+1],arr[i+2],0,6.2832); }
+    ctx.fill();
+  });
 }
 
 /* หมอก: ยกหมึกออกจริง ๆ แล้วทาโทนของโลกตรงนั้นกลับลงไป
@@ -4319,6 +4330,7 @@ function drawFog(ctx,list){
      ดูดจากตรงนั้นแล้วเอามาทา = ได้ก้อนดำ ซึ่งตรงข้ามกับที่หมอกควรทำ */
   const dpr=Math.min(devicePixelRatio||1,2);
   const sc=ctx.canvas.getContext('2d',{willReadFrequently:true});
+  const key=G._key||'';
   ctx.save();
   for(const b of list){
     const r0=G.rotate(b.a); if(r0.z<0.06) continue;
@@ -4330,17 +4342,22 @@ function drawFog(ctx,list){
     const a=b.w*br*(0.35+0.65*Math.sqrt(r0.z))*0.62;
     if(a<=.03) continue;
     /* ⚠️ getImageData คืนสี *ก่อนผสมกับพื้นหลังหน้าเว็บ*
-       พิกเซลที่ alpha ต่ำจึงคืนสีหมึกเข้ม ไม่ใช่สีที่ตาเห็นจริง
-       เอามาทาตรง ๆ = ได้ก้อนดำ ต้องผสมกับสีกระดาษเองก่อน */
-    let tone='rgba(226,224,216,';
-    try{
-      const px=sc.getImageData(Math.round(p.x*dpr),Math.round(p.y*dpr),1,1).data;
-      const al=px[3]/255;
-      const r=Math.round(px[0]*al+PAPER[0]*(1-al));
-      const gg=Math.round(px[1]*al+PAPER[1]*(1-al));
-      const bb=Math.round(px[2]*al+PAPER[2]*(1-al));
-      tone='rgba('+r+','+gg+','+bb+',';
-    }catch(e){}
+       พิกเซลที่ alpha ต่ำจึงคืนสีหมึกเข้ม ไม่ใช่สีที่ตาเห็นจริง ต้องผสมกับสีกระดาษเองก่อน
+
+       และอ่านครั้งเดียวต่อการขยับกล้อง ไม่ใช่ทุกเฟรม —
+       การอ่านพิกเซลกลับจาก canvas บังคับให้ GPU กับ CPU รอกัน
+       บนเครื่องจริงมันแพงกว่าที่วัดได้ในเครื่องทดสอบมาก */
+    if(b._k!==key){
+      b._k=key; b._tone='rgba(226,224,216,';
+      try{
+        const px=sc.getImageData(Math.round(p.x*dpr),Math.round(p.y*dpr),1,1).data;
+        const al=px[3]/255;
+        b._tone='rgba('+Math.round(px[0]*al+PAPER[0]*(1-al))+','
+                       +Math.round(px[1]*al+PAPER[1]*(1-al))+','
+                       +Math.round(px[2]*al+PAPER[2]*(1-al))+',';
+      }catch(e){}
+    }
+    const tone=b._tone;
     const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
     g.addColorStop(0,tone+a.toFixed(3)+')');
     g.addColorStop(0.55,tone+(a*0.5).toFixed(3)+')');
@@ -4374,29 +4391,47 @@ function drawIce(ctx,list,cracks){
     for(let i=0;i<arr.length;i+=5){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
     ctx.stroke();
   });
-  /* ประกายเย็นที่หัวหยด */
+  /* ประกายเย็นที่หัวหยด — จัดกลุ่มเช่นกัน */
+  const Gl=new Map();
   B.forEach((arr)=>{
     for(let i=0;i<arr.length;i+=5){
       const gl=arr[i+4];
       if(gl<0.25) continue;
-      ctx.fillStyle='rgba(255,255,252,'+(gl*0.8).toFixed(3)+')';
-      ctx.beginPath(); ctx.arc(arr[i],arr[i+1],1.15,0,6.2832); ctx.fill();
+      const ai=Math.min(19,Math.round(gl*0.8*24));
+      let a2=Gl.get(ai); if(!a2) Gl.set(ai,a2=[]);
+      a2.push(arr[i],arr[i+1]);
     }
+  });
+  Gl.forEach((arr,ai)=>{
+    ctx.fillStyle='rgba(255,255,252,'+(ai/24).toFixed(3)+')';
+    ctx.beginPath();
+    for(let i=0;i<arr.length;i+=2){ ctx.moveTo(arr[i]+1.15,arr[i+1]);
+      ctx.arc(arr[i],arr[i+1],1.15,0,6.2832); }
+    ctx.fill();
   });
   /* รอยแตกที่ค้างอยู่ — น้ำแข็งคือสิ่งที่ไม่ไหลผ่าน */
   ctx.lineWidth=0.85;
+  const C=new Map();
   for(const c of cracks){
     const r0=G.rotate(c.a); if(r0.z<0.05) continue;
     const p=G.project(r0);
     const a=0.34*(0.42+0.58*Math.sin(T*0.5+c.ph))*(0.35+0.65*Math.sqrt(r0.z));
     if(a<=.02) continue;
     const s=(2.0+2.4*c.s)*Math.min(1.6,G.R/288);
-    ctx.strokeStyle='rgba(46,54,72,'+a.toFixed(3)+')';
-    ctx.beginPath();
-    ctx.moveTo(p.x-s,p.y-s*0.6); ctx.lineTo(p.x+s,p.y+s*0.6);
-    ctx.moveTo(p.x-s*0.7,p.y+s*0.7); ctx.lineTo(p.x+s*0.7,p.y-s*0.7);
-    ctx.stroke();
+    const ai=Math.min(15,Math.round(a*40));
+    let arr=C.get(ai); if(!arr) C.set(ai,arr=[]);
+    arr.push(p.x,p.y,s);
   }
+  C.forEach((arr,ai)=>{
+    ctx.strokeStyle='rgba(46,54,72,'+(ai/40).toFixed(3)+')';
+    ctx.beginPath();
+    for(let i=0;i<arr.length;i+=3){
+      const x=arr[i],y=arr[i+1],s=arr[i+2];
+      ctx.moveTo(x-s,y-s*0.6); ctx.lineTo(x+s,y+s*0.6);
+      ctx.moveTo(x-s*0.7,y+s*0.7); ctx.lineTo(x+s*0.7,y-s*0.7);
+    }
+    ctx.stroke();
+  });
   ctx.restore();
 }
 
