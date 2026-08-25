@@ -354,6 +354,24 @@ function slerpV(a,b,t){
   return {x:pa.x*s0+pb.x*s1, y:pa.y*s0+pb.y*s1, z:pa.z*s0+pb.z*s1};
 }
 function slerpLL(a,b,t){ return fromXYZ(slerpV(a,b,t)); }
+/* ---------- ปัดพิกัดให้หยาบ (ข้อ 76) ----------
+   กอล์ฟ 25 ส.ค.: "ไม่อยากให้ใช้ตำแหน่งที่ระบุชัดขนาดนั้น แค่รู้ว่าอยู่ประมาณ อำเภอ เมือง ก็พอ
+   เพราะมันสุ่มเสี่ยงในอนาคต"
+
+   ปัดที่ทศนิยม 1 ตำแหน่ง = ตารางกว้าง 11.12 กม. ตามละติจูด และ 10.80 กม. ตามลองจิจูดที่ไทย
+   (วัดจริงด้วย gcDist) ซึ่งเป็นสเกลของ *อำเภอ* ไม่ใช่ของบ้าน
+
+   ทำไมไม่กระทบภาพหรือเวลา: ช่องตารางลมที่เล็กที่สุดกว้าง 107 กม. (สนามครึ่งกว้าง 750 กม. หาร 14 ช่วง)
+   ความคลาดเคลื่อนจึงไม่ถึงหนึ่งในสิบของช่องเดียว และเส้นทางสั้นสุดที่แอปเจอจริงยังยาวหลายร้อยกิโลเมตร
+
+   ⚠️ ต้องปัด *ตรงประตูทางเข้า* ทุกบาน ไม่ใช่ปัดตอนแพ็กลิงก์
+   ไม่งั้นค่าละเอียดจะไปนอนอยู่ใน localStorage และถูกส่งออกไปหา Open-Meteo ก่อนแล้ว */
+const LL_STEP=1;
+const coarseLat=v=>+(+v).toFixed(LL_STEP);
+function coarseLL(o){
+  if(!o||o.lat==null||o.lng==null) return o;
+  return Object.assign({},o,{lat:coarseLat(o.lat), lng:coarseLat(o.lng)});
+}
 function gcDist(a,b){
   const dLat=(b.lat-a.lat)*RAD, dLng=(b.lng-a.lng)*RAD;
   const s=Math.sin(dLat/2)**2 + Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dLng/2)**2;
@@ -393,7 +411,17 @@ const store = {
     if(i>=0) a[i]=rec; else a.push(rec);
     this.saveAll(a); return rec;
   },
-  me(){ try{ return JSON.parse(LS.get(K.ME)||'null'); }catch(e){ return null; } },
+  me(){
+    try{
+      const m=JSON.parse(LS.get(K.ME)||'null');
+      /* ของเก่าที่เคยเก็บพิกัดละเอียดไว้ ต้องถูกลบทิ้งจริง ไม่ใช่แค่ไม่เอาไปใช้ */
+      if(m&&m.lat!=null){
+        const c=coarseLL(m);
+        if(c.lat!==m.lat||c.lng!==m.lng){ LS.set(K.ME, JSON.stringify(c)); return c; }
+      }
+      return m;
+    }catch(e){ return null; }
+  },
   setMe(m){ LS.set(K.ME, JSON.stringify(m)); }
 };
 
@@ -3078,7 +3106,7 @@ function wireSearch(inputSel,hitsSel,onPick){
           const b=document.createElement('button');
           b.className='hit'; b.type='button';
           b.innerHTML=esc(r.name)+' <small>'+esc(r.place)+'</small>';
-          b.onclick=()=>{ inp.value=r.place; hits.innerHTML=''; onPick(r); };
+          b.onclick=()=>{ inp.value=r.place; hits.innerHTML=''; onPick(coarseLL(r)); };
           hits.appendChild(b);
         });
         if(!rs.length) hits.innerHTML='<div class="hit"><small>ไม่พบสถานที่นี้</small></div>';
@@ -3225,8 +3253,8 @@ async function confirmSend(){
   const sim=p.sim;
   const rec={
     id:p.id,
-    f:{n:p.from, la:+p.me.lat.toFixed(4), lo:+p.me.lng.toFixed(4), p:p.me.place},
-    t:{n:p.to,   la:+p.B.lat.toFixed(4),  lo:+p.B.lng.toFixed(4),  p:p.place},
+    f:{n:p.from, la:coarseLat(p.me.lat), lo:coarseLat(p.me.lng), p:p.me.place},
+    t:{n:p.to,   la:coarseLat(p.B.lat),  lo:coarseLat(p.B.lng),  p:p.place},
     s:Date.now(), th:sim.total, ct:p.ct, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
   };
   store.put(Object.assign({dir:'out'},rec));
@@ -3476,7 +3504,8 @@ $('#btnHere').onclick=()=>{
   if(!navigator.geolocation) return toast('เครื่องนี้ไม่รองรับ');
   toast('กำลังหาตำแหน่ง…');
   navigator.geolocation.getCurrentPosition(async pos=>{
-    const {latitude:lat,longitude:lng}=pos.coords;
+    /* ปัดทันทีที่รับค่า — ค่าเต็มความละเอียดต้องไม่ถูกเก็บ ไม่ถูกส่งออก แม้แต่ครั้งเดียว */
+    const lat=coarseLat(pos.coords.latitude), lng=coarseLat(pos.coords.longitude);
     const name=await reverseName(lat,lng);
     meDraft={lat,lng,place:name};
     $('#vPlace').value=name; saveMe(); toast('ตั้งต้นทางเป็น '+name);
