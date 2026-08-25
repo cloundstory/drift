@@ -1070,20 +1070,32 @@ function rainMarks(L,tf){
      WMO 95-99 แปลว่ามีเมฆก่อตัวสูง ซึ่ง *หนากว่า* ที่สนามฝนหยาบ ๆ บอกได้อยู่แล้ว
      จึงเพิ่มมวลเมฆเฉพาะรอบจุดฟ้าคะนอง — เป็นความจริงทางอุตุฯ ไม่ใช่การตกแต่ง
      ผลคือฟ้าแลบมีก้อนเมฆให้อยู่เสมอ และก้อนนั้นเป็นก้อนที่เข้มที่สุดในภาพ */
-  const thunder=[];
-  if(L.lg) for(let i=0;i<L.lg.length;i++) if((L.lg[i][8]||0)>=95){
+  /* ---------- จุดอากาศหนักบนเส้นทาง (ข้อ 85, 88) ----------
+     `weather_code` มีแค่ 13 จุดบนเส้นทาง แต่มันบอกสิ่งที่สนามฝนหยาบ ๆ บอกไม่ได้
+     WMO 95-99 = เมฆก่อตัวสูง · 71-77 = หิมะ · 56/57/66/67 = ฝนแข็งตัว
+     ทั้งสามอย่างตกลงมาจากเมฆทั้งนั้น ถ้าไม่เพิ่มมวลให้ มันจะร่วงออกมาจากฟ้าโล่ง */
+  const WX=[];
+  if(L.lg) for(let i=0;i<L.lg.length;i++){
+    const wc=L.lg[i][8]||0;
+    let kind=0, mass=0;
+    if(wc>=95)                          { kind=1; mass=2.4; }   /* ฟ้าคะนอง */
+    else if(wc>=71&&wc<=77)             { kind=2; mass=1.5; }   /* หิมะ — เมฆเรียบ ไม่มีแกนหนัก */
+    else if(wc===56||wc===57||wc===66||wc===67) { kind=3; mass=1.9; }  /* ฝนแข็งตัว */
+    else if(wc===45||wc===48)           { kind=4; mass=0; }     /* หมอก — ไม่มีมวลเมฆ */
+    if(!kind) continue;
     const q=fromXYZ(posVAt(L,(i+0.5)/L.lg.length));
     /* แปลงเป็นพิกัดในกรอบเส้นทางครั้งเดียว แล้ววัดระยะในกรอบนั้นตรง ๆ
        ถูกกว่าการทำตารางแล้ว gcDist ทุกช่องมาก และแม่นพอสำหรับก้อนกลม ๆ */
     const d=gcDist(pts.mid,q), b=(bearing(pts.mid,q)-pts.brg)*RAD;
-    thunder.push({al:d*Math.cos(b), cr:d*Math.sin(b)});
+    WX.push({kind, mass, lat:q.lat, lng:q.lng, al:d*Math.cos(b), cr:d*Math.sin(b)});
   }
   const sRad2=(half*0.17)*(half*0.17);
   const sbAt=(al,cr)=>{
     let s=0;
-    for(const th of thunder){
-      const dx=al-th.al, dy=cr-th.cr;
-      const e=Math.exp(-(dx*dx+dy*dy)/sRad2);
+    for(const w of WX){
+      if(!w.mass) continue;
+      const dx=al-w.al, dy=cr-w.cr;
+      const e=Math.exp(-(dx*dx+dy*dy)/sRad2)*(w.mass/2.4);
       if(e>s) s=e;
     }
     return s;
@@ -1134,6 +1146,54 @@ function rainMarks(L,tf){
     fall.push({p:track, sp:0.28+0.22*hs(n*9.1), ph:hs(n*11.3), w:0.5+0.5*d});
   }
   out.fall=fall;
+
+  /* ---------- หิมะ · หมอกจริง · ฝนแข็งตัว (ข้อ 88) ----------
+     สามอันนี้ขับด้วย `weather_code` ที่เก็บอยู่แล้ว ไม่ต้องขอข้อมูลเพิ่มสักช่อง
+     แต่ละอันต้องใช้ *ช่องทางการมองเห็นคนละช่อง* กับเมฆ ลม และฝน (ข้อ 85.3)
+       หิมะ    = จุดสว่างที่ *ยกกระดาษ* ไม่ใช่รอยที่ลงบนกระดาษ · ส่ายไปมา · ช้ามาก
+       หมอก    = ยางลบ ไม่ใช่สีที่ทาทับ · ไม่เคลื่อน หายใจช้า ๆ
+       ฝนแข็งตัว = ร่วงตรงสนิท เร็วกว่าฝน + ประกายที่หัว + รอยแตกที่ค้างอยู่ */
+  const wxR=half*0.20, snow=[], fogp=[], ice=[], crack=[];
+  for(let wi=0;wi<WX.length;wi++){
+    const w=WX[wi];
+    if(w.kind===2){
+      for(let k=0;k<240;k++){
+        const n=wi*991+k*17.3;
+        const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.1))*wxR);
+        const brg=hs(n*7.7)*360, track=[];
+        let q={lat:q0.lat,lng:q0.lng};
+        for(let m=0;m<=6;m++){
+          track.push(toXYZ(q.lat,q.lng));
+          /* ส่ายไปมา — นี่คือสิ่งที่บอกว่าเป็นหิมะ ไม่ใช่ฝน */
+          q=destPoint(q.lat,q.lng,(brg+Math.sin(m*1.15+hs(n*5.3)*6.283)*34+360)%360, wxR*0.075);
+        }
+        snow.push({p:track, sp:0.10+0.07*hs(n*11.1), ph:hs(n*13.7), w:0.5+0.5*hs(n*19.3)});
+      }
+    } else if(w.kind===3){
+      for(let k=0;k<140;k++){
+        const n=wi*733+k*29.7;
+        const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.3))*wxR);
+        const brg=hs(n*7.1)*360, track=[];
+        let q={lat:q0.lat,lng:q0.lng};
+        for(let m=0;m<=6;m++){ track.push(toXYZ(q.lat,q.lng));
+          q=destPoint(q.lat,q.lng,brg,wxR*0.085); }        /* ไม่ส่ายเลย */
+        ice.push({p:track, sp:0.42+0.26*hs(n*11.7), ph:hs(n*13.1), w:0.5+0.5*hs(n*17.9)});
+      }
+      for(let k=0;k<40;k++){
+        const n=wi*311+k*41.3;
+        const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*5.1))*wxR*0.95);
+        crack.push({a:toXYZ(q0.lat,q0.lng), s:0.55+0.55*hs(n*3.9), ph:hs(n*7.7)*6.283});
+      }
+    } else if(w.kind===4){
+      for(let k=0;k<52;k++){
+        const n=wi*577+k*23.1;
+        const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.7))*wxR*1.15);
+        fogp.push({a:toXYZ(q0.lat,q0.lng), r:wxR*(0.24+0.20*hs(n*5.9)),
+                   ph:hs(n*9.3)*6.283, w:0.45+0.55*hs(n*7.1)});
+      }
+    }
+  }
+  out.snow=snow; out.fogp=fogp; out.ice=ice; out.crack=crack;
 
   const HN=340, HS=46, hatch=[];
   const HR=half*1.45, dU=2*HR/HS;
@@ -2413,16 +2473,20 @@ const G = {
 
      จาง ๆ ตอนเพิ่งหลุดจากเมฆ เข้มกลางทาง แล้วจางหายตอนปลาย
      ถ้าโผล่มาเต็มที่ทันทีแล้วดับทันที ตาจะเห็นเป็นของกะพริบ ไม่ใช่ของที่ร่วง */
+  /* ตำแหน่งบนรางตามเฟส — ใช้ร่วมกันทุกชั้นที่มีของร่วง (ฝน หิมะ น้ำแข็ง) */
+  _at(tr,u){
+    const K=tr.length-1, x=clamp(u,0,1)*K;
+    const i=Math.min(K-1,Math.floor(x)), f=x-i, a=tr[i], b=tr[i+1];
+    const vx=a.x+(b.x-a.x)*f, vy=a.y+(b.y-a.y)*f, vz=a.z+(b.z-a.z)*f;
+    const m=Math.hypot(vx,vy,vz)||1;
+    return {x:vx/m, y:vy/m, z:vz/m};
+  },
+  /* ขอบของจังหวะเกิด-ดับต้องไม่มีมุม ไม่งั้นตาจับได้ว่ากะพริบ (ข้อ 86.4) */
+  _ss(e,a,b){ const x=clamp((e-a)/(b-a),0,1); return x*x*(3-2*x); },
   fall(ctx,marks,alpha){
     if(!marks||!marks.fall||!marks.fall.length) return;
     const B=new Map();
-    const at=(tr,u)=>{
-      const K=tr.length-1, x=clamp(u,0,1)*K;
-      const i=Math.min(K-1,Math.floor(x)), f=x-i, a=tr[i], b=tr[i+1];
-      const vx=a.x+(b.x-a.x)*f, vy=a.y+(b.y-a.y)*f, vz=a.z+(b.z-a.z)*f;
-      const m=Math.hypot(vx,vy,vz)||1;
-      return {x:vx/m, y:vy/m, z:vz/m};
-    };
+    const at=(tr,u)=>this._at(tr,u);
     for(const t of marks.fall){
       const u=(T*t.sp+t.ph)%1;
       /* ขีดยาวขึ้นอ่านเป็น *สายที่กำลังร่วง* จุดสั้น ๆ อ่านเป็นเม็ดฝุ่นที่ลอย */
@@ -2435,8 +2499,7 @@ const G = {
       /* ⚠️ ขอบของจังหวะเกิด-ดับต้องไม่มีมุม ไม่งั้นตาจับได้ว่า "โผล่" กับ "ดับ"
          ใช้ smoothstep ทั้งขาเข้าและขาออก อนุพันธ์จึงเป็นศูนย์ที่ปลายทั้งสองข้าง
          ของเดิมขาเข้าเป็นเส้นตรงชันมาก (u*7) จึงเห็นเป็นการกะพริบมากกว่าการไหล */
-      const ss=(e,a2,b2)=>{ const x=clamp((e-a2)/(b2-a2),0,1); return x*x*(3-2*x); };
-      const life=ss(u,0,0.28)*(1-ss(u,0.5,1));
+      const life=this._ss(u,0,0.28)*(1-this._ss(u,0.5,1));
       if(life<=0.02) continue;
       const depth=.42+.58*Math.sqrt(Math.max(0,(r0.z+r1.z)*.5));
       let a=alpha*t.w*depth*life*0.46;
@@ -2458,6 +2521,130 @@ const G = {
       for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
       ctx.stroke();
     });
+    ctx.restore();
+  },
+  /* ---------- หิมะ (ข้อ 88) ----------
+     กลับขั้วกับฝน: ฝนคือรอยที่ลงบนกระดาษ หิมะคือจุดที่ *ยกกระดาษให้สว่าง*
+     ⚠️ จัดกลุ่มก่อนวาดเสมอ — วาดทีละเม็ดคือต้นเหตุของอาการกระตุก (ข้อ 87.2) */
+  snowFall(ctx,marks,alpha){
+    if(!marks||!marks.snow||!marks.snow.length) return;
+    const B=new Map();
+    for(const t of marks.snow){
+      const u=(T*t.sp+t.ph)%1;
+      const life=this._ss(u,0,0.3)*(1-this._ss(u,0.55,1));
+      if(life<=0.02) continue;
+      const r0=this.rotate(this._at(t.p,u)); if(r0.z<0.03) continue;
+      const p=this.project(r0);
+      if(p.x<-6||p.x>this.W+6||p.y<-6||p.y>this.H+6) continue;
+      const a=alpha*life*(.45+.55*Math.sqrt(r0.z))*t.w*0.95;
+      if(a<=.02) continue;
+      const ai=Math.min(23,Math.round(a*24));
+      let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
+      arr.push(p.x,p.y,0.85+0.85*t.w);
+    }
+    B.forEach((arr,ai)=>{
+      ctx.fillStyle='rgba(255,254,250,'+(ai/24).toFixed(3)+')';
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=3){ ctx.moveTo(arr[i]+arr[i+2],arr[i+1]);
+        ctx.arc(arr[i],arr[i+1],arr[i+2],0,6.2832); }
+      ctx.fill();
+    });
+  },
+  /* ---------- หมอกจริง (ข้อ 88) ----------
+     หมอกไม่ได้เพิ่มรอย มันลบรอย — เมฆคือดินสอที่วางลง หมอกคือดินสอที่ถูกยกออก
+
+     ⚠️ ห้ามอ่านพิกเซลกลับจาก canvas เพื่อหาโทน — วัดแล้วกิน 25.4ms ต่อเฟรม
+     เพราะบังคับให้ GPU ล้างงานที่ค้างให้เสร็จก่อน (ข้อ 87.4)
+     สุ่มโทนผิวโลกด้านสว่างพบว่าอยู่ราว 200-218 ทุกจุด ใช้ค่าคงที่แล้วหรี่ตามความลึกก็พอ */
+  fogWx(ctx,marks,alpha){
+    if(!marks||!marks.fogp||!marks.fogp.length) return;
+    ctx.save();
+    for(const b of marks.fogp){
+      const r0=this.rotate(b.a); if(r0.z<0.06) continue;
+      const p=this.project(r0);
+      const rad=this.R*Math.sin(b.r/ER)*(0.85+0.15*Math.sin(T*0.5+b.ph));
+      if(rad<2) continue;
+      if(p.x<-rad||p.x>this.W+rad||p.y<-rad||p.y>this.H+rad) continue;
+      const dep=0.35+0.65*Math.sqrt(r0.z);
+      const a=alpha*b.w*(0.55+0.45*Math.sin(T*0.42+b.ph))*dep*0.62;
+      if(a<=.03) continue;
+      const k=0.80+0.20*dep;
+      const tone='rgba('+Math.round(212*k)+','+Math.round(208*k)+','+Math.round(200*k)+',';
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+      g.addColorStop(0,tone+a.toFixed(3)+')');
+      g.addColorStop(0.55,tone+(a*0.5).toFixed(3)+')');
+      g.addColorStop(1,tone+'0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.2832); ctx.fill();
+    }
+    ctx.restore();
+  },
+  /* ---------- ฝนแข็งตัว (ข้อ 88) ----------
+     ยืมการร่วงของฝนมา แต่เร็วกว่า ตรงสนิท ไม่ส่ายเลย
+     ตัวที่บอกว่าไม่ใช่ฝนธรรมดาคือประกายที่หัวหยด และรอยแตกที่ *ค้างอยู่*
+     น้ำแข็งคือสิ่งที่ค้าง ไม่ใช่สิ่งที่ไหลผ่าน */
+  iceFall(ctx,marks,alpha){
+    if(!marks||!marks.ice||!marks.ice.length) return;
+    const B=new Map();
+    for(const t of marks.ice){
+      const u=(T*t.sp+t.ph)%1;
+      const life=this._ss(u,0,0.26)*(1-this._ss(u,0.5,1));
+      if(life<=0.02) continue;
+      const r0=this.rotate(this._at(t.p,u)); if(r0.z<0.03) continue;
+      const r1=this.rotate(this._at(t.p,u-0.15)); if(r1.z<0.03) continue;
+      const p0=this.project(r0), p1=this.project(r1);
+      if((p0.x<-8&&p1.x<-8)||(p0.x>this.W+8&&p1.x>this.W+8)) continue;
+      if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
+      const dep=life*(.42+.58*Math.sqrt((r0.z+r1.z)*.5));
+      let a=alpha*dep*t.w*0.5;
+      if(a<=.01) continue; if(a>.44) a=.44;
+      const ai=Math.min(19,Math.round(a*32));
+      let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
+      arr.push(p0.x,p0.y,p1.x,p1.y,dep);
+    }
+    ctx.save(); ctx.lineCap='round'; ctx.lineWidth=0.9;
+    B.forEach((arr,ai)=>{
+      ctx.strokeStyle='rgba(52,60,78,'+(ai/32).toFixed(3)+')';
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=5){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
+      ctx.stroke();
+    });
+    const Gl=new Map();
+    B.forEach(arr=>{ for(let i=0;i<arr.length;i+=5){
+      if(arr[i+4]<0.25) continue;
+      const ai=Math.min(19,Math.round(arr[i+4]*0.8*24));
+      let a2=Gl.get(ai); if(!a2) Gl.set(ai,a2=[]);
+      a2.push(arr[i],arr[i+1]); } });
+    Gl.forEach((arr,ai)=>{
+      ctx.fillStyle='rgba(255,255,252,'+(ai/24).toFixed(3)+')';
+      ctx.beginPath();
+      for(let i=0;i<arr.length;i+=2){ ctx.moveTo(arr[i]+1.15,arr[i+1]);
+        ctx.arc(arr[i],arr[i+1],1.15,0,6.2832); }
+      ctx.fill();
+    });
+    if(marks.crack&&marks.crack.length){
+      ctx.lineWidth=0.85;
+      const C=new Map();
+      for(const c of marks.crack){
+        const r0=this.rotate(c.a); if(r0.z<0.05) continue;
+        const p=this.project(r0);
+        const a=alpha*0.34*(0.42+0.58*Math.sin(T*0.5+c.ph))*(0.35+0.65*Math.sqrt(r0.z));
+        if(a<=.02) continue;
+        const s=(2.0+2.4*c.s)*Math.min(1.6,this.R/288);
+        const ai=Math.min(15,Math.round(a*40));
+        let arr=C.get(ai); if(!arr) C.set(ai,arr=[]);
+        arr.push(p.x,p.y,s);
+      }
+      C.forEach((arr,ai)=>{
+        ctx.strokeStyle='rgba(46,54,72,'+(ai/40).toFixed(3)+')';
+        ctx.beginPath();
+        for(let i=0;i<arr.length;i+=3){
+          const x=arr[i],y=arr[i+1],s=arr[i+2];
+          ctx.moveTo(x-s,y-s*0.6); ctx.lineTo(x+s,y+s*0.6);
+          ctx.moveTo(x-s*0.7,y+s*0.7); ctx.lineTo(x+s*0.7,y-s*0.7);
+        }
+        ctx.stroke();
+      });
+    }
     ctx.restore();
   },
   /* ---------- ประกายฟ้าแลบบนโลก (ข้อ 70) ----------
@@ -3044,8 +3231,13 @@ function renderGlobe(){
        ถ้าใช้หมอกตัวเดียวกัน วงเปิดจะเปิดฟ้าโปร่งรอบจดหมายเสมอ
        ทั้งที่จดหมายกำลังอยู่กลางฝน — กลับหัวกับความจริง (ข้อ 6 ปะทะข้อ 70) */
     const rm=rainMarks(sel.L, sel.st.prog);
+    /* ลำดับคือความหมาย: หมอกลบสิ่งที่อยู่ใต้มัน · ของที่ร่วงอยู่บนเมฆ ·
+       ฟ้าแลบส่องจากในเมฆ · แต่ไม่มีอะไรได้รับอนุญาตให้กลบลม (ข้อ 84.6ง) */
     G.hatchClouds(sctx, rm, 1);
+    G.fogWx(sctx, rm, 1);
     G.fall(sctx, rm, 1);
+    G.snowFall(sctx, rm, 1);
+    G.iceFall(sctx, rm, 1);
     G.bolts(sctx, sel.L, sel.st);
     G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
   }
