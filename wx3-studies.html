@@ -1,0 +1,340 @@
+<meta charset="utf-8">
+<title>หิมะ หมอก น้ำแข็ง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Noto+Serif+Thai:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#eee9de; --paper-2:#e5e2d8; --cool:#dfe2e6;
+  --ink:#333842; --ink-2:#63697a; --ink-3:#8b8f9c;
+  --rule:#d2ccbd; --rule-2:#e0dacb;
+  --seal:#a8574a; --seal-bg:#f0e4e0;
+  --card:#f3efe6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#191c22; --paper-2:#202430; --cool:#171a20;
+    --ink:#e2ded3; --ink-2:#a2a7b6; --ink-3:#767c8c;
+    --rule:#343947; --rule-2:#282c37;
+    --seal:#d08a7c; --seal-bg:#2e2320;
+    --card:#20242e;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#191c22; --paper-2:#202430; --cool:#171a20;
+  --ink:#e2ded3; --ink-2:#a2a7b6; --ink-3:#767c8c;
+  --rule:#343947; --rule-2:#282c37;
+  --seal:#d08a7c; --seal-bg:#2e2320;
+  --card:#20242e;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper);
+  background-image:linear-gradient(168deg,var(--cool) 0%,var(--paper) 46%,var(--paper-2) 100%);
+  background-attachment:fixed; color:var(--ink);
+  font-family:'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif;
+  font-size:16px; line-height:1.78; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:38rem;margin:0 auto;padding:2.6rem 1.2rem 5rem;display:flex;flex-direction:column;gap:2.2rem}
+@media (min-width:62rem){.wrap{max-width:56rem;padding-left:2.5rem;padding-right:2.5rem}}
+
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:'Noto Serif Thai',Georgia,serif;font-weight:600;font-size:1.85rem;line-height:1.42;margin:.45rem 0 0}
+.standfirst{margin:.35rem 0 0;color:var(--ink-2);font-size:1rem;text-wrap:balance}
+.meta{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-3);
+  padding-top:.8rem;margin-top:.9rem;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:.4rem 1.1rem}
+
+h2{font-family:'Noto Serif Thai',Georgia,serif;font-weight:600;font-size:1.15rem;margin:0 0 .1rem}
+.wmo{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-3);letter-spacing:.04em}
+p{margin:.55rem 0 0;font-size:.95rem}
+p:first-of-type{margin-top:.7rem}
+em{font-style:normal;color:var(--seal);font-weight:500}
+strong{font-weight:600}
+
+.grid{display:flex;flex-direction:column;gap:1.6rem}
+@media (min-width:52rem){.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem}}
+
+.card{border:1px solid var(--rule);background:var(--card);padding:1rem 1.1rem 1.2rem;display:flex;flex-direction:column}
+.stage{
+  width:100%;aspect-ratio:4/3;display:block;margin-bottom:.85rem;
+  border:1px solid var(--rule-2);
+}
+.legend{
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--seal);margin-bottom:.15rem;
+}
+
+.note{border-left:2px solid var(--seal);background:var(--seal-bg);padding:.9rem 1.05rem;font-size:.93rem}
+.note .tag{display:block;font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--seal);margin-bottom:.3rem}
+.note p{margin:.45rem 0 0}.note p:first-of-type{margin-top:0}
+
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:22rem}
+th,td{text-align:left;padding:.5rem .7rem .5rem 0;border-bottom:1px solid var(--rule-2);vertical-align:top}
+thead th{border-bottom:1px solid var(--rule);font-weight:500;font-size:.7rem;letter-spacing:.05em;
+  color:var(--ink-3);text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+tbody tr:last-child td{border-bottom:none}
+.close{border-top:1px solid var(--rule);padding-top:1.3rem;font-size:.9rem;color:var(--ink-2)}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">drift · ศึกษางานอาร์ต</span>
+    <h1>หิมะ หมอก น้ำแข็ง</h1>
+    <p class="standfirst">สามคำอากาศที่ <code style="font-family:'IBM Plex Mono',monospace;font-size:.9em">weather_code</code> บอกเราอยู่แล้ว แต่ยังไม่เคยวาด — ออกแบบในภาษาเดียวกับเมฆ ฝน และลม</p>
+    <div class="meta"><span>25 ส.ค. 2569</span><span>ยังไม่ได้ใส่ในแอป</span><span>ทุกช่องขยับจริง</span></div>
+  </header>
+
+  <div class="note">
+    <span class="tag">กติกาที่ทั้งสามอันต้องเคารพ</span>
+    <p>ภาษาที่มีอยู่แล้วถูกจองไปหมดแล้ว — <strong>เมฆ</strong> คือขีดดินสอมุมคงที่ที่ถูกถมจนเป็นพื้นที่ · <strong>ลม</strong> คือเส้นโค้งที่มีคลื่นสว่างวิ่งบนตัวมัน · <strong>ฝน</strong> คือสิ่งเดียวที่ตัวมันเองเคลื่อนที่แล้วจางหาย</p>
+    <p><em>ของใหม่สามอันจึงห้ามใช้ช่องทางเดิมซ้ำ</em> ไม่งั้นจะเกิดปัญหาเดิมกับตอนที่ฝนจมหายไปในเมฆ</p>
+  </div>
+
+  <section class="grid">
+
+    <div class="card">
+      <canvas class="stage" data-mode="rain"></canvas>
+      <span class="legend">อ้างอิง — ของที่มีแล้ว</span>
+      <h2>ฝน</h2>
+      <div class="wmo">WMO 51-67 · ทำแล้วในแอป</div>
+      <p>ขีดเข้มที่ <strong>ร่วงลงมาเป็นเส้นตรง</strong> จางตอนเกิดและตอนดับ วางไว้เป็นตัวเทียบสำหรับอีกสามอันข้างล่าง</p>
+    </div>
+
+    <div class="card">
+      <canvas class="stage" data-mode="snow"></canvas>
+      <span class="legend">ของใหม่</span>
+      <h2>หิมะ</h2>
+      <div class="wmo">WMO 71-77 · ยังไม่เคยวาด</div>
+      <p><strong>กลับขั้วกับฝน</strong> — ฝนคือรอยที่ <em>ลงบนกระดาษ</em> หิมะคือจุดที่ <em>ยกกระดาษให้สว่างขึ้น</em> ใช้ช่องทางเดียวกับฟ้าแลบ (แสง) แต่คนละจังหวะกันสิ้นเชิง</p>
+      <p>และมันไม่ตกตรง — <strong>ส่ายไปมาระหว่างทาง</strong> ช้ากว่าฝนราวสามเท่า · เมฆหิมะเรียบและจางกว่าเมฆฝน เพราะเมฆหิมะไม่มีแกนหนักแบบเมฆฝน</p>
+    </div>
+
+    <div class="card">
+      <canvas class="stage" data-mode="fog"></canvas>
+      <span class="legend">ของใหม่</span>
+      <h2>หมอกจริง</h2>
+      <div class="wmo">WMO 45, 48 · ยังไม่เคยวาด</div>
+      <p><strong>หมอกไม่ได้เพิ่มรอย มันลบรอย</strong> — สิ่งที่อยู่ข้างใต้จางหายไป เส้นชายฝั่งและเส้นกริดที่เคยอ่านออกกลายเป็นเงาราง ๆ</p>
+      <p>นี่เป็นที่เดียวที่ <em>ขอบฟุ้งเป็นสิ่งที่ถูกต้อง</em> — เพราะหมอกไม่มีขอบจริง ๆ ต่างจากเมฆที่เราต้องดิ้นรนสร้างขอบให้มัน · ⚠️ ต้องแยกจากม่านหมอกของแอปที่ทำหน้าที่ปิดอนาคต (ข้อ 2)</p>
+    </div>
+
+    <div class="card">
+      <canvas class="stage" data-mode="ice"></canvas>
+      <span class="legend">ของใหม่</span>
+      <h2>ฝนแข็งตัว</h2>
+      <div class="wmo">WMO 56, 57, 66, 67 · ยังไม่เคยวาด</div>
+      <p>เป็นฝนที่ <strong>แข็งเมื่อกระทบ</strong> — จึงยืมการร่วงของฝนมา แต่ตกเร็วกว่า ตรงกว่า และไม่ส่ายเลย</p>
+      <p>ตัวที่บอกว่านี่ไม่ใช่ฝนธรรมดาคือ <strong>ประกายเย็นที่หัวหยด</strong> และรอยแตกเล็ก ๆ ที่ทิ้งไว้ตรงที่มันไปถึง — <em>น้ำแข็งคือสิ่งที่ค้างอยู่ ไม่ใช่สิ่งที่ไหลผ่าน</em></p>
+    </div>
+
+  </section>
+
+  <section>
+    <h2>ทั้งสี่ใช้คนละช่องทางกันจริงไหม</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th></th><th>ตัวมันเอง</th><th>ทางเดิน</th><th>จังหวะ</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ฝน</strong></td><td>ขีดเข้มลงบนกระดาษ</td><td>ตรง ตามลม</td><td>ปานกลาง</td></tr>
+          <tr><td><strong>หิมะ</strong></td><td><em>จุดสว่าง</em> ยกกระดาษขึ้น</td><td><em>ส่ายไปมา</em></td><td><em>ช้ามาก</em></td></tr>
+          <tr><td><strong>หมอก</strong></td><td><em>ไม่มีรอย — ลบของเดิม</em></td><td>ไม่เคลื่อน</td><td>หายใจช้า ๆ</td></tr>
+          <tr><td><strong>น้ำแข็ง</strong></td><td>ขีด + <em>ประกาย + รอยแตกที่ค้างไว้</em></td><td>ตรงสนิท</td><td><em>เร็ว</em></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="close">
+    <p>หน้านี้เป็นงานศึกษา วาดด้วยโค้ดชุดย่อที่ใช้ไวยากรณ์เดียวกับแอป (พื้นกระดาษเดียวกัน หมึกเดียวกัน ความมืดมาจากความถี่ ปลายจังหวะไม่มีมุม) แต่ <strong>ยังไม่ได้ใส่ลง <code style="font-family:'IBM Plex Mono',monospace;font-size:.9em">index.html</code></strong> — รอกอล์ฟตัดสินก่อน</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hs = n => { const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ss=(e,a,b)=>{ const x=clamp((e-a)/(b-a),0,1); return x*x*(3-2*x); };
+
+/* value noise หลายความถี่ — โครงสร้างขอบเมฆ แบบเดียวกับในแอป */
+function vn(x,y,s){
+  const xi=Math.floor(x), yi=Math.floor(y), xf=x-xi, yf=y-yi;
+  const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
+  const g=(p,q)=>hs(p*157.31+q*311.7+s);
+  return g(xi,yi)*(1-u)*(1-v)+g(xi+1,yi)*u*(1-v)+g(xi,yi+1)*(1-u)*v+g(xi+1,yi+1)*u*v;
+}
+/* กรอบเล็กกว่าลูกโลกมาก ถ้าใช้ความถี่เท่าในแอปจะได้เนื้อสม่ำเสมอเต็มจอ ไม่มีก้อน
+   ลดความถี่ลงจนเห็นก้อนหนึ่งถึงสองก้อนในกรอบ แล้วจึงมีฟ้าโปร่งให้เทียบ */
+const fbm=(x,y,s)=>vn(x*1.15,y*1.15,s)*0.62+vn(x*2.9+11,y*2.9+5,s)*0.26+vn(x*7.1+23,y*7.1+29,s)*0.12;
+
+/* เมฆ: ความมืดมาจาก *ความถี่ของเส้น* ไม่ใช่ความทึบ — ถมทับหลายชั้นที่เลื่อนกัน */
+function cloud(g,W,H,seed,heavy,mode){
+  const A=-28*Math.PI/180;
+  /* ⚠️ เกณฑ์ต่ำสุดคือตัวกำหนดว่ามี *ฟ้าโปร่ง* เหลือไหม
+     ตั้งต่ำเกินไปเมื่อไหร่ เมฆจะเต็มกรอบจนไม่เหลืออะไรให้เทียบ แล้วก็ไม่อ่านเป็นก้อน
+     snow ใช้ชุดของตัวเอง: กลางโทน เรียบ ไม่มีแกนหนัก — เพราะเมฆหิมะไม่มีแกนแบบเมฆฝน
+     แต่ต้องเข้มพอให้เม็ดขาวเด้งออกมา ไม่งั้นหิมะจะหายไปในกระดาษ */
+  const layers = mode==='snow'
+    ? [[0.46,0.34,0.88,0.00,0],[0.56,0.34,0.62,0.50,7]]
+    : [[0.44,0.42,0.86,0.00,0],[0.58,0.40,0.55,0.50,7],[0.68,0.42,0.45,0.25,13],[0.80,0.45,0.40,0.00,19]];
+  const N=Math.round(H/2.6), S=Math.round(W/9);
+  g.lineCap='round'; g.lineWidth=0.95;
+  const R=Math.hypot(W,H)*0.62, dU=2*R/S;
+  for(const [minv,gain,base,off,sd] of layers){
+    const ca=Math.cos(A), sa=Math.sin(A);
+    for(let i=0;i<N;i++){
+      const o=((i+0.5+off)/N-0.5)*2*R;
+      for(let k=0;k<S;k++){
+        const n=i*131.7+k*7.3+sd;
+        const ang=A+(hs(n*1.7)-0.5)*0.06, c2=Math.cos(ang), s2=Math.sin(ang);
+        const u0=((k+0.5)/S-0.5)*2*R;
+        const x0=W/2+u0*c2-o*s2, y0=H/2+u0*s2+o*c2;
+        if(x0<-20||x0>W+20||y0<-20||y0>H+20) continue;
+        const m=fbm(x0/W,y0/H,seed)*(heavy?1.5:1.0);
+        if(m<minv) continue;
+        const d=base+(1-base)*Math.min(1,Math.pow((m-minv)/gain,0.7));
+        if(hs(n)>d) continue;
+        const u1=u0+dU*(1.5+hs(n*3.1)*0.8);
+        g.strokeStyle='rgba(58,63,76,'+((mode==='snow'?0.105:0.125)*(0.5+0.5*d)).toFixed(3)+')';
+        g.beginPath(); g.moveTo(x0,y0);
+        g.lineTo(W/2+u1*c2-o*s2, H/2+u1*s2+o*c2); g.stroke();
+      }
+    }
+  }
+}
+
+/* เส้นแผ่นดินจาง ๆ ไว้ให้หมอกลบ */
+function land(g,W,H,a){
+  g.save(); g.strokeStyle='rgba(84,90,104,'+a+')'; g.lineWidth=1;
+  for(let s=0;s<3;s++){
+    g.beginPath();
+    for(let i=0;i<=40;i++){
+      const t=i/40, x=W*(0.06+t*0.9);
+      const y=H*(0.24+s*0.26)+Math.sin(t*6.1+s*2.3)*H*0.07+Math.sin(t*13.7+s)*H*0.025;
+      i?g.lineTo(x,y):g.moveTo(x,y);
+    }
+    g.stroke();
+  }
+  g.strokeStyle='rgba(84,90,104,'+(a*0.5)+')';
+  for(let i=1;i<4;i++){ g.beginPath(); g.moveTo(W*i/4,0); g.lineTo(W*i/4,H); g.stroke(); }
+  g.restore();
+}
+
+const TICKS=[];
+function make(cv,mode){
+  const g=cv.getContext('2d');
+  let W=0,H=0,base=null,parts=[],dpr=1;
+  function build(){
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=cv.clientWidth; H=cv.clientHeight;
+    if(!W||!H) return false;
+    cv.width=W*dpr; cv.height=H*dpr;
+    g.setTransform(dpr,0,0,dpr,0,0);
+    /* ชั้นที่ไม่ขยับ วาดครั้งเดียวเก็บไว้ */
+    base=document.createElement('canvas');
+    base.width=cv.width; base.height=cv.height;
+    const b=base.getContext('2d'); b.setTransform(dpr,0,0,dpr,0,0);
+    /* ⚠️ พื้นกระดาษวาดลงใน canvas เอง ไม่ฝากไว้กับ CSS ข้างหลัง
+       ไม่งั้นเวลาส่งออกเป็นภาพจะได้พื้นดำ และงานที่ตรวจก็ไม่ใช่งานที่คนเห็น (ข้อ 62.8) */
+    const pg=b.createLinearGradient(0,0,W*0.35,H);
+    pg.addColorStop(0,'#dfe2e6'); pg.addColorStop(1,'#eee9de');
+    b.fillStyle=pg; b.fillRect(0,0,W,H);
+    if(mode==='fog') land(b,W,H,0.55);
+    else cloud(b,W,H, mode==='snow'?31:mode==='ice'?57:3, mode!=='snow', mode);
+    parts=[];
+    const NP = mode==='snow'?210 : mode==='ice'?70 : mode==='rain'?80 : 0;
+    for(let i=0;i<NP;i++){
+      parts.push({
+        x:hs(i*3.1)*W, y:hs(i*7.7)*H*0.55,
+        sp:(mode==='snow'?0.055:mode==='ice'?0.30:0.16)*(0.7+0.6*hs(i*11.3)),
+        ph:hs(i*5.9), w:0.5+0.5*hs(i*13.1), sway:hs(i*17.3)*6.283
+      });
+    }
+    return true;
+  }
+  let t0=performance.now();
+  function frame(now,forced){
+    if(!base && !build()){ if(!forced) requestAnimationFrame(frame); return; }
+    const T = RM ? 2.2 : (forced!==undefined ? forced : (now-t0)/1000);
+    g.clearRect(0,0,W,H);
+    g.drawImage(base,0,0,W,H);
+
+    if(mode==='fog'){
+      /* หมอกไม่เพิ่มรอย — มันลบของเดิม · หายใจช้า ๆ */
+      const br=0.62+0.16*Math.sin(T*0.55);
+      for(let i=0;i<7;i++){
+        const cx=W*(0.12+0.13*i)+Math.sin(T*0.22+i)*W*0.05;
+        const cy=H*(0.34+0.22*Math.sin(i*1.7))+Math.cos(T*0.19+i*0.8)*H*0.05;
+        const r=Math.min(W,H)*(0.36+0.12*hs(i*9.1));
+        const rg=g.createRadialGradient(cx,cy,0,cx,cy,r);
+        rg.addColorStop(0,'rgba(238,235,226,'+(0.26*br).toFixed(3)+')');
+        rg.addColorStop(0.6,'rgba(238,235,226,'+(0.13*br).toFixed(3)+')');
+        rg.addColorStop(1,'rgba(238,235,226,0)');
+        g.fillStyle=rg; g.beginPath(); g.arc(cx,cy,r,0,6.2832); g.fill();
+      }
+      if(!forced) requestAnimationFrame(frame);
+      return;
+    }
+
+    g.lineCap='round';
+    for(const p of parts){
+      const u=(T*p.sp+p.ph)%1;
+      const life=ss(u,0,0.28)*(1-ss(u,0.5,1));
+      if(life<=0.02) continue;
+      const fallH=H*0.95;
+      let x=p.x, y=p.y+u*fallH;
+      if(mode==='snow'){
+        /* ส่ายไปมา — นี่คือสิ่งที่บอกว่าเป็นหิมะ ไม่ใช่ฝน */
+        x += Math.sin(u*7.4+p.sway)*W*0.035 + Math.sin(u*3.1+p.sway*2)*W*0.018;
+        /* เม็ดต้องเล็ก — ใหญ่เมื่อไหร่กลายเป็นฟองสว่าง ไม่ใช่หิมะ */
+        const r=0.78+0.72*p.w;
+        const a=life*0.92;
+        g.fillStyle='rgba(255,254,250,'+a.toFixed(3)+')';
+        g.beginPath(); g.arc(x,y,r,0,6.2832); g.fill();
+        continue;
+      }
+      const len = mode==='ice' ? H*0.10 : H*0.13;
+      const dx  = mode==='ice' ? W*0.012 : W*0.045;
+      g.lineWidth = mode==='ice' ? 0.85 : 0.95;
+      g.strokeStyle = mode==='ice'
+        ? 'rgba(52,60,78,'+(life*p.w*0.44).toFixed(3)+')'
+        : 'rgba(48,53,66,'+(life*p.w*0.40).toFixed(3)+')';
+      g.beginPath(); g.moveTo(x,y); g.lineTo(x-dx*0.35,y-len); g.stroke();
+      if(mode==='ice'){
+        /* ประกายเย็นที่หัวหยด — ตัวบอกว่าไม่ใช่ฝนธรรมดา */
+        g.fillStyle='rgba(255,255,252,'+(life*0.85).toFixed(3)+')';
+        g.beginPath(); g.arc(x,y,1.25,0,6.2832); g.fill();
+      }
+    }
+    if(mode==='ice'){
+      /* รอยแตกที่ค้างอยู่ — น้ำแข็งคือสิ่งที่ *ไม่ไหลผ่าน* */
+      for(let i=0;i<26;i++){
+        const cx=hs(i*23.1)*W, cy=H*(0.55+0.42*hs(i*29.7));
+        const a=0.46*(0.45+0.55*Math.sin(T*0.5+i*1.9))*(0.5+0.5*hs(i*3.7));
+        if(a<=0.02) continue;
+        const s=3.0+3.0*hs(i*41.3);
+        g.strokeStyle='rgba(46,54,72,'+a.toFixed(3)+')'; g.lineWidth=1.0;
+        g.beginPath();
+        g.moveTo(cx-s,cy-s*0.6); g.lineTo(cx+s,cy+s*0.6);
+        g.moveTo(cx-s*0.7,cy+s*0.7); g.lineTo(cx+s*0.7,cy-s*0.7);
+        g.stroke();
+      }
+    }
+    if(!forced) requestAnimationFrame(frame);
+  }
+  TICKS.push(tt=>frame(performance.now(),tt));
+  requestAnimationFrame(frame);
+  addEventListener('resize',()=>{ base=null; });
+}
+document.querySelectorAll('canvas.stage').forEach(cv=>make(cv,cv.dataset.mode));
+/* ขับเฟรมเองได้ — ใช้ตอนตรวจงานในหน้าต่างที่ไม่ compositing (rAF ถูกหยุด) */
+window.__tick = tt => TICKS.forEach(f=>f(tt));
+})();
+</script>
