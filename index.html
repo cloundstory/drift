@@ -1017,6 +1017,35 @@ function rainMarks(L,tf){
       }
     }
   }
+  /* ---------- มวลเมฆ (ข้อ 69) ----------
+     กอล์ฟ 25 ส.ค.: "ฝนจะมาจากเมฆครึ้มถูกไหม ถ้าเราไม่เขียนระบุ
+     น้อยคนมากจะเห็นว่าเส้นพวกนี้คือฝน"
+
+     ถูกต้อง — ขีดเปล่า ๆ บนกระดาษไม่มีอะไรบอกว่ามันคือฝน
+     มันจะอ่านเป็นลาย เป็นรอยขูด เป็นอะไรก็ได้
+     ต้องมีมวลรองอยู่ ขีดพวกนั้นถึงจะ *ตกลงมาจาก* อะไรสักอย่าง
+
+     ⚠️ เราไม่มีข้อมูลเมฆ มีแต่ปริมาณฝน จึงใช้ฝนเป็นตัวแทนของเมฆ
+     ซึ่งจริงในทางเดียว (มีฝนแปลว่ามีเมฆ) แต่ไม่จริงในทางกลับ (เมฆครึ้มไม่จำเป็นต้องมีฝน)
+     ถ้าวันไหนอยากได้เมฆที่ไม่มีฝนด้วย ต้องขอ cloud_cover เพิ่มและเก็บลง URL อีกชั้น
+
+     จุดเมฆหยาบและกว้างกว่าขีดฝนมาก เพราะระบบเมฆมีขนาดใหญ่และขอบไม่คม */
+  const cl=[], NC=13;
+  for(let r=0;r<NC;r++) for(let c=0;c<NC;c++){
+    const al=((r+0.5)/NC-0.5)*2*half;
+    const cr=((c+0.5+(r%2)*0.5)/NC-0.5)*2*half;
+    const mid=pts.mid;
+    let p = al===0 ? {lat:mid.lat,lng:mid.lng}
+                   : destPoint(mid.lat,mid.lng, al>0?pts.brg:(pts.brg+180)%360, Math.abs(al));
+    if(cr!==0) p=destPoint(p.lat,p.lng,(pts.brg+90)%360,cr);
+    const mm=rainAt(f,p.lat,p.lng,bucket/6);
+    if(mm<0.03) continue;
+    /* รัศมีเป็นระยะบนผิวโลก จึงโตตามซูมเองโดยไม่ต้องคูณอะไร */
+    const rKm=half*2/NC*0.95;
+    const e=destPoint(p.lat,p.lng,(pts.brg+90)%360,rKm);
+    cl.push({a:toXYZ(p.lat,p.lng), e:toXYZ(e.lat,e.lng), mm});
+  }
+  out.cloud=cl;
   if(_rainMarks.size>40) _rainMarks.clear();
   _rainMarks.set(key,out);
   return out;
@@ -2184,6 +2213,45 @@ const G = {
      ต้องวาด *หลัง* ลบความทึบของหมอก เพราะกอล์ฟตัดสินให้เห็นอากาศข้างหน้าได้
      (ข้อ 2 อยากให้หมอกปิดอนาคต แต่ข้อ 67 ว่าจดหมายต้องเดินทางไปหาอากาศ
       ถ้าอากาศถูกบัง มันก็กลับไปเป็นสิ่งที่เกิดขึ้นคู่ไปกับจดหมายเหมือนเดิม) */
+  /* หยดนุ่มสำเร็จรูป — สร้างครั้งเดียวแล้ว drawImage ซ้ำ
+     ถ้าสร้าง radial gradient ใหม่ทุกจุดทุกเฟรม จะเสียเวลาไปกับการสร้างวัตถุมากกว่าการวาด */
+  _cloudSprite(){
+    if(this._cs) return this._cs;
+    const N=96, c=document.createElement('canvas'); c.width=c.height=N;
+    const g=c.getContext('2d');
+    const rg=g.createRadialGradient(N/2,N/2,0,N/2,N/2,N/2);
+    rg.addColorStop(0,'rgba(84,90,104,0.50)');
+    rg.addColorStop(.42,'rgba(84,90,104,0.28)');
+    rg.addColorStop(.76,'rgba(84,90,104,0.08)');
+    rg.addColorStop(1,'rgba(84,90,104,0)');
+    g.fillStyle=rg; g.fillRect(0,0,N,N);
+    this._cs=c; return c;
+  },
+  /* ---------- เมฆฝน (ข้อ 69) ----------
+     มวลนุ่มที่รองอยู่ใต้ขีดฝน ทำให้ขีดอ่านเป็น "ฝนที่ตกจากเมฆ" ไม่ใช่ลายบนกระดาษ
+     ต้องนุ่มและจางกว่าขีดมาก ไม่งั้นมันจะกลายเป็นคราบเปื้อนบนผืนผ้า */
+  clouds(ctx,marks,alpha){
+    if(!marks||!marks.cloud||!marks.cloud.length) return;
+    const sp=this._cloudSprite();
+    ctx.save();
+    for(const m of marks.cloud){
+      const r0=this.rotate(m.a); if(r0.z<0.03) continue;
+      const p0=this.project(r0), pe=this.project(this.rotate(m.e));
+      const rad=Math.hypot(pe.x-p0.x,pe.y-p0.y);
+      if(rad<2||rad>this.R*2.2) continue;
+      if(p0.x<-rad||p0.x>this.W+rad||p0.y<-rad||p0.y>this.H+rad) continue;
+      const depth=.35+.65*Math.sqrt(r0.z);
+      /* ต้องเริ่มจากเกือบศูนย์ ไม่ใช่มีพื้นขั้นต่ำ
+         ถ้ามีพื้น ฝนแค่ 0.03 มม. ก็ได้มวลเข้ม ทั้งสนามจะเทาเสมอกันจนไม่มีขอบ
+         เมฆที่ไม่มีขอบอ่านเป็น "กระดาษสกปรก" ไม่ใช่ "เมฆ"
+         ยกกำลัง 0.75 ให้ฝนเบายังพอเห็นเป็นปุยบาง แต่ฝนหนักถึงจะทึบจริง */
+      const a=alpha*depth*Math.min(1,Math.pow(m.mm/3.2,0.75));
+      if(a<=.02) continue;
+      ctx.globalAlpha=Math.min(.85,a);
+      ctx.drawImage(sp,p0.x-rad,p0.y-rad,rad*2,rad*2);
+    }
+    ctx.restore();
+  },
   rain(ctx,marks,alpha){
     if(!marks||!marks.length) return;
     const B=new Map();
@@ -2692,8 +2760,11 @@ function renderGlobe(){
   /* ข้อ 31 — ลมทะลุหมอกเสมอ จึงต้องวาดหลังลบความทึบ
      เฉพาะฉบับที่เลือก ไม่งั้นหลายเส้นทางจะทับกันจนอ่านไม่ออกว่าลมไปทางไหน */
   if(sel && !sel.st.arrived && !sel.st.gone){
-    /* ฝนอยู่ใต้ริ้วลม — ลมคือพระเอก ฝนคือภูมิประเทศที่ลมพัดผ่าน */
-    G.rain(sctx, rainMarks(sel.L, sel.st.prog), 1);
+    /* เมฆ → ฝน → ลม · ลมคือพระเอกจึงอยู่บนสุด
+       เมฆอยู่ล่างสุดเพราะมันคือมวลที่ฝนตกลงมาจาก ไม่ใช่สิ่งที่ลอยอยู่หน้าฝน */
+    const rm=rainMarks(sel.L, sel.st.prog);
+    G.clouds(sctx, rm, 1);
+    G.rain(sctx, rm, 1);
     G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
   }
 
