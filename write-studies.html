@@ -551,22 +551,55 @@ function wcSeries(t,d,lat,lng){
   return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre,
                   wind_gusts_10m:gst}};
 }
-/* ดึงพยากรณ์ทุกจุดบนเส้นทางในคำขอเดียว (Open-Meteo รับหลายพิกัดได้)
-   ลองแคชภูมิภาคก่อนเสมอ ไม่ได้ค่อยยิงตรง */
+/* ดึงพยากรณ์ให้ทุกจุด — แต่ *แยกแหล่ง* ตามชนิดของสิ่งที่จะเอาไปใช้ (ข้อ 64)
+
+   สนามลม 225 จุด → แคชภูมิภาคพอ เพราะ drift อ่านทิศและความเร็วลมต่อเนื่อง
+   ซึ่งเป็นสนามกว้าง เกลี่ยข้ามกริด 1° แล้วยังถูกอยู่
+
+   จุดบนเส้นทาง 13 จุด → **ต้องยิงสด** เพราะเป็นตัวตัดสินอากาศ พายุ ฝน และเวลา
+   ลมกระโชกเป็นปรากฏการณ์เฉพาะจุดจากเมฆฝนฟ้าคะนอง กว้างไม่กี่สิบกิโลเมตรและกินเวลาสั้น
+   แคชกริด 1° (~111 กม.) ทุก 3 ชม. แล้วเกลี่ยค่าระหว่างจุด = ยอดหายเกลี้ยง
+
+   วัดจริงเส้นฉะเชิงเทรา→เลย 25 ส.ค.: ของจริงกระโชกสูงสุด 72 กม./ชม. มีฝนฟ้าคะนอง 11 จาก 13 จุด
+   แต่แคชเห็นแค่ 46 (64%) แอปจึงรายงานว่า "ฟ้าเปิดตลอดทาง" ทั้งที่มีพายุอยู่จริง
+   กอล์ฟจับได้เพราะเทียบกับความจริง — บั๊กนี้เกิดตอนย้ายเกณฑ์พายุไปใช้กระโชก (ข้อ 62)
+   โดยไม่ได้ตรวจว่าแคชรับไหวไหม
+
+   13 พิกัดต่อการส่งหนึ่งครั้งคือราคาที่ถูกมาก เทียบกับการรายงานอากาศผิด */
 async function fetchWx(pts){
+  const nRoute=CFG.SEGS+1;
+  const cut=Math.max(0, pts.length-nRoute);
+  const field=pts.slice(0,cut), route=pts.slice(cut);
+  let fieldWx=null, src='';
   try{
     const man=await wcManifest();
-    if(man){
-      const t=wcPick(man,pts);
+    if(man && field.length){
+      const t=wcPick(man,field);
       if(t){
         const d=await wcLoad(man,t);
-        WX_SRC='cache:'+t.id;
-        return pts.map(p=>wcSeries(t,d,p.lat,p.lng));
+        fieldWx=field.map(p=>wcSeries(t,d,p.lat,p.lng));
+        src='cache:'+t.id;
       }
     }
-  }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ — ถอยไปยิงตรง */ }
-  WX_SRC='api';
-  return fetchWxLive(pts);
+  }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ */ }
+  try{
+    const routeWx=await fetchWxLive(route);
+    if(!fieldWx){
+      /* ไม่มีแคช — ยิงสดทั้งหมด ยังถูกต้องเสมอ แค่ใช้โควตามากกว่า */
+      const all=await fetchWxLive(pts);
+      WX_SRC='api'; return all;
+    }
+    WX_SRC=src+'+api'; return fieldWx.concat(routeWx);
+  }catch(e){
+    /* ยิงสดไม่ได้ (ออฟไลน์) — ถอยไปใช้แคชทั้งหมด
+       ต้องบอกให้รู้ว่าอากาศอาจอ่อนกว่าความจริง ไม่ใช่เงียบ ๆ แล้วปล่อยให้เชื่อ */
+    if(fieldWx){
+      const man=await wcManifest(); const t=wcPick(man,pts);
+      if(t){ const d=await wcLoad(man,t);
+        WX_SRC='cache-only'; return pts.map(p=>wcSeries(t,d,p.lat,p.lng)); }
+    }
+    throw e;
+  }
 }
 let WX_SRC='';
 async function fetchWxLive(pts){
@@ -3585,7 +3618,13 @@ css.textContent=`
   #wstage{flex:1 1 auto;position:relative;overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;padding:6px 14px 18px;
     padding-bottom:18px}
-  #sheet2{position:relative;margin:0 auto;width:100%;max-width:420px;
+  /* ความกว้างกระดาษ — ตามที่จอให้มาจริง ไม่ใช่ตัวเลขตายตัว
+     บนมือถือแนวตั้ง 420px คือเต็มจอพอดีอยู่แล้ว
+     แต่บนจอคอม 420px ทิ้งที่ว่างสองข้างไปเปล่า ๆ ทั้งที่กระดาษขยายได้อีกมาก
+     เพดานไม่ได้มาจากพื้นที่ แต่มาจาก *ความยาวบรรทัดที่ยังอ่านสบาย*
+     บรรทัดยาวเกินราว 70 ตัวอักษร สายตาจะหาจุดเริ่มบรรทัดถัดไปไม่เจอ
+     ที่ 17px ราว 70 ตัวอักษรตกประมาณ 760px จึงใช้เป็นเพดาน */
+  #sheet2{position:relative;margin:0 auto;width:100%;max-width:min(760px,100%);
     border-radius:2px;overflow:hidden;
     box-shadow:0 1px 2px rgba(51,51,58,.10),0 10px 26px rgba(51,51,58,.10);
     transform-origin:50% 15%;will-change:transform;
@@ -3602,7 +3641,9 @@ css.textContent=`
     border-bottom:1px solid rgba(84,90,104,.16)}
   #sheet2 input::placeholder,#sheet2 textarea::placeholder{color:rgba(84,90,104,.34)}
   #sheet2 input:focus,#sheet2 textarea:focus{border-bottom-color:rgba(198,154,84,.75)}
-  #wbody{font-size:15px;line-height:1.95;min-height:44vh;margin-top:16px;border-bottom:0}
+  /* ต้องมี #sheet2 นำหน้า ไม่งั้นแพ้ #sheet2 textarea{font:inherit} ที่ specificity สูงกว่า
+     และ font แบบย่อจะลากขนาดตัวอักษรกลับไปเป็นของ body ทั้งที่ตั้งไว้แล้ว */
+  #sheet2 #wbody{font-size:15px;line-height:1.95;min-height:44vh;margin-top:16px;border-bottom:0}
   #wfrom{text-align:right}
   .wfoot{margin-top:auto;display:flex;align-items:baseline;justify-content:flex-end;gap:7px;padding-top:18px}
   #whits{position:absolute;left:26px;right:26px;z-index:3;background:#fbf9f4;
@@ -3625,6 +3666,17 @@ css.textContent=`
      ปล่อยให้กว้างตามจอ คำต่อบรรทัดจะมากขึ้น บรรทัดน้อยลง เห็นเนื้อจดหมายมากขึ้น
      ทั้งที่ความสูงเท่าเดิม · บวกกับเก็บแถบบน-ล่างที่กินที่ไปเปล่า ๆ
      กระดาษแนวนอนก็เป็นกระดาษจริง ไม่ได้โกหกอะไร */
+  /* จอคอม — กระดาษใหญ่ขึ้นทั้งกว้างและสูง ตัวอักษรโตขึ้นตามระยะการมองที่ไกลกว่ามือถือ */
+  @media (min-width:760px) and (min-height:620px){
+    #wstage{padding:14px 22px 24px}
+    #sheet2 .ink{padding:46px 56px 52px;min-height:min(78vh,860px)}
+    #sheet2 .meta{font-size:12px;margin-bottom:20px}
+    .wline .lb,#sheet2 input{font-size:17px}
+    #sheet2 .ink{font-size:17px}
+    #sheet2 #wbody{font-size:17px;line-height:2.05;min-height:46vh;margin-top:22px}
+    #wnote{padding:0 22px 10px;font-size:12px}
+    #wbar{padding:11px 22px calc(env(safe-area-inset-bottom) + 16px)}
+  }
   @media (orientation:landscape) and (max-height:560px){
     #wtop{position:absolute;top:0;right:0;z-index:6;padding:8px 10px 0;background:none}
     #wtop .act{display:none}
@@ -3632,7 +3684,7 @@ css.textContent=`
     #sheet2{max-width:min(680px,92vw)}
     #sheet2 .ink{padding:16px 22px 18px;min-height:0}
     #sheet2 .meta{margin-bottom:8px}
-    #wbody{min-height:28vh;margin-top:10px;line-height:1.75}
+    #sheet2 #wbody{min-height:28vh;margin-top:10px;line-height:1.75}
     .wfoot{padding-top:10px}
     #wnote{display:none}
     #wbar{padding:6px 12px calc(env(safe-area-inset-bottom) + 7px)}
