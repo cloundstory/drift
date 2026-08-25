@@ -1130,7 +1130,8 @@ function rainMarks(L,tf){
       track.push(toXYZ(q.lat,q.lng));
       q=destPoint(q.lat,q.lng,brg,step);
     }
-    fall.push({p:track, sp:0.42+0.30*hs(n*9.1), ph:hs(n*11.3), w:0.5+0.5*d});
+    /* ช้าลงราวหนึ่งในสาม — กอล์ฟ 25 ส.ค.: "อยากให้มันนิ่มกว่านี้หน่อย" */
+    fall.push({p:track, sp:0.28+0.22*hs(n*9.1), ph:hs(n*11.3), w:0.5+0.5*d});
   }
   out.fall=fall;
 
@@ -2431,12 +2432,16 @@ const G = {
       const p0=this.project(r0), p1=this.project(r1);
       if((p0.x<-8&&p1.x<-8)||(p0.x>this.W+8&&p1.x>this.W+8)) continue;
       if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
-      const life=Math.min(1,u*7)*(1-Math.max(0,(u-0.55)/0.45)*0.92);
+      /* ⚠️ ขอบของจังหวะเกิด-ดับต้องไม่มีมุม ไม่งั้นตาจับได้ว่า "โผล่" กับ "ดับ"
+         ใช้ smoothstep ทั้งขาเข้าและขาออก อนุพันธ์จึงเป็นศูนย์ที่ปลายทั้งสองข้าง
+         ของเดิมขาเข้าเป็นเส้นตรงชันมาก (u*7) จึงเห็นเป็นการกะพริบมากกว่าการไหล */
+      const ss=(e,a2,b2)=>{ const x=clamp((e-a2)/(b2-a2),0,1); return x*x*(3-2*x); };
+      const life=ss(u,0,0.28)*(1-ss(u,0.5,1));
       if(life<=0.02) continue;
       const depth=.42+.58*Math.sqrt(Math.max(0,(r0.z+r1.z)*.5));
-      let a=alpha*t.w*depth*life*0.72;
-      if(a<=.01) continue;
-      if(a>.58) a=.58;
+      let a=alpha*t.w*depth*life*0.46;
+      if(a<=.008) continue;
+      if(a>.38) a=.38;
       const ai=Math.min(19,Math.round(a*32));
       let arr=B.get(ai); if(!arr) B.set(ai,arr=[]);
       arr.push(p0.x,p0.y,p1.x,p1.y);
@@ -2444,10 +2449,11 @@ const G = {
     if(!B.size) return;
     ctx.save();
     ctx.lineCap='round';
-    ctx.lineWidth=1.2;
+    ctx.lineWidth=0.95;
     B.forEach((arr,ai)=>{
-      /* เข้มกว่าเมฆ เพราะต้องอ่านออกบนพื้นที่ถูกถมไว้แล้ว */
-      ctx.strokeStyle='rgba(38,42,54,'+(ai/32).toFixed(3)+')';
+      /* เข้มกว่าเมฆอยู่บ้าง แต่ไม่ต้องมาก — สิ่งที่ทำให้อ่านออกคือการเคลื่อนไหว ไม่ใช่น้ำหนัก
+         ถ้าเข้มเกินไปมันจะกลายเป็นขีดแข็ง ๆ วิ่งผ่าน ไม่ใช่สายฝน */
+      ctx.strokeStyle='rgba(48,53,66,'+(ai/32).toFixed(3)+')';
       ctx.beginPath();
       for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
       ctx.stroke();
