@@ -2772,6 +2772,19 @@ async function confirmSend(){
 
 /* ---------- อ่านจดหมาย ---------- */
 function openRead(L){
+  /* ---------- องก์รับ "drifted in" (ข้อ 61.4) ----------
+     ฉบับขาเข้าที่ถึงแล้วและยังไม่เคยหยิบ ต้องได้เห็นมันร่อนลงมาก่อน แล้วแตะหยิบเอง
+     L.pk เป็นธงในเครื่องอย่างเดียว (แบบเดียวกับ L.nf) ไม่ได้อยู่ในลิงก์
+     ฉบับเก่าที่ไม่มีธงนี้ = ยังไม่เคยหยิบ ซึ่งถูกแล้ว */
+  if(L.dir==='in' && !L.pk){
+    const st0=letterState(L,Date.now());
+    if(st0.arrived && !st0.gone){
+      L.pk=1; store.put(L);
+      closeSheet();
+      openArrive(L,()=>openRead(L));
+      return;
+    }
+  }
   current=L; logOpen=false;
   const st=letterState(L,Date.now());
   const stage=$('#rStage'), log=$('#rLog');
@@ -3082,7 +3095,10 @@ function dBuildTex(L){
   g.textAlign='right'; g.font=F(14.5); g.fillText('จาก '+L.f.n, dTW-24, dTH-34);
 }
 
-function dWarp(g,cx,cy,pw,ph,t,wind,rotY,rotX,rotZ,depth,curl,cols,rows){
+/* ox,oy = ระยะใน *โลก* (ไม่ใช่บนจอ) — ใช้ตอนกระดาษอยู่ไกล
+   ของที่อยู่ไกลต้องขยับเข้าหากลางจอตามเปอร์สเปกทีฟ ไม่ใช่เลื่อนเป็นพิกเซลคงที่ */
+function dWarp(g,cx,cy,pw,ph,t,wind,rotY,rotX,rotZ,depth,curl,cols,rows,ox,oy){
+  ox=ox||0; oy=oy||0;
   const {pts}=meshPoints(pw,ph,t,wind,cols,rows);
   const cY=Math.cos(rotY),sY=Math.sin(rotY);
   const cX=Math.cos(rotX),sX=Math.sin(rotX);
@@ -3100,7 +3116,7 @@ function dWarp(g,cx,cy,pw,ph,t,wind,rotY,rotX,rotZ,depth,curl,cols,rows){
       }
       const x1=x*cY+z*sY, zA=-x*sY+z*cY;
       const y1=y*cX-zA*sX, z1=y*sX+zA*cX;
-      const x2=x1*cZ-y1*sZ, y2=x1*sZ+y1*cZ;
+      const x2=x1*cZ-y1*sZ+ox, y2=x1*sZ+y1*cZ+oy;
       const s=DRIFT_FOC/(DRIFT_FOC+depth+z1);
       row.push({x:cx+x2*s, y:cy+y2*s, X:x2, Y:y2, Z:z1});
     }
@@ -3145,8 +3161,15 @@ function dWarp(g,cx,cy,pw,ph,t,wind,rotY,rotX,rotZ,depth,curl,cols,rows){
       const ma=((x1-x0)*(v2-v0)-(x2-x0)*(v1-v0))/den, mb=((x2-x0)*(u1-u0)-(x1-x0)*(u2-u0))/den;
       const mc=((y1-y0)*(v2-v0)-(y2-y0)*(v1-v0))/den, md=((y2-y0)*(u1-u0)-(y1-y0)*(u2-u0))/den;
       g.save();
-      g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.lineTo(x2,y2);g.closePath();
-      g.clip(); g.lineWidth=1; g.strokeStyle='rgba(0,0,0,0)'; g.stroke();
+      /* ขยายสามเหลี่ยมออกจากจุดศูนย์ถ่วงเล็กน้อย ให้ช่องที่ติดกันซ้อนทับกันราวหนึ่งพิกเซล
+         ไม่งั้นขอบที่ถูก antialias จะเหลือรอยต่อเป็นเส้นตารางทั้งแผ่น
+         เห็นชัดตอนกระดาษอยู่ใกล้และมุมต่ำ (องก์รับ ตอนนอนอยู่กับพื้น) */
+      const gx=(x0+x1+x2)/3, gy=(y0+y1+y2)/3, EX=0.7;
+      const ex=(px,py)=>{ const dx=px-gx, dy=py-gy, l=Math.hypot(dx,dy)||1;
+                          return [px+dx/l*EX, py+dy/l*EX]; };
+      const e0=ex(x0,y0), e1=ex(x1,y1), e2=ex(x2,y2);
+      g.beginPath();g.moveTo(e0[0],e0[1]);g.lineTo(e1[0],e1[1]);g.lineTo(e2[0],e2[1]);g.closePath();
+      g.clip();
       g.transform(ma,mc,mb,md,x0-ma*u0-mb*v0,y0-mc*u0-md*v0);
       g.drawImage(TX,0,0);
       const uA=c/cols*dTW, uB=(c+1)/cols*dTW, vA=r/rows*dTH, vB=(r+1)/rows*dTH;
@@ -3361,6 +3384,151 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',()=>{ if(dHold){clearInterval(dHold);dHold=null;
   if(dPHASE==='wait'&&dProg<dFeel(dSPD).keep){dY=0;dProg=0;} } });
+
+
+
+/* ============================================================
+   องก์รับ "drifted in" — จดหมายร่อนลงมาแล้วเราหยิบขึ้นมา (ข้อ 61.4)
+
+   ยกมาจาก receive-studies.html ที่ผ่านตากอล์ฟแล้ว 24 ส.ค.
+   ลูกโลก → ร่อนลง → แตะพื้น → นอนรอ → แตะหยิบ → อ่าน
+
+   กระดาษที่ตกไม่เคย "ตั้งขึ้น" — แรงต้านอากาศสูงสุดเมื่อผิวขวางทางตก
+   นั่นคือเหตุผลเดียวที่มันร่วงช้าพอจะร่อนได้ ระนาบจึงราบตลอด
+   แกว่งรอบแนวราบเท่านั้น และตอนผ่านระดับสายตาเราจะเห็นเป็นสันบาง ๆ เอง
+   ============================================================ */
+const A_GLOBE=1400, A_FALL=4200, A_LAND=700, A_PICK=900;
+let aPHASE='off', aT0=0, aLET=null, aSPD=5, aDone=null, aRAF=null;
+
+/* ท่าร่อน — ร่อนยาวไปข้างหนึ่ง ค้างที่ปลายครู่หนึ่ง แล้วพลิกกลับเร็ว ๆ
+   ไซน์บริสุทธิ์ให้จังหวะสม่ำเสมอเกินจนดูเหมือนถูกดึงไปมา ดัดปลายให้แบนด้วยเลขยกกำลัง < 1 */
+function aFall(k,w){
+  const W=innerWidth, H=innerHeight;
+  const cycles=1.6+w*1.1, ph=k*Math.PI*2*cycles;
+  const sRaw=Math.sin(ph);
+  const sway=Math.sign(sRaw)*Math.pow(Math.abs(sRaw),0.55);
+  const swayV=Math.cos(ph);                    /* ความเร็วข้าง — กำหนดมุมเอียง */
+  const settle=Math.pow(k,3.0);
+  const amp=(0.34+w*0.24)*(1-settle*0.96);
+  return {
+    tx: sway*W*amp,
+    /* เริ่มสูงเหนือจอ จบต่ำกว่าระดับสายตา — เดินผ่านระดับสายตาระหว่างทาง */
+    ty: -H*0.92 + Math.pow(k,1.35)*H*1.24,
+    depth: 2100*(1-Math.pow(k,1.5)),
+    /* ท่าจบต้องแน่นอน — คว่ำหน้าลงพื้นเสมอ
+       เดิมปล่อยให้ swayV ตัดสิน ท่าจบเลยขึ้นกับเฟสที่บังเอิญหยุด (ลม 5/45 หงาย · ลม 20 คว่ำ)
+       และคว่ำคือท่าที่ถูก เพราะถ้าอ่านได้ตั้งแต่อยู่บนพื้น การหยิบก็ไม่เหลือความหมาย */
+    rotX: (Math.PI/2 + swayV*0.52)*(1-settle) + settle*(Math.PI/2+0.19),
+    rotY: sway*0.42*(1-settle*0.95),
+    rotZ: -swayV*0.34*(1-settle*0.96),
+    curl: (0.30+w*0.40)*(1-settle*0.75),
+    mwind: 0.16+w*0.22*(1-settle*0.6),
+    settle
+  };
+}
+
+function aPaint(){
+  const cv=$('#flycv'), W=innerWidth, H=innerHeight, dp=Math.min(devicePixelRatio||1,2);
+  if(cv.width!==W*dp||cv.height!==H*dp){ cv.width=W*dp; cv.height=H*dp; }
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+  if(!dTEX) return;
+  const w=dWindOf(aSPD), now=performance.now(), el=now-aT0;
+  let S=null, strk=0;
+  if(aPHASE==='fall'){
+    const k=Math.min(1,el/A_FALL);
+    S=aFall(k,w); strk=1.1*(1-S.settle*0.5);
+    if(k>=1){ aPHASE='land'; aT0=now; }
+  }else if(aPHASE==='land'){
+    const k=Math.min(1,el/A_LAND);
+    S=aFall(1,w); strk=0.5*(1-k);
+    /* แตะพื้นแล้วยังไหวอีกนิดก่อนนิ่ง — กระดาษไม่หยุดทันทีที่ถึงพื้น */
+    const q=Math.exp(-k*5)*Math.sin(k*13)*(1-k);
+    S.rotZ+=q*0.10; S.rotY+=q*0.13; S.curl*=(1-k*0.55);
+    if(k>=1){ aPHASE='wait'; aT0=now; $('#driftWord').textContent='แตะเพื่อหยิบขึ้นมา'; }
+  }else if(aPHASE==='wait'){
+    S=aFall(1,w); S.curl*=0.45; strk=0.14;
+    S.ty+=Math.sin(dT*1.1)*2.2;                /* นอนอยู่แต่ยังหายใจ */
+  }else if(aPHASE==='pick'){
+    const k=Math.min(1,el/A_PICK), e=1-Math.pow(1-k,2.6);
+    const A=aFall(1,w); A.curl*=0.45;
+    /* หยิบขึ้นมา = พลิกจากนอนราบ (90 องศา) มาเป็นหันหน้าเข้าหาเรา (0 องศา) */
+    S={ tx:A.tx*(1-e), ty:A.ty*(1-e), depth:A.depth*(1-e),
+        rotX:A.rotX*(1-e), rotY:A.rotY*(1-e), rotZ:A.rotZ*(1-e),
+        curl:A.curl*(1-e)*0.6, mwind:0.16*(1-e)+0.05, settle:(1-e)*0.9 };
+    strk=0.14*(1-e);
+    if(k>=1){ aPHASE='read'; aT0=now; aFinish(); return; }
+  }
+  if(!S) return;
+  const bw=Math.min(W*0.86,380), bh=bw*(dTH/dTW);
+  const persp=DRIFT_FOC/(DRIFT_FOC+S.depth);
+  const lod = persp>0.55?[13,16] : persp>0.28?[9,11] : [6,7];
+  const f={w};
+  dStreaks(g,strk,f,-Math.PI/2,true,S.depth,W,H);
+  /* เงาบนพื้น — ตัวเดียวที่บอกว่ามี "พื้น" อยู่จริง
+     ต้องฉายด้วยสูตรเดียวกับกระดาษ ไม่งั้นมันจะไม่อยู่ใต้กระดาษ */
+  if(S.settle>0.25){
+    const a=(S.settle-0.25)/0.75;
+    const sw=bw*persp*0.72, sh=sw*0.20;
+    const gx=W/2+S.tx*persp, gy=H/2+(S.ty+bh*0.12)*persp;
+    g.save(); g.translate(gx,gy); g.scale(1,sh/(sw*0.7));
+    const rg=g.createRadialGradient(0,0,0,0,0,sw*0.7);
+    rg.addColorStop(0,'rgba(84,90,104,'+(0.20*a).toFixed(3)+')');
+    rg.addColorStop(1,'rgba(84,90,104,0)');
+    g.fillStyle=rg; g.beginPath(); g.arc(0,0,sw*0.7,0,Math.PI*2); g.fill();
+    g.restore();
+  }
+  dWarp(g,W/2,H/2,bw,bh,dT,S.mwind,S.rotY,S.rotX,S.rotZ,S.depth,S.curl,lod[0],lod[1],S.tx,S.ty);
+  dStreaks(g,strk,f,-Math.PI/2,false,S.depth,W,H);
+  dGrain(g,0.085,W,H);
+}
+
+function aTick(){
+  aRAF=requestAnimationFrame(aTick);
+  if(aPHASE==='off') return;
+  dT+=1/60;
+  if(aPHASE==='globe'){
+    const el=performance.now()-aT0;
+    /* ลูกโลกค้างไว้ครู่หนึ่งก่อน แล้วจางออก — ผู้รับได้เห็นว่ามันมาจากไหน */
+    const k=Math.min(1,el/A_GLOBE);
+    stage.style.opacity=(1-Math.max(0,(k-0.55)/0.45)).toFixed(3);
+    renderGlobe();
+    if(k>=1){ aPHASE='fall'; aT0=performance.now(); stage.style.opacity='0'; }
+    return;
+  }
+  aPaint();
+}
+
+function openArrive(L,onDone){
+  aLET=L; aDone=onDone||null;
+  /* ลมที่ *ปลายทาง* เป็นตัวกำหนดการร่อน ไม่ใช่ลมต้นทาง — จดหมายกำลังตกลงที่นั่น */
+  const last=(L.lg&&L.lg.length)?L.lg[L.lg.length-1]:null;
+  aSPD=last?last[2]:5;
+  dT=0; dTEX=null;
+  dBuildTex(L);
+  selected=L.id;
+  const at=llOf(L.t);
+  G.focus(at, G.fitZoom(CFG.REVEAL_MIN*2));
+  sizeStage();
+  aPHASE='globe'; aT0=performance.now();
+  $('#driftWord').textContent='drifted in';
+  $('#drift').classList.add('on');
+  document.body.classList.add('drifting');
+  if(!aRAF) aTick();
+}
+function aFinish(){
+  aPHASE='off';
+  $('#drift').classList.remove('on');
+  document.body.classList.remove('drifting');
+  stage.style.opacity='1';
+  if(aDone){ const f=aDone; aDone=null; f(); }
+}
+/* แตะเพื่อหยิบ — action ของผู้รับคือการเก็บจดหมายขึ้นมา ไม่ใช่การกดปุ่ม */
+$('#drift').addEventListener('pointerdown',e=>{
+  if(aPHASE!=='wait') return;
+  e.preventDefault();
+  aPHASE='pick'; aT0=performance.now();
+  $('#driftWord').textContent='';
+});
 
 
 sizeStage();
