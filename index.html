@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e4e3e0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>จดหมายสายลม</title>
+<title>drift</title>
 <style>
 /* ---------- Noto Serif Thai ฝังในไฟล์ (ข้อ 61.1) ----------
    ไทยกับอังกฤษต้องมาจากฟอนต์เดียวกัน ไม่งั้นน้ำหนักเส้นกับสัดส่วนจะไม่ตรงกัน
@@ -26,7 +26,7 @@
   text-align:center;pointer-events:none;display:flex;flex-direction:column;gap:7px}
 #driftWord{font-size:13px;letter-spacing:.34em;color:var(--dim)}
 #driftHint i{font-style:normal;font-size:11.5px;letter-spacing:.12em;color:var(--faint)}
-body.drifting header.bar,body.drifting #dock,body.drifting #play{opacity:0;pointer-events:none;transition:opacity .3s}
+body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;transition:opacity .3s}
 @media (prefers-reduced-motion:reduce){#driftHint{transition:none}}
 
 :root{
@@ -69,10 +69,6 @@ button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
 .play{display:flex;align-items:center;gap:10px;padding:0 14px 2px}
 .play[hidden]{display:none}
 .play input{flex:1;accent-color:#c69a54;height:32px;background:none}
-/* ยังไม่ได้เลือกฉบับ = โชว์แต่ปุ่ม ให้เห็นว่ามีทางเข้าอยู่ตรงนี้
-   ทางเข้าที่มองไม่เห็นเท่ากับไม่มี — แต่ยังไม่เลือกฉบับให้เอง ตามข้อ 7 */
-.play.solo{justify-content:center}
-.play.solo input,.play.solo .ptime{display:none}
 .pbtn{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:999px;
   background:rgba(255,255,255,.62);backdrop-filter:blur(7px);padding:8px 16px;font-size:12px;letter-spacing:.06em}
 .ptime{flex:0 0 auto;min-width:78px;text-align:right;font-size:11px;color:var(--dim);
@@ -143,30 +139,90 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 .waiting{text-align:center;padding:40px 20px;font-size:14px;line-height:2.2;color:var(--dim)}
 .waiting b{display:block;font-weight:normal;font-size:19px;color:var(--txt);letter-spacing:.05em;margin-bottom:10px}
 
+
+/* ---------- หน้าแรกใหม่ (ข้อ 100.2) ----------
+   เดิมมีของห้าก้อนแย่งสายตากับลูกโลก — แถบบนสองปุ่ม บรรทัดใบ้ แถบจดหมายเลื่อนได้ ที่จับ แถบเล่น
+   เหลือสี่: ลูกโลก · บรรทัดสถานะ · เมนู · เขียน
+   ⚠️ ทุกอันที่กดได้ต้องมีพื้นที่แตะ 44px แม้ตาจะเห็นแค่ตัวหนังสือบาง ๆ */
+.mbtn{width:44px;height:44px;margin:-8px -10px -8px 0;display:flex;flex-direction:column;
+  align-items:flex-end;justify-content:center;gap:4.5px;padding:0 10px 0 0}
+.mbtn i{display:block;height:1.5px;width:20px;background:rgba(84,90,104,.55);border-radius:1px;
+  font-style:normal;transition:background .2s}
+.mbtn i:nth-child(2){width:16px}
+.mbtn i:nth-child(3){width:19px}
+.mbtn:active i{background:rgba(84,90,104,.85)}
+
+/* บรรทัดสถานะ — สิ่งเดียวที่ต้องอ่าน และสิ่งเดียวที่ต้องทำต่อ */
+#status{align-self:center;max-width:88%;text-align:center;padding:11px 18px;
+  min-height:44px;display:flex;flex-direction:column;justify-content:center;gap:3px;
+  border-radius:14px;transition:opacity .45s,background .2s}
+#status:active{background:rgba(255,255,255,.4)}
+#status[hidden]{display:none}
+#status b{font-weight:normal;font-size:15.5px;letter-spacing:.04em;line-height:1.6}
+#status i{font-style:normal;font-size:11px;letter-spacing:.09em;color:var(--faint);line-height:1.7}
+#status.quiet b{font-size:13px;color:var(--dim);letter-spacing:.08em}
+#status.here b{color:#8b6a33}
+
+#bottom{padding:6px 16px calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:center}
+#btnWrite{min-width:148px;padding:12px 26px;border-radius:14px;font-size:13.5px;letter-spacing:.08em}
+body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transition:opacity .3s}
+
+/* แถวในเมนูกับในกล่อง — สูง 46px ทั้งแถวแตะได้ ไม่ใช่แค่ตัวหนังสือ */
+.mrow{display:flex;width:100%;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:15px 4px;min-height:46px;border-bottom:1px solid var(--line-soft);text-align:left}
+.mrow:last-child{border-bottom:0}
+.mrow b{font-weight:normal;font-size:14.5px}
+.mrow em{font-style:normal;font-size:11.5px;color:var(--faint);white-space:nowrap;flex:0 0 auto}
+.mrow:active{background:rgba(255,255,255,.4)}
+.mrow.on b,.mrow.on em{color:#8b6a33}
+.mrow.gone{opacity:.5}
+.grp{font-size:10px;letter-spacing:.34em;color:var(--faint);margin:16px 0 2px}
+.grp:first-child{margin-top:0}
+
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
 </head>
 <body>
 <canvas id="stage"></canvas>
-<div class="hint" id="hint">ยังไม่มีจดหมายอยู่กลางลม<br><span style="opacity:.6">ปัดเพื่อหมุนโลก</span></div>
-
 <div class="veil">
   <header class="bar">
-    <div class="brand">จดหมายสายลม</div>
-    <div class="tools">
-      <button class="btn ghost" id="btnVault">คลัง</button>
-      <button class="btn gold" id="btnWrite">เขียนจดหมาย</button>
-    </div>
+    <div class="brand">drift</div>
+    <button class="mbtn" id="btnMenu" aria-label="เมนู"><i></i><i></i><i></i></button>
   </header>
   <div class="spacer"></div>
+  <button id="status" hidden></button>
   <div class="play" id="play" hidden>
     <button class="pbtn" id="pPlay">ดูการเดินทาง</button>
     <input type="range" id="pScrub" min="0" max="1000" value="0" aria-label="เลื่อนดูการเดินทาง">
     <span class="ptime" id="pTime"></span>
   </div>
-  <div class="dock" id="dock"></div>
+  <div id="bottom"><button class="btn gold" id="btnWrite">เขียน</button></div>
 </div>
+
+<!-- เมนู — ทางเข้าเดียวของทุกอย่างที่ไม่ใช่การเขียน (ข้อ 100.2)
+     ยังมีสองบรรทัด เพราะ "คนที่เขียนถึงได้" กับ "drift port ของฉัน" ยังไม่มีจริง
+     ⛔ ห้ามใส่บรรทัดที่กดแล้วไม่มีอะไร — เมนูจะโตเองตอน port มาถึง -->
+<section class="sheet" id="menu">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>drift</h2>
+    <p class="sub">เก็บในเครื่องนี้เท่านั้น</p>
+    <button class="mrow" id="mInbox"><b>กล่องจดหมาย</b><em id="mCount"></em></button>
+    <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
+    <div class="rule"></div>
+    <p class="note faint">ลมและอากาศจาก Open-Meteo</p>
+  </div>
+</section>
+
+<section class="sheet" id="inbox">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>กล่องจดหมาย</h2>
+    <p class="sub">แตะฉบับที่ถึงแล้วเพื่ออ่าน · ฉบับที่ยังเดินทางอยู่จะพาไปดูบนลูกโลก</p>
+    <div id="inboxList"></div>
+  </div>
+</section>
 
 <section class="sheet" id="compose">
   <button class="close" data-close>ปิด</button>
@@ -237,7 +293,7 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 <section class="sheet" id="vault">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
-    <h2>คลังจดหมาย</h2>
+    <h2>บัญชี</h2>
     <p class="sub">เก็บในเครื่องนี้เท่านั้น — ล้างข้อมูลเบราว์เซอร์แล้วหาย</p>
     <label class="f"><span>ชื่อคุณ</span><input id="vName" placeholder="ชื่อที่จะปรากฏบนจดหมาย"></label>
     <label class="f"><span>ที่อยู่ของคุณ (ต้นทาง)</span><input id="vPlace" placeholder="พิมพ์ชื่อเมือง" autocomplete="off"></label>
@@ -283,7 +339,7 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 <div id="toast"></div>
 <script>
 /* ============================================================
-   จดหมายสายลม — เฟส 1 (no-backend)
+   drift — เฟส 1 (no-backend)
    single-file HTML + localStorage + URL-encode
    ค่าคงที่ทั้งหมดรวมไว้ใน CFG เพื่อจูนได้จุดเดียว (ดู §11 ของ CONCEPT)
    ============================================================ */
@@ -3814,13 +3870,11 @@ function syncPlay(){
   const st=L?letterState(L,Date.now()):null;
   const on = !!L && !!st && !!(L.lg&&L.lg.length&&L.th>0);
   if(!on && PREVIEW) previewOff();
-  /* ยังไม่ได้เลือกฉบับ แต่มีจดหมายให้ย้อนดู = โชว์ปุ่มไว้ให้เห็นว่ามีทางเข้า
-     กดแล้วค่อยเลือกให้ ไม่ใช่เลือกให้ตั้งแต่เปิดแอป (ข้อ 7) */
-  const solo = !on && previewable().length>0;
-  bar.hidden = !on && !solo;
-  bar.classList.toggle('solo', solo);
+  /* ข้อ 100.2 — เดิมโชว์ปุ่มค้างไว้ตอนยังไม่เลือกฉบับ เพราะแถบจดหมายเป็นทางเข้าเดียว
+     "ทางเข้าที่มองไม่เห็นเท่ากับไม่มี" ยังจริงอยู่ แต่ตอนนี้มีสามทางเข้าแล้ว —
+     บรรทัดสถานะ · แตะจดหมายบนลูกโลก · กล่องจดหมายในเมนู ปุ่มค้างจึงเหลือแค่ของรก */
+  bar.hidden = !on;
   if(bar.hidden) return;
-  if(solo){ $('#pPlay').textContent='ดูการเดินทาง'; return; }
   $('#pPlay').textContent = PREVIEW ? (PREVIEW.play?'หยุด':'เล่นต่อ') : 'ดูการเดินทาง';
   const h = PREVIEW ? PREVIEW.h : st.elapsed;
   $('#pScrub').value = Math.round(clamp(h/L.th,0,1)*1000);
@@ -3855,6 +3909,17 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheet);
 
 /* ---------- ปัดหมุนโลก ---------- */
 let tapX=0, tapY=0, tapT=0;
+/* ตำแหน่งจดหมายบนจอของเฟรมล่าสุด — เติมใน renderGlobe ใช้ตอนแตะ
+   ต้องมีเพราะข้อ 100.2 ถอดแถบจดหมายด้านล่างออก ซึ่งเคยเป็นทางเดียวที่เลือกฉบับได้ */
+const HITS=[];
+function hitLetter(x,y){
+  let best=null, bd=44;          /* 44px = พื้นที่แตะขั้นต่ำ ไม่ใช่ขนาดจุดที่ตาเห็น */
+  for(const h of HITS){
+    const d=Math.hypot(h.x-x,h.y-y);
+    if(d<bd){ bd=d; best=h.id; }
+  }
+  return best ? store.letters().find(L=>L.id===best) : null;
+}
 /* ข้อ 26 — ปัดนิ้วเดียวหมุนโลกเหมือนเดิมทุกระดับซูม · หุบสองนิ้ว/ล้อเมาส์ = ซูม ไม่ชนกัน */
 const PTR=new Map(); let pinchD=0, pinchZ=1;
 const pinchDist=()=>{ const a=[...PTR.values()]; return Math.hypot(a[0].x-a[1].x, a[0].y-a[1].y); };
@@ -3873,9 +3938,16 @@ stage.addEventListener('wheel',e=>{
    เกณฑ์เข้มพอจะไม่ชนกับการปัดหมุนโลก (ข้อ 26 ปัดนิ้วเดียวยังหมุนเหมือนเดิม) */
 stage.addEventListener('pointerup',e=>{
   if(PTR.size>1) return;
-  if(Math.hypot(e.clientX-tapX,e.clientY-tapY)<6 && performance.now()-tapT<320 && selected){
-    selected=null; G.zTarget=1; G.target=null; previewOff(); refreshDock();
+  if(Math.hypot(e.clientX-tapX,e.clientY-tapY)>=6 || performance.now()-tapT>=320) return;
+  const L=hitLetter(e.clientX,e.clientY);
+  if(L){
+    /* แตะฉบับเดิมซ้ำ = เปิดอ่าน · แตะฉบับใหม่ = เลือกแล้วหมุนกล้องไปหา
+       ข้อ 7 ไม่ได้ห้ามเปิดตอนผู้ใช้แตะ มันห้ามเลือกให้เองตอนเปิดแอป */
+    const st=letterState(L,Date.now());
+    if(selected===L.id && (st.arrived||st.gone)) openRead(L); else pickLetter(L);
+    return;
   }
+  if(selected){ selected=null; G.zTarget=1; G.target=null; previewOff(); refreshDock(); }
 });
 stage.addEventListener('pointermove',e=>{
   if(PTR.has(e.pointerId)) PTR.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -3990,6 +4062,7 @@ function renderGlobe(){
     G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
   }
 
+  HITS.length=0;
   /* ---------- ชั้นจดหมาย: อยู่เหนือหมอกเสมอ ----------
      หมอกปิดโลก ไม่ได้ปิดจดหมาย · ข้อ 7 หน้าเริ่มต้น = หมอก + จุดทอง + จุดปลายทาง */
   all.forEach(({L,st,A,B})=>{
@@ -4041,6 +4114,7 @@ function renderGlobe(){
        ไม่งั้นเส้นในจังหวัดจะไม่มีวันเห็นกระดาษ เพราะซูมพอดีของมันอยู่ที่ 16 เท่าแล้ว */
     const fitz = selected===L.id ? G.fitZoom(fitKm(L)) : 0;
     const paper = fitz ? clamp(G.zoom/fitz-1.3, 0, 1) : 0;
+    if(p.z>=0) HITS.push({id:L.id,x:p.x,y:p.y});
     if(paper<1) G.dot(sctx,p,pulse*(1-paper), selected===L.id);
     if(paper>0 && p.z>=0){
       const wnd=(L.lg&&L.lg[st.legIdx]) ? clamp(L.lg[st.legIdx][2]/90,.1,1) : .3;
@@ -4051,7 +4125,9 @@ function renderGlobe(){
     }
   });
   flying.slice(CFG.MAX_ANIM).forEach(({L,st})=>{
-    G.dot(sctx,G.pipeV(posVAt(L,st.prog)),1,selected===L.id);
+    const q=G.pipeV(posVAt(L,st.prog));
+    if(q.z>=0) HITS.push({id:L.id,x:q.x,y:q.y});
+    G.dot(sctx,q,1,selected===L.id);
   });
 }
 
@@ -4099,42 +4175,97 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
-/* ---------- แถบจดหมายด้านล่าง ---------- */
+/* ---------- หน้าแรก: บรรทัดสถานะ · เมนู · กล่องจดหมาย (ข้อ 100.2) ----------
+   ชื่อ refreshDock ยังอยู่เพราะมีคนเรียก 9 ที่ แต่ของที่มันเติมเปลี่ยนไปแล้ว
+   แถบจดหมายที่เลื่อนได้ถูกถอดทิ้ง — จดหมายอยู่บนลูกโลกอยู่แล้ว ไม่ต้องมีสำเนาเป็นชิปอีกชุด
+
+   ⚠️ แต่ของเดิม *ไม่มี* การแตะเลือกฉบับบนลูกโลกเลย เลือกได้ทางแถบล่างทางเดียว
+   ถอดแถบออกเฉย ๆ = ทางเข้าหายไป จึงต้องเพิ่ม hit-test บนลูกโลกพร้อมกัน (ดู HITS) */
+function etaWord(L,st){
+  if(st.gone) return 'สายลมพัดหลง';
+  if(st.arrived) return L.dir==='in' ? (L.read?'อ่านแล้ว':'ยังไม่ได้เปิด') : 'ถึงแล้ว';
+  if(st.parked) return st.sev>=3 ? 'วนอยู่ในพายุ' : 'ถูกลมปั่น';
+  return 'อีก '+fmtDur(st.remain);
+}
+/* บรรทัดเดียวที่ตัดสินว่าหน้าแรกพูดอะไร (ข้อ 99.10ฌ)
+   ถึงแล้วยังไม่เปิด > กำลังมา > กำลังไป > เงียบ
+   ⚠️ ข้อ 7 — บรรทัดนี้ *ชี้* ได้ แต่ห้ามเปิดให้เอง การเปิดต้องเป็นนิ้วของผู้ใช้ */
+function topLetter(list,now){
+  const s=L=>({L,st:letterState(L,now)});
+  const inb=list.filter(L=>L.dir==='in').map(s);
+  const hit=inb.find(x=>x.st.arrived&&!x.st.gone&&!x.L.read);
+  if(hit) return {...hit,rank:'here'};
+  const coming=inb.filter(x=>!x.st.arrived&&!x.st.gone).sort((a,b)=>a.st.remain-b.st.remain)[0];
+  if(coming) return {...coming,rank:'coming'};
+  const going=list.filter(L=>L.dir!=='in').map(s)
+    .filter(x=>!x.st.arrived&&!x.st.gone).sort((a,b)=>a.st.remain-b.st.remain)[0];
+  if(going) return {...going,rank:'going'};
+  return null;
+}
 function refreshDock(){
-  const dock=$('#dock'), now=Date.now();
-  const list=store.letters().sort((a,b)=>b.s-a.s);
-  dock.innerHTML='';
-  $('#hint').style.opacity = list.length ? 0 : 1;
-  list.forEach(L=>{
-    const st=letterState(L,now);
-    const b=document.createElement('button');
-    b.className='chip'+(selected===L.id?' sel':'')+(L.dir==='in'&&st.arrived?' here':'')+(st.gone?' gone':'');
-    let eta;
-    if(st.gone) eta='สายลมพัดหลง';
-    else if(st.arrived) eta = L.dir==='in' ? 'drifted in · เปิดอ่าน' : 'drifted in';
-    else if(st.parked) eta=(st.sev>=3?'วนอยู่ในพายุ':'ถูกลมปั่น');
-    else eta='drifting · อีก '+fmtDur(st.remain);
-    b.innerHTML='<span class="who">'+esc(L.dir==='in'?'จาก '+L.f.n:'ถึง '+L.t.n)+'</span><span class="eta">'+eta+'</span>';
-    b.onclick=()=>{
-      if(selected===L.id){ openRead(L); return; }
-      selected=L.id;
-      previewOff();
-      G.focus(posAt(L,st.prog), G.fitZoom(fitKm(L)));
-      refreshDock();
-    };
-    dock.appendChild(b);
-  });
+  const now=Date.now(), list=store.letters().sort((a,b)=>b.s-a.s);
+  const el=$('#status'), top=topLetter(list,now);
+  el.className=''; el.onclick=null;
+  if(!top){
+    el.hidden=false; el.classList.add('quiet');
+    el.innerHTML='<b>'+(list.length?'ตอนนี้ไม่มีจดหมายอยู่กลางลม':'ยังไม่มีจดหมายอยู่กลางลม')+'</b>'
+      +'<i>ปัดเพื่อหมุนโลก</i>';
+  }else{
+    const {L,st,rank}=top;
+    let head,sub;
+    if(rank==='here'){ head='มีจดหมายถึงคุณ'; sub='จาก '+esc(L.f.n); el.classList.add('here'); }
+    else if(rank==='coming'){ head='อีก '+fmtDur(st.remain); sub='จาก '+esc(L.f.n); }
+    else { head='ของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
+    el.hidden=false;
+    el.innerHTML='<b>'+head+'</b><i>'+sub+'</i>';
+    el.onclick=()=>{ if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
+  }
+  fillInbox(list,now);
   syncPlay();
 }
+/* เลือกฉบับแล้วหมุนกล้องไปหา — เดิมโค้ดก้อนนี้อยู่ในปุ่มของแถบล่าง */
+function pickLetter(L){
+  const st=letterState(L,Date.now());
+  selected=L.id; previewOff();
+  G.focus(posAt(L,st.prog), G.fitZoom(fitKm(L)));
+  refreshDock();
+}
+function fillInbox(list,now){
+  const box=$('#inboxList'); box.innerHTML='';
+  const rows=list.map(L=>({L,st:letterState(L,now)}));
+  const grp=[
+    ['กำลังมา',  rows.filter(x=>x.L.dir==='in'&&!x.st.arrived&&!x.st.gone)],
+    ['ถึงแล้ว',   rows.filter(x=>x.L.dir==='in'&&(x.st.arrived||x.st.gone))],
+    ['ของคุณที่กำลังไป', rows.filter(x=>x.L.dir!=='in'&&!x.st.arrived&&!x.st.gone)],
+    ['ส่งถึงแล้ว', rows.filter(x=>x.L.dir!=='in'&&(x.st.arrived||x.st.gone))]
+  ];
+  let n=0;
+  grp.forEach(([name,items])=>{
+    if(!items.length) return;
+    const h=document.createElement('div'); h.className='grp'; h.textContent=name; box.appendChild(h);
+    items.forEach(({L,st})=>{
+      n++;
+      const b=document.createElement('button');
+      b.className='mrow'+(L.dir==='in'&&st.arrived&&!L.read?' on':'')+(st.gone?' gone':'');
+      b.innerHTML='<b>'+esc(L.dir==='in'?'จาก '+L.f.n:'ถึง '+L.t.n)+'</b><em>'+etaWord(L,st)+'</em>';
+      b.onclick=()=>{ closeSheet(); if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
+      box.appendChild(b);
+    });
+  });
+  if(!n) box.innerHTML='<p class="note">ยังไม่มีจดหมายในเครื่องนี้</p>';
+  $('#mCount').textContent = list.length ? (function(){
+    const unread=list.filter(L=>L.dir==='in'&&letterState(L,now).arrived&&!L.read).length;
+    const coming=list.filter(L=>L.dir==='in'&&!letterState(L,now).arrived).length;
+    const p=[]; if(unread) p.push('ยังไม่ได้เปิด '+unread); if(coming) p.push('กำลังมา '+coming);
+    return p.length?p.join(' · '):list.length+' ฉบับ';
+  })() : 'ยังไม่มี';
+}
+$('#btnMenu').onclick=()=>{ refreshDock(); openSheet('menu'); };
+$('#mInbox').onclick=()=>{ openSheet('inbox'); };
+$('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
+
 $('#pPlay').onclick=()=>{
-  let L=store.letters().find(x=>x.id===selected);
-  if(!L){
-    /* ยังไม่ได้เลือกฉบับ — หยิบฉบับที่ยังบินอยู่ล่าสุดให้ แล้วหมุนกล้องไปหา */
-    L=previewable()[0]; if(!L) return;
-    selected=L.id;
-    G.focus(posAt(L,0), G.fitZoom(fitKm(L)));
-    refreshDock();
-  }
+  const L=store.letters().find(x=>x.id===selected); if(!L) return;
   if(!PREVIEW) previewOn(L);
   else { PREVIEW.play=!PREVIEW.play; if(PREVIEW.play&&PREVIEW.h>=L.th) PREVIEW.h=0; syncPlay(); }
 };
@@ -4334,7 +4465,7 @@ async function confirmSend(){
   };
   $('#btnFile').onclick=()=>exportOne(rec);
   $('#btnShare').onclick=async()=>{
-    if(navigator.share){ try{ await navigator.share({title:'จดหมายสายลม',text:'มีจดหมายกำลังไปหาคุณ',url}); }catch(e){} }
+    if(navigator.share){ try{ await navigator.share({title:'drift',text:'มีจดหมายกำลังไปหาคุณ',url}); }catch(e){} }
     else toast('เบราว์เซอร์นี้ไม่รองรับการส่งต่อ — ใช้คัดลอกลิงก์แทน');
   };
   /* เปิดจากไฟล์ในเครื่อง = ลิงก์นี้คนอื่นเปิดไม่ได้ ต้องบอกก่อนที่เขาจะส่งไปแล้วงง */
@@ -4474,7 +4605,7 @@ function notifyArrivals(){
     if(!st.arrived&&!st.gone) return;
     L.nf=1; store.put(L); changed=true;
     const msg = st.gone ? 'จดหมายจาก '+L.f.n+' หลงทางไปกับลม' : 'จดหมายจาก '+L.f.n+' ถึงแล้ว';
-    try{ if(window.Notification && Notification.permission==='granted') new Notification('จดหมายสายลม',{body:msg}); }catch(e){}
+    try{ if(window.Notification && Notification.permission==='granted') new Notification('drift',{body:msg}); }catch(e){}
     toast(msg);
   });
   if(changed) refreshDock();
@@ -4583,7 +4714,6 @@ $('#btnHere').onclick=()=>{
 
 /* ---------- wiring ---------- */
 $('#btnWrite').onclick=openCompose;
-$('#btnVault').onclick=()=>{ showMe(); openSheet('vault'); };
 $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
 $('#vName').addEventListener('change',saveMe);
@@ -4593,7 +4723,7 @@ wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต�
 /* PWA: manifest ฝังในไฟล์เดียว + service worker เมื่อถูก host (สะพานสู่แอปตาม §8.6)
    เปิดจากไฟล์ในเครื่อง (file://) ก็ยังใช้ได้ครบ แค่ไม่มี offline cache */
 (function(){
-  const m={ name:'จดหมายสายลม', short_name:'สายลม', display:'standalone',
+  const m={ name:'drift', short_name:'drift', display:'standalone',
     background_color:'#e4e3e0', theme_color:'#e4e3e0', start_url:'.', icons:[] };
   const l=document.createElement('link');
   l.rel='manifest'; l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
