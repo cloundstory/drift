@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — ร่องรอยบนจดหมาย: งานภาพ</title>
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 60px)}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:22px;line-height:1.9}
+.lead b{font-weight:normal;color:#8b6a33}
+section{margin-bottom:34px}
+h2{font-size:14px;font-weight:normal;letter-spacing:.16em;margin-bottom:4px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:12px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:0 0 26px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+@media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{text-align:center}
+.cell canvas{width:100%;aspect-ratio:3/4;display:block;border-radius:2px;
+  box-shadow:0 1px 3px rgba(60,55,45,.16), 0 6px 14px rgba(60,55,45,.08)}
+.cap{font-size:11.5px;color:var(--dim);letter-spacing:.04em;margin-top:6px;line-height:1.65}
+.cap b{display:block;font-weight:normal;color:var(--txt);font-size:12.5px;letter-spacing:.06em;margin-bottom:1px}
+.ctl{display:flex;align-items:center;gap:9px;margin-bottom:5px;font-size:12px;color:var(--dim)}
+.ctl label{flex:0 0 130px;letter-spacing:.04em}
+.ctl input[type=range]{flex:1;accent-color:#c69a54;height:26px}
+.ctl output{flex:0 0 36px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--txt)}
+.pane{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;margin-bottom:14px}
+@media(max-width:700px){.pane{grid-template-columns:1fr}}
+.sub{font-size:11px;letter-spacing:.14em;color:var(--faint);margin:8px 0 4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.btn{border:1px solid var(--line);border-radius:999px;padding:8px 15px;background:rgba(255,255,255,.42);
+  font:inherit;font-size:12px;letter-spacing:.05em;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.9);border-color:rgba(198,154,84,.55)}
+.note{font-size:12px;color:var(--dim);line-height:1.95;border-left:2px solid var(--line);padding-left:12px;margin-top:14px}
+.note b{font-weight:normal;color:#8b6a33}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ร่องรอยบนจดหมาย</h1>
+<p class="lead">
+เพดาน: ต้องอ่านว่า <b>"ผ่านการเดินทางมา"</b> ไม่ใช่ <b>"เสียหาย"</b><br>
+หิมะเปียกเหมือนฝน · หมอกไม่ทิ้งร่องรอย · ฝนแข็งตัวทิ้งรอยแตก<br>
+<b>แต่ละอย่างมีสี่แพทเทิร์น</b> เลือกด้วยรหัสจดหมาย — จดหมายคนละฉบับจึงไม่ซ้ำกัน
+</p>
+
+<div class="pane">
+ <div>
+  <div class="sub">ความเปียก (ฝน + หิมะ)</div>
+  <div class="ctl"><label>ความเปียก</label><input type="range" id="v_wet" min="0" max="100" value="52"><output>52</output></div>
+  <div class="ctl"><label>ขอบคราบ</label><input type="range" id="v_tide" min="0" max="100" value="62"><output>62</output></div>
+  <div class="ctl"><label>ละอองเล็ก</label><input type="range" id="v_spat" min="0" max="100" value="45"><output>45</output></div>
+  <div class="ctl"><label>กระดาษบวม</label><input type="range" id="v_cock" min="0" max="100" value="45"><output>45</output></div>
+ </div>
+ <div>
+  <div class="sub">รอยยับ · รอยแตก · อายุ</div>
+  <div class="ctl"><label>รอยยับ (พายุ)</label><input type="range" id="v_storm" min="0" max="100" value="48"><output>48</output></div>
+  <div class="ctl"><label>รอยปั่น (กระโชก)</label><input type="range" id="v_gust" min="0" max="100" value="45"><output>45</output></div>
+  <div class="ctl"><label>รอยแตก (น้ำแข็ง)</label><input type="range" id="v_ice" min="0" max="100" value="52"><output>52</output></div>
+  <div class="ctl"><label>เส้นใยฉีก</label><input type="range" id="v_tear" min="0" max="100" value="58"><output>58</output></div>
+  <div class="ctl"><label>อายุ</label><input type="range" id="v_days" min="0" max="100" value="42"><output>42</output></div>
+  <div class="ctl"><label>จุดด่าง</label><input type="range" id="v_fox" min="0" max="100" value="40"><output>40</output></div>
+ </div>
+</div>
+
+<div class="bar">
+  <button class="btn on" data-txt="1">มีตัวหนังสือ</button>
+  <button class="btn" data-only="1">ดูรอยล้วน</button>
+  <button class="btn" data-big="1">ดูใหญ่</button>
+  <button class="btn" data-seed="1">สุ่มรหัสใหม่</button>
+  <span style="font-size:11.5px;color:var(--faint)">รหัสตอนนี้ <b id="seedv">0</b></span>
+</div>
+
+<div class="rule"></div>
+
+<section>
+<h2>ความเปียก · สี่แพทเทิร์น</h2>
+<p class="q">น้ำเข้ากระดาษได้หลายทาง — ซึมจากริม ไหลลงจากบน จุ่มทั้งมุม หรือโดนละอองทั่วใบ</p>
+<div class="grid" id="gW"></div>
+</section>
+
+<section>
+<h2>รอยยับจากพายุ · สี่แพทเทิร์น</h2>
+<p class="q">พายุกดกระดาษไปทางเดียว — แต่จะกดตรงไหนขึ้นกับว่ามันจับกระดาษยังไง</p>
+<div class="grid" id="gS"></div>
+</section>
+
+<section>
+<h2>รอยปั่นจากลมกระโชก · สี่แพทเทิร์น</h2>
+<p class="q">ถูกปั่น ไม่ใช่ถูกทับ (ข้อ 96) — ทุกแพทเทิร์นจึง<b>ไม่มีทิศหลัก</b></p>
+<div class="grid" id="gG"></div>
+</section>
+
+<section>
+<h2>รอยแตกจากฝนแข็งตัว · สี่แพทเทิร์น</h2>
+<p class="q">น้ำแข็งเกาะแล้วกระดาษแข็ง พอถูกดัดจึงแตก — <b>รอยนี้ไม่หายไปตามเวลา</b></p>
+<div class="grid" id="gI"></div>
+</section>
+
+<div class="rule"></div>
+
+<section>
+<h2>สี่ฉบับที่เจออากาศเหมือนกันทุกอย่าง</h2>
+<p class="q">ต่างกันแค่รหัสจดหมาย — <b>นี่คือสิ่งที่แอปตอนนี้ยังทำไม่ได้</b><br>
+<code>drawPaper</code> ไม่รับรหัสเลย จดหมายทุกฉบับจึงมีคราบตำแหน่งเดียวกันเป๊ะ</p>
+<div class="grid" id="gR"></div>
+</section>
+
+<div class="note">
+<b>ที่ต้องแก้ในแอปจริง:</b><br>
+1. <code>tracesOf</code> ต้องคืน <code>id</code> ด้วย และ <code>drawPaper</code> ต้องรับไปเลือกแพทเทิร์น + วางตำแหน่ง<br>
+2. เพิ่มช่อง <code>ice</code> — นับ leg ที่ <code>wcx(wc)===2</code> แล้วให้เคลือบหนาตัดออก<br>
+3. หิมะไม่ต้องแก้อะไร รวมกับฝนอยู่แล้วตามที่ตัดสิน
+</div>
+</div>
+
+<script>
+'use strict';
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const c255=v=>Math.max(0,Math.min(255,Math.round(v)));
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+/* hash ที่รับรหัสจดหมาย — จดหมายคนละฉบับได้ลายคนละแบบ */
+const hs=(n,sd)=>{ const x=Math.sin((n+(sd||0)*137.73)*12.9898)*43758.5453; return x-Math.floor(x); };
+let V={wet:.52,tide:.62,spat:.45,cock:.45,storm:.48,gust:.45,ice:.52,tear:.58,days:.42,fox:.40};
+let SHOWTXT=true, ONLY=false, BIG=false, SEED=0;
+
+/* ---------- พื้นกระดาษ ---------- */
+function sheet(x,W,H,age){
+  const base=mix([243,239,230],[216,203,171],age*.72);
+  const g=x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'rgb('+c255(base[0]+4)+','+c255(base[1]+4)+','+c255(base[2]+4)+')');
+  g.addColorStop(1,'rgb('+c255(base[0]-6)+','+c255(base[1]-7)+','+c255(base[2]-8)+')');
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.lineWidth=1;
+  for(let i=0;i<14;i++){
+    const y=((Math.sin(i*23.7)*.5+.5)*H);
+    x.strokeStyle='rgba(120,110,90,'+(.014+(i%3)*.005)+')';
+    x.beginPath();x.moveTo(-4,y);
+    x.bezierCurveTo(W*.3,y+Math.sin(i*2.1)*6,W*.7,y-Math.sin(i*1.7)*7,W+4,y+Math.sin(i)*3);
+    x.stroke();
+  }
+}
+function letters(x,W,H){
+  if(!SHOWTXT) return;
+  x.save(); x.strokeStyle='rgba(58,54,48,.44)';
+  x.lineWidth=W/300*1.15; x.lineCap='round';
+  const m=W*0.15, top=H*0.19, lh=H*0.061;
+  for(let r=0;r<10;r++){
+    const y=top+r*lh; let px=m;
+    const words=2+Math.floor(hs(r*7.7)*3);
+    for(let w=0;w<words;w++){
+      const len=(W-m*2)/words*(0.55+hs(r*3.1+w)*0.4);
+      x.beginPath();
+      for(let k=0;k<len;k+=W/300*3.2){
+        const yy=y+Math.sin((px+k)*0.55+r)*(W/300*1.05);
+        k?x.lineTo(px+k,yy):x.moveTo(px+k,yy);
+      }
+      x.stroke();
+      px+=len+(W-m*2)/words*0.16; if(px>W-m) break;
+    }
+  }
+  x.restore();
+}
+function aged(x,W,H,age,sd){
+  const S=W/300;
+  const n=Math.round(V.fox*age*70);
+  for(let i=0;i<n;i++){
+    const px=hs(i*4.1,sd)*W, py=hs(i*8.7+2,sd)*H, r=(0.7+hs(i*2.9,sd)*2.6)*S;
+    const a=(0.05+hs(i*6.3,sd)*0.09)*V.fox;
+    const g=x.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0,'rgba(146,110,66,'+a.toFixed(3)+')');
+    g.addColorStop(1,'rgba(146,110,66,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+  }
+  x.strokeStyle='rgba(150,132,96,'+(age*.20).toFixed(3)+')'; x.lineWidth=1.4*S;
+  for(const [ax,ay,bx,by] of [[0,0,W,0],[W,0,W,H],[W,H,0,H],[0,H,0,0]]){
+    x.beginPath();
+    for(let i=0;i<=26;i++){
+      const t=i/26, jx=(hs(i*3.3+ax,sd)-0.5)*2.2*S*age, jy=(hs(i*5.1+ay,sd)-0.5)*2.2*S*age;
+      const qx=ax+(bx-ax)*t+jx, qy=ay+(by-ay)*t+jy;
+      i?x.lineTo(qx,qy):x.moveTo(qx,qy);
+    }
+    x.stroke();
+  }
+  const v=x.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.72);
+  v.addColorStop(0,'rgba(120,104,74,0)');
+  v.addColorStop(1,'rgba(120,104,74,'+(.06+age*.16)+')');
+  x.fillStyle=v; x.fillRect(0,0,W,H);
+}
+
+/* ============================================================
+   ความเปียก — แกนร่วม: คราบหนึ่งก้อนที่ขอบหยักและมีขอบคราบ
+   ============================================================ */
+function blob(x,px,py,rad,i,sd,k,squash){
+  const pts=[], N=30;
+  for(let j=0;j<=N;j++){
+    const a=j/N*6.2832;
+    const wob=1+Math.sin(a*2+i)*0.14+Math.sin(a*3.7+i*2.1)*0.09+Math.sin(a*6.1+i)*0.05;
+    pts.push([px+Math.cos(a)*rad*wob, py+Math.sin(a)*rad*wob*(squash||0.86)]);
+  }
+  x.save();
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath();
+  const g=x.createRadialGradient(px,py,0,px,py,rad);
+  const a0=(.045+k*.075);
+  g.addColorStop(0,'rgba(96,88,70,'+(a0*.55).toFixed(3)+')');
+  g.addColorStop(.72,'rgba(96,88,70,'+a0.toFixed(3)+')');
+  g.addColorStop(1,'rgba(96,88,70,'+(a0*.75).toFixed(3)+')');
+  x.fillStyle=g; x.fill(); x.restore();
+  if(V.tide>0.02){
+    x.save();
+    x.strokeStyle='rgba(84,74,54,'+((.05+k*.10)*V.tide).toFixed(3)+')';
+    x.lineWidth=(0.8+k*0.9)*(rad/26);
+    x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath(); x.stroke();
+    if(hs(i*9.1,sd)>0.45){
+      x.beginPath();
+      pts.forEach(([qx,qy],j)=>{ const sx=px+(qx-px)*0.72, sy=py+(qy-py)*0.72; j?x.lineTo(sx,sy):x.moveTo(sx,sy); });
+      x.closePath();
+      x.strokeStyle='rgba(84,74,54,'+((.03+k*.06)*V.tide).toFixed(3)+')';
+      x.lineWidth=0.7*(rad/26); x.stroke();
+    }
+    x.restore();
+  }
+}
+function cockle(x,W,H,k,sd){
+  if(V.cock<=0.02) return;
+  const S=W/300;
+  for(let i=0;i<9;i++){
+    const y=(i+0.5)/9*H, amp=(3+hs(i*3.3,sd)*7)*S, a=(.020+k*.030)*V.cock;
+    x.strokeStyle='rgba(104,92,68,'+a.toFixed(3)+')'; x.lineWidth=(3+hs(i*5.1,sd)*5)*S;
+    x.beginPath();
+    for(let j=0;j<=24;j++){ const t=j/24; j?x.lineTo(t*W,y+Math.sin(t*7+i*1.7)*amp):x.moveTo(t*W,y+Math.sin(t*7+i*1.7)*amp); }
+    x.stroke();
+    x.strokeStyle='rgba(255,252,244,'+(a*1.1).toFixed(3)+')'; x.lineWidth=(2.4+hs(i*5.1,sd)*4)*S;
+    x.beginPath();
+    for(let j=0;j<=24;j++){ const t=j/24, qy=y+Math.sin(t*7+i*1.7)*amp+2.6*S; j?x.lineTo(t*W,qy):x.moveTo(t*W,qy); }
+    x.stroke();
+  }
+}
+function spatter(x,W,H,k,sd,dens){
+  if(V.spat<=0.02) return;
+  const S=W/300, n=Math.round(k*V.spat*(dens||180));
+  for(let i=0;i<n;i++){
+    const px=hs(i*2.3,sd)*W, py=hs(i*7.1+1.3,sd)*H, r=(0.35+hs(i*4.7,sd)*1.5)*S;
+    x.fillStyle='rgba(96,86,66,'+((.05+hs(i*3.9,sd)*.10)*V.spat).toFixed(3)+')';
+    x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+  }
+}
+/* W1 ซึมจากริม */
+function wetEdge(x,W,H,k,sd){
+  const S=W/300; cockle(x,W,H,k,sd);
+  const n=Math.round(3+k*9);
+  for(let i=0;i<n;i++){
+    let u=hs(i*12.9,sd), v=hs(i*7.7+2.1,sd);
+    u = u<.5 ? u*.30 : 1-(1-u)*.30;
+    if(v>.20&&v<.82) v = (i%2) ? v*.24 : 1-(1-v)*.22;
+    blob(x,clamp(u,0,1)*W,clamp(v,0,1)*H,(9+hs(i*3.3,sd)*26)*(0.55+k)*S,i,sd,k);
+  }
+  spatter(x,W,H,k,sd);
+}
+/* W2 ไหลลงจากด้านบน */
+function wetDrip(x,W,H,k,sd){
+  const S=W/300; cockle(x,W,H,k,sd);
+  x.lineCap='round';
+  const n=Math.round(3+k*10);
+  for(let i=0;i<n;i++){
+    const px=(0.06+hs(i*5.7,sd)*0.88)*W;
+    const len=(30+hs(i*2.7,sd)*95)*S*(0.4+k);
+    const wob=(hs(i*6.1,sd)-0.5)*7*S;
+    x.strokeStyle='rgba(92,82,62,'+(.035+k*.070).toFixed(3)+')';
+    x.lineWidth=(1.6+hs(i*4.3,sd)*3.6)*S;
+    x.beginPath(); x.moveTo(px,0);
+    x.bezierCurveTo(px+wob,len*.4, px-wob*.6,len*.7, px+wob*.3,len);
+    x.stroke();
+    blob(x,px+wob*.3,len,(4+hs(i*8.1,sd)*9)*(0.5+k)*S,i,sd,k,1.25);
+  }
+  spatter(x,W,H,k,sd,90);
+}
+/* W3 จุ่มทั้งมุม */
+function wetCorner(x,W,H,k,sd){
+  const S=W/300; cockle(x,W,H,k,sd);
+  const q=Math.floor(hs(3.7,sd)*4);
+  const cx=(q===1||q===2)?W:0, cy=(q>=2)?H:0;
+  const rad=Math.min(W,H)*(0.34+k*0.42);
+  const pts=[], N=34;
+  for(let j=0;j<=N;j++){
+    const a=j/N*6.2832;
+    const wob=1+Math.sin(a*2.3+q)*0.13+Math.sin(a*4.1+q*2)*0.08;
+    pts.push([cx+Math.cos(a)*rad*wob, cy+Math.sin(a)*rad*wob]);
+  }
+  x.save();
+  x.beginPath(); x.rect(0,0,W,H); x.clip();
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath();
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,rad);
+  g.addColorStop(0,'rgba(92,84,66,'+(.075+k*.085).toFixed(3)+')');
+  g.addColorStop(.80,'rgba(92,84,66,'+(.050+k*.060).toFixed(3)+')');
+  g.addColorStop(1,'rgba(92,84,66,'+(.070+k*.080).toFixed(3)+')');
+  x.fillStyle=g; x.fill();
+  x.strokeStyle='rgba(80,70,50,'+((.06+k*.11)*V.tide).toFixed(3)+')';
+  x.lineWidth=(1.0+k*1.1)*S;
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath(); x.stroke();
+  x.restore();
+  const m=Math.round(2+k*4);
+  for(let i=0;i<m;i++){
+    const a=hs(i*3.1,sd)*6.2832, d=rad*(1.05+hs(i*5.3,sd)*0.35);
+    blob(x,cx+Math.cos(a)*d,cy+Math.sin(a)*d,(5+hs(i*7.7,sd)*11)*(0.5+k)*S,i,sd,k*0.8);
+  }
+  spatter(x,W,H,k,sd,70);
+}
+/* W4 ละอองทั่วใบ ไม่มีคราบใหญ่ */
+function wetMist(x,W,H,k,sd){
+  const S=W/300; cockle(x,W,H,k*0.7,sd);
+  const n=Math.round(14+k*30);
+  for(let i=0;i<n;i++){
+    const px=hs(i*3.7,sd)*W, py=hs(i*9.1+1.1,sd)*H;
+    blob(x,px,py,(2.5+hs(i*5.9,sd)*7)*(0.5+k)*S,i,sd,k*0.85,1.0);
+  }
+  spatter(x,W,H,k,sd,380);
+}
+
+/* ============================================================
+   รอยพับ — ต้องมีเงาและด้านสว่าง ไม่งั้นอ่านเป็นขีด
+   ============================================================ */
+function crease(x,S,x0,y0,x1,y1,k,widK){
+  const dx=x1-x0, dy=y1-y0, len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len, off=1.5*S*(widK||1);
+  x.lineCap='round';
+  x.strokeStyle='rgba(96,86,66,'+(.05+k*.11).toFixed(3)+')';
+  x.lineWidth=(0.9+k*1.1)*S*(widK||1);
+  x.beginPath(); x.moveTo(x0,y0); x.lineTo(x1,y1); x.stroke();
+  x.strokeStyle='rgba(255,252,244,'+(.05+k*.12).toFixed(3)+')';
+  x.lineWidth=(0.7+k*0.9)*S*(widK||1);
+  x.beginPath(); x.moveTo(x0+nx*off,y0+ny*off); x.lineTo(x1+nx*off,y1+ny*off); x.stroke();
+}
+function branchOff(x,S,x0,y0,x1,y1,k,sd,i,n){
+  for(let b=0;b<n;b++){
+    const t=0.3+hs(i*3.7+b,sd)*0.55;
+    const bx=x0+(x1-x0)*t, by=y0+(y1-y0)*t;
+    const ang=Math.atan2(y1-y0,x1-x0)+(hs(i*9.1+b,sd)-0.5)*1.6;
+    const bl=Math.hypot(x1-x0,y1-y0)*(0.15+hs(i*5.5+b,sd)*0.30);
+    crease(x,S,bx,by,bx+Math.cos(ang)*bl,by+Math.sin(ang)*bl,k*0.72,0.75);
+  }
+}
+function edgeShade(x,W,H,k){
+  const e=x.createLinearGradient(0,0,0,H);
+  e.addColorStop(0,'rgba(92,80,58,'+(k*.14)+')');
+  e.addColorStop(.12,'rgba(92,80,58,0)');
+  e.addColorStop(.88,'rgba(92,80,58,0)');
+  e.addColorStop(1,'rgba(92,80,58,'+(k*.14)+')');
+  x.fillStyle=e;x.fillRect(0,0,W,H);
+}
+/* S1 พับกลางตามยาว */
+function stormFoldV(x,W,H,k,sd){
+  const S=W/300, cx=W*(0.40+hs(1.3,sd)*0.20);
+  crease(x,S,cx,-4,cx+(hs(2.1,sd)-0.5)*W*0.10,H+4,k,1.7);
+  branchOff(x,S,cx,0,cx,H,k,sd,1,3);
+  const n=Math.round(1+k*3);
+  for(let i=0;i<n;i++){
+    const y=(0.15+hs(i*4.3,sd)*0.7)*H, w=(0.10+hs(i*6.1,sd)*0.26)*W;
+    crease(x,S,cx-w,y,cx+w,y+(hs(i*2.7,sd)-0.5)*H*0.10,k*0.8,1.0);
+  }
+  edgeShade(x,W,H,k);
+}
+/* S2 พับขวางหลายเส้น — เหมือนถูกม้วน */
+function stormRoll(x,W,H,k,sd){
+  const S=W/300;
+  const n=Math.round(3+k*4);
+  for(let i=0;i<n;i++){
+    const y=(i+0.6)/(n+0.2)*H+(hs(i*5.1,sd)-0.5)*H*0.05;
+    crease(x,S,-4,y,W+4,y+(hs(i*3.3,sd)-0.5)*H*0.06,k,1.35);
+    branchOff(x,S,0,y,W,y,k,sd,i,1);
+  }
+  edgeShade(x,W,H,k);
+}
+/* S3 ยับรวมศูนย์ — ถูกกำ */
+function stormCrush(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.3+hs(2.9,sd)*0.4)*W, cy=(0.3+hs(4.7,sd)*0.4)*H;
+  const n=Math.round(5+k*8);
+  for(let i=0;i<n;i++){
+    const a=i/n*6.2832+hs(i,sd)*0.5;
+    const len=Math.min(W,H)*(0.22+hs(i*3.1,sd)*0.52)*(0.5+k);
+    crease(x,S,cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len,k,1.1);
+    branchOff(x,S,cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len,k,sd,i,1);
+  }
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.4);
+  g.addColorStop(0,'rgba(96,86,66,'+(k*.10).toFixed(3)+')');
+  g.addColorStop(1,'rgba(96,86,66,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  edgeShade(x,W,H,k*0.6);
+}
+/* S4 เข้าจากขอบ + มุมงอ — ของเดิม */
+function stormEdge(x,W,H,k,sd){
+  const S=W/300;
+  const n=Math.round(2+k*5);
+  for(let i=0;i<n;i++){
+    const side=i%2, y0=(hs(i*4.1,sd)*.9+.05)*H, len=(30+k*95)*S;
+    const x0=side?W:0, x1=side?W-len:len, y1=y0+(side?1:-1)*len*0.55;
+    crease(x,S,x0,y0,x1,y1,k,1.25);
+    branchOff(x,S,x0,y0,x1,y1,k,sd,i,1+Math.round(hs(i*7.3,sd)*2));
+  }
+  if(k>0.3){
+    const cs=(14+k*30)*S;
+    const g=x.createLinearGradient(W-cs,H-cs,W,H);
+    g.addColorStop(0,'rgba(255,252,244,0)');
+    g.addColorStop(1,'rgba(96,86,66,'+(k*.16).toFixed(3)+')');
+    x.fillStyle=g; x.beginPath();
+    x.moveTo(W-cs,H); x.lineTo(W,H-cs); x.lineTo(W,H); x.closePath(); x.fill();
+  }
+  edgeShade(x,W,H,k);
+}
+
+/* ============================================================
+   รอยปั่น — ไม่มีทิศหลักทุกแพทเทิร์น (ข้อ 96)
+   ============================================================ */
+function wrinkles(x,W,H,k,sd,n){
+  const S=W/300; x.lineCap='round';
+  for(let i=0;i<n;i++){
+    const px=hs(i*8.1,sd)*W, py=hs(i*4.3+3,sd)*H;
+    const ang=hs(i*6.7,sd)*6.2832, len=(2+hs(i*2.9,sd)*7)*S;
+    x.strokeStyle='rgba(96,86,66,'+(.020+k*.045).toFixed(3)+')';
+    x.lineWidth=0.7*S;
+    x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(ang)*len,py+Math.sin(ang)*len); x.stroke();
+  }
+}
+/* G1 ไขว้ทั่วแผ่น */
+function gustCross(x,W,H,k,sd){
+  const S=W/300, n=Math.round(4+k*11);
+  for(let i=0;i<n;i++){
+    const x0=hs(i*3.1,sd)*W, y0=hs(i*7.9,sd)*H;
+    const ang=hs(i*5.5,sd)*6.2832, len=(20+hs(i*2.3,sd)*66)*S*(0.4+k);
+    crease(x,S,x0,y0,x0+Math.cos(ang)*len,y0+Math.sin(ang)*len,k,0.9);
+  }
+  wrinkles(x,W,H,k,sd,Math.round(k*90));
+}
+/* G2 หมุนรอบจุด — ถูกปั่นเป็นวง */
+function gustSwirl(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.28+hs(1.7,sd)*0.44)*W, cy=(0.28+hs(3.3,sd)*0.44)*H;
+  const n=Math.round(5+k*9);
+  for(let i=0;i<n;i++){
+    const r0=Math.min(W,H)*(0.06+hs(i*2.7,sd)*0.30);
+    const a0=hs(i*4.1,sd)*6.2832, sweep=(0.6+hs(i*6.3,sd)*1.5)*(hs(i,sd)>0.5?1:-1);
+    let px=cx+Math.cos(a0)*r0, py=cy+Math.sin(a0)*r0;
+    const steps=5;
+    for(let s=1;s<=steps;s++){
+      const a=a0+sweep*s/steps, r=r0*(1+s/steps*0.35);
+      const qx=cx+Math.cos(a)*r, qy=cy+Math.sin(a)*r;
+      crease(x,S,px,py,qx,qy,k*(1-s/steps*0.35),0.85);
+      px=qx; py=qy;
+    }
+  }
+  wrinkles(x,W,H,k,sd,Math.round(k*70));
+}
+/* G3 ย่นเป็นคลื่นสองทิศตัดกัน */
+function gustWave(x,W,H,k,sd){
+  const S=W/300;
+  for(const dir of [0,1]){
+    const n=Math.round(3+k*5);
+    for(let i=0;i<n;i++){
+      const t=(i+0.5)/n, jit=(hs(i*3.7+dir*9,sd)-0.5)*0.12;
+      x.lineCap='round';
+      const seg=10;
+      for(let s=0;s<seg;s++){
+        const f0=s/seg, f1=(s+1)/seg;
+        const a0=dir? [f0*W,(t+jit)*H+Math.sin(f0*6+i)*H*0.05] : [(t+jit)*W+Math.sin(f0*6+i)*W*0.05, f0*H];
+        const a1=dir? [f1*W,(t+jit)*H+Math.sin(f1*6+i)*H*0.05] : [(t+jit)*W+Math.sin(f1*6+i)*W*0.05, f1*H];
+        crease(x,S,a0[0],a0[1],a1[0],a1[1],k*0.8,0.8);
+      }
+    }
+  }
+  wrinkles(x,W,H,k,sd,Math.round(k*60));
+}
+/* G4 ย่นละเอียดล้วน ไม่มีรอยหลัก */
+function gustCrumple(x,W,H,k,sd){
+  wrinkles(x,W,H,k*1.25,sd,Math.round(60+k*260));
+  const S=W/300, n=Math.round(2+k*4);
+  for(let i=0;i<n;i++){
+    const x0=hs(i*5.1,sd)*W, y0=hs(i*9.3,sd)*H;
+    const ang=hs(i*7.7,sd)*6.2832, len=(14+hs(i*3.1,sd)*26)*S;
+    crease(x,S,x0,y0,x0+Math.cos(ang)*len,y0+Math.sin(ang)*len,k*0.7,0.7);
+  }
+}
+
+/* ============================================================
+   รอยแตก — ของที่ค้างอยู่ ไม่หายตามเวลา
+   ============================================================ */
+function crackLine(x,S,px,py,ang,len,depth,k,sd){
+  if(depth<=0||len<2*S) return;
+  const segs=2+Math.round(hs(px*0.7+py*1.3,sd)*2);
+  let cx=px, cy=py, ca=ang;
+  const path=[[cx,cy]];
+  for(let s=0;s<segs;s++){
+    ca+=(hs(cx*1.7+cy*0.9+s,sd)-0.5)*0.9;
+    const sl=len/segs; cx+=Math.cos(ca)*sl; cy+=Math.sin(ca)*sl; path.push([cx,cy]);
+  }
+  x.lineCap='round'; x.lineJoin='round';
+  x.strokeStyle='rgba(76,68,50,'+(.15+k*.24).toFixed(3)+')';
+  x.lineWidth=(0.7+k*0.75)*S*(depth/3);
+  x.beginPath(); path.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.stroke();
+  if(V.tear>0.02){
+    x.strokeStyle='rgba(255,253,248,'+((.10+k*.18)*V.tear).toFixed(3)+')';
+    x.lineWidth=(0.55+k*0.55)*S*(depth/3);
+    x.beginPath();
+    path.forEach(([qx,qy],j)=>j?x.lineTo(qx+0.9*S,qy+0.9*S):x.moveTo(qx+0.9*S,qy+0.9*S));
+    x.stroke();
+  }
+  const bn=depth>1?(1+Math.round(hs(px*2.3+py,sd)*2)):0;
+  for(let b=0;b<bn;b++)
+    crackLine(x,S,cx,cy,ca+(hs(px+b*3.1,sd)-0.5)*2.0,len*(0.35+hs(py+b*1.7,sd)*0.3),depth-1,k*0.8,sd);
+}
+function pinholes(x,W,H,k,sd){
+  if(k<=0.55) return;
+  const S=W/300, m=Math.round((k-0.55)*14);
+  for(let i=0;i<m;i++){
+    const px=(0.12+hs(i*6.1,sd)*0.76)*W, py=(0.12+hs(i*9.7,sd)*0.76)*H;
+    const r=(0.8+hs(i*3.7,sd)*1.8)*S;
+    x.fillStyle='rgba(70,62,46,'+((k-0.55)*.45).toFixed(3)+')';
+    x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+    x.strokeStyle='rgba(255,252,246,'+((k-0.55)*.5*V.tear).toFixed(3)+')';
+    x.lineWidth=0.6*S; x.beginPath(); x.arc(px,py,r*1.5,0,6.2832); x.stroke();
+  }
+}
+/* I1 แตกจากขอบเข้ามา */
+function iceEdge(x,W,H,k,sd){
+  const S=W/300, n=Math.round(3+k*6);
+  for(let i=0;i<n;i++){
+    const side=i%4;
+    const t=0.08+hs(i*4.7,sd)*0.84;
+    const px=side===0?t*W:side===1?W:side===2?t*W:0;
+    const py=side===0?0:side===1?t*H:side===2?H:t*H;
+    const inward=side===0?Math.PI/2:side===1?Math.PI:side===2?-Math.PI/2:0;
+    crackLine(x,S,px,py,inward+(hs(i*2.9,sd)-0.5)*1.1,(20+hs(i*3.3,sd)*44)*S*(0.5+k),3,k,sd);
+  }
+  pinholes(x,W,H,k,sd);
+}
+/* I2 แตกจากกลางออก */
+function iceRadial(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.32+hs(2.1,sd)*0.36)*W, cy=(0.32+hs(5.3,sd)*0.36)*H;
+  const n=Math.round(4+k*6);
+  for(let i=0;i<n;i++)
+    crackLine(x,S,cx,cy,i/n*6.2832+hs(i,sd)*0.6,(18+hs(i*3.7,sd)*40)*S*(0.5+k),3,k,sd);
+  pinholes(x,W,H,k,sd);
+}
+/* I3 แตกตามรอยพับ — เส้นยาวเกือบตรง */
+function iceFold(x,W,H,k,sd){
+  const S=W/300, n=Math.round(2+k*3);
+  for(let i=0;i<n;i++){
+    const vert=hs(i*3.1,sd)>0.5;
+    const t=0.18+hs(i*6.7,sd)*0.64;
+    const px=vert?t*W:0, py=vert?0:t*H;
+    const ang=vert?Math.PI/2:0;
+    let cx=px, cy=py;
+    const segs=Math.round(4+k*4);
+    for(let s=0;s<segs;s++){
+      const sl=(vert?H:W)/segs;
+      crackLine(x,S,cx,cy,ang+(hs(i*2.3+s,sd)-0.5)*0.5,sl,2,k,sd);
+      cx+=Math.cos(ang)*sl; cy+=Math.sin(ang)*sl;
+    }
+  }
+  pinholes(x,W,H,k,sd);
+}
+/* I4 แตกเป็นร่างแห */
+function iceNet(x,W,H,k,sd){
+  const S=W/300, n=Math.round(5+k*8);
+  const nodes=[];
+  for(let i=0;i<n;i++) nodes.push([(0.10+hs(i*4.1,sd)*0.80)*W,(0.10+hs(i*7.9,sd)*0.80)*H]);
+  for(let i=0;i<n;i++){
+    let best=-1, bd=1e9;
+    for(let j=0;j<n;j++){ if(j===i) continue;
+      const d=Math.hypot(nodes[i][0]-nodes[j][0],nodes[i][1]-nodes[j][1]);
+      if(d<bd){ bd=d; best=j; } }
+    if(best<0) continue;
+    const ang=Math.atan2(nodes[best][1]-nodes[i][1],nodes[best][0]-nodes[i][0]);
+    crackLine(x,S,nodes[i][0],nodes[i][1],ang,bd,2,k,sd);
+    if(hs(i*5.5,sd)>0.5){
+      const k2=(i+2)%n;
+      const a2=Math.atan2(nodes[k2][1]-nodes[i][1],nodes[k2][0]-nodes[i][0]);
+      const d2=Math.hypot(nodes[i][0]-nodes[k2][0],nodes[i][1]-nodes[k2][1]);
+      crackLine(x,S,nodes[i][0],nodes[i][1],a2,d2*0.7,2,k*0.8,sd);
+    }
+  }
+  pinholes(x,W,H,k,sd);
+}
+
+const WETS=[wetEdge,wetDrip,wetCorner,wetMist];
+const STORMS=[stormFoldV,stormRoll,stormCrush,stormEdge];
+const GUSTS=[gustCross,gustSwirl,gustWave,gustCrumple];
+const ICES=[iceEdge,iceRadial,iceFold,iceNet];
+const pick=(arr,sd,salt)=>arr[Math.floor(hs(salt,sd)*arr.length)%arr.length];
+
+/* ---------- ประกอบ ---------- */
+function paint(c,parts,age,sd){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  const W=c.clientWidth, H=c.clientHeight;
+  if(!W||!H) return;
+  if(c.width!==Math.round(W*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
+  const x=c.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+  if(ONLY){ x.fillStyle='#efece4'; x.fillRect(0,0,W,H); }
+  else { sheet(x,W,H,age); letters(x,W,H); }
+  parts.forEach(fn=>fn(x,W,H));
+  if(!ONLY) aged(x,W,H,age,sd);
+}
+
+const SETS=[
+ {g:'gW', names:['ซึมจากริม','ไหลลงจากบน','จุ่มทั้งมุม','ละอองทั่วใบ'],
+  descs:['น้ำเข้าทางขอบกระดาษ คราบเกาะริม','รอยไหลยาวจากขอบบน มีหัวหยดที่ปลาย',
+         'มุมหนึ่งจุ่มน้ำ คราบใหญ่ก้อนเดียว','เม็ดเล็กกระจายทั้งใบ ไม่มีคราบใหญ่'],
+  fns:WETS, val:()=>V.wet},
+ {g:'gS', names:['พับกลางตามยาว','พับขวางหลายเส้น','ยับรวมศูนย์','เข้าจากขอบ + มุมงอ'],
+  descs:['รอยพับหลักเส้นเดียว แตกแขนงออกข้าง','เหมือนถูกม้วนแล้วคลี่ออก',
+         'ถูกกำ รอยแตกออกจากจุดเดียว','ของเดิมในแอป — เข้าจากริมสองข้าง'],
+  fns:STORMS, val:()=>V.storm},
+ {g:'gG', names:['ไขว้ทั่วแผ่น','หมุนรอบจุด','คลื่นสองทิศตัดกัน','ย่นละเอียดล้วน'],
+  descs:['รอยพับสั้นทุกทิศ + รอยย่น','ถูกปั่นเป็นวงรอบจุดหนึ่ง',
+         'คลื่นแนวตั้งกับแนวนอนซ้อนกัน','ไม่มีรอยหลักเลย มีแต่ย่นเล็ก 300 เส้น'],
+  fns:GUSTS, val:()=>V.gust},
+ {g:'gI', names:['แตกจากขอบเข้ามา','แตกจากกลางออก','แตกตามรอยพับ','แตกเป็นร่างแห'],
+  descs:['เริ่มที่ริมกระดาษ วิ่งเข้าใน','ศูนย์กลางเดียว แตกออกทุกทิศ',
+         'เส้นยาวเกือบตรง ตามแนวที่กระดาษถูกดัด','เชื่อมจุดต่อจุด เหมือนน้ำแข็งบนกระจก'],
+  fns:ICES, val:()=>V.ice}
+];
+
+const all=[];
+SETS.forEach(S=>{
+  const host=document.getElementById(S.g);
+  S.fns.forEach((fn,i)=>{
+    const d=document.createElement('div'); d.className='cell';
+    const c=document.createElement('canvas');
+    const cap=document.createElement('div'); cap.className='cap';
+    cap.innerHTML='<b>'+(i+1)+'. '+S.names[i]+'</b>'+S.descs[i];
+    d.appendChild(c); d.appendChild(cap); host.appendChild(d);
+    all.push({c, get parts(){ return [(x,W,H)=>fn(x,W,H,S.val(),SEED)]; }, age:()=>V.days});
+  });
+});
+/* สี่ฉบับ รหัสต่างกัน */
+const hostR=document.getElementById('gR');
+for(let n=0;n<4;n++){
+  const d=document.createElement('div'); d.className='cell';
+  const c=document.createElement('canvas');
+  const cap=document.createElement('div'); cap.className='cap';
+  cap.innerHTML='<b>ฉบับที่ '+(n+1)+'</b>';
+  d.appendChild(c); d.appendChild(cap); hostR.appendChild(d);
+  all.push({c, cap, get parts(){
+    const sd=SEED+n*17+1;
+    const w=pick(WETS,sd,1.1), s=pick(STORMS,sd,2.3), g=pick(GUSTS,sd,3.7), ic=pick(ICES,sd,5.1);
+    if(this.cap) this.cap.innerHTML='<b>ฉบับที่ '+(n+1)+'</b>'
+      +SETS[0].names[WETS.indexOf(w)]+' · '+SETS[1].names[STORMS.indexOf(s)]+'<br>'
+      +SETS[2].names[GUSTS.indexOf(g)]+' · '+SETS[3].names[ICES.indexOf(ic)];
+    return [(x,W,H)=>w(x,W,H,V.wet,sd),(x,W,H)=>s(x,W,H,V.storm,sd),
+            (x,W,H)=>g(x,W,H,V.gust,sd),(x,W,H)=>ic(x,W,H,V.ice,sd)];
+  }, age:()=>V.days, seed:()=>SEED+n*17+1});
+}
+
+function draw(){ all.forEach(o=>paint(o.c,o.parts,o.age(),o.seed?o.seed():SEED)); }
+
+Object.keys(V).forEach(k=>{
+  const el=document.getElementById('v_'+k); if(!el) return;
+  const out=el.nextElementSibling;
+  el.oninput=()=>{ V[k]=+el.value/100; out.value=el.value; draw(); };
+});
+document.querySelector('[data-txt]').onclick=function(){ SHOWTXT=!SHOWTXT; this.classList.toggle('on',SHOWTXT); draw(); };
+document.querySelector('[data-only]').onclick=function(){ ONLY=!ONLY; this.classList.toggle('on',ONLY); draw(); };
+document.querySelector('[data-big]').onclick=function(){
+  BIG=!BIG; this.classList.toggle('on',BIG);
+  document.querySelectorAll('.grid').forEach(g=>g.style.gridTemplateColumns=BIG?'repeat(2,1fr)':'');
+  requestAnimationFrame(draw);
+};
+document.querySelector('[data-seed]').onclick=()=>{
+  SEED=Math.floor(Math.random()*9999);
+  document.getElementById('seedv').textContent=SEED;
+  draw();
+};
+addEventListener('resize',()=>requestAnimationFrame(draw));
+draw();
+</script>
+</body>
+</html>

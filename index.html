@@ -3334,7 +3334,378 @@ function rainBlooms(ctx,rain,at,sizeK){
   }
 }
 
-/* กระดาษตอนเปิดอ่าน — นิ่ง อ่านง่าย ร่องรอยอยู่ขอบ */
+/* ============================================================
+   ร่องรอยบนกระดาษ (ข้อ 98) — จูนที่ `trace-studies.html`
+
+   สี่อย่าง แต่ละอย่างมีสี่แพทเทิร์น เลือกด้วยรหัสจดหมาย
+     ความเปียก (ฝน+หิมะ) · รอยยับพายุ · รอยปั่นกระโชก · รอยแตกฝนแข็งตัว
+   หมอกไม่ทิ้งร่องรอย (กอล์ฟตัดสิน) · หิมะเปียกเหมือนฝน จึงรวมอยู่ในความเปียก
+
+   ⚠️ ทุกฟังก์ชันรับ `sd` (รหัสจดหมาย) — ของเดิมไม่มีเลย
+   จดหมายทุกฉบับจึงเคยมีคราบตำแหน่งเดียวกันเป๊ะ ต่างแค่ความเข้ม
+   ============================================================ */
+const phash=(n,sd)=>{ const x=Math.sin((n+(sd||0)*137.73)*12.9898)*43758.5453; return x-Math.floor(x); };
+
+/* คราบน้ำหนึ่งก้อน — ขอบหยักเพราะน้ำซึมตามเส้นใย ไม่ใช่วงกลม
+   และมี *ขอบคราบ* ที่เข้มกว่าเนื้อใน ซึ่งเป็นสิ่งที่บอกว่ามันแห้งแล้ว */
+function pBlob(x,px,py,rad,i,sd,k,squash){
+  const pts=[], N=30;
+  for(let j=0;j<=N;j++){
+    const a=j/N*6.2832;
+    const wob=1+Math.sin(a*2+i)*0.14+Math.sin(a*3.7+i*2.1)*0.09+Math.sin(a*6.1+i)*0.05;
+    pts.push([px+Math.cos(a)*rad*wob, py+Math.sin(a)*rad*wob*(squash||0.86)]);
+  }
+  x.save();
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath();
+  const g=x.createRadialGradient(px,py,0,px,py,rad), a0=(.045+k*.075);
+  g.addColorStop(0,'rgba(96,88,70,'+(a0*.55).toFixed(3)+')');
+  g.addColorStop(.72,'rgba(96,88,70,'+a0.toFixed(3)+')');
+  g.addColorStop(1,'rgba(96,88,70,'+(a0*.75).toFixed(3)+')');
+  x.fillStyle=g; x.fill(); x.restore();
+  x.save();
+  x.strokeStyle='rgba(84,74,54,'+(.05+k*.10).toFixed(3)+')';
+  x.lineWidth=(0.8+k*0.9)*(rad/26);
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath(); x.stroke();
+  if(phash(i*9.1,sd)>0.45){
+    x.beginPath();
+    pts.forEach(([qx,qy],j)=>{ const sx=px+(qx-px)*0.72, sy=py+(qy-py)*0.72; j?x.lineTo(sx,sy):x.moveTo(sx,sy); });
+    x.closePath();
+    x.strokeStyle='rgba(84,74,54,'+(.03+k*.06).toFixed(3)+')';
+    x.lineWidth=0.7*(rad/26); x.stroke();
+  }
+  x.restore();
+}
+/* กระดาษเปียกแล้วบวมเป็นคลื่น — แถบเงาสลับสว่าง ไม่ใช่รอยเปื้อน */
+function pCockle(x,W,H,k,sd){
+  const S=W/300;
+  for(let i=0;i<9;i++){
+    const y=(i+0.5)/9*H, amp=(3+phash(i*3.3,sd)*7)*S, a=(.020+k*.030)*0.9;
+    x.strokeStyle='rgba(104,92,68,'+a.toFixed(3)+')'; x.lineWidth=(3+phash(i*5.1,sd)*5)*S;
+    x.beginPath();
+    for(let j=0;j<=24;j++){ const t=j/24, qy=y+Math.sin(t*7+i*1.7)*amp; j?x.lineTo(t*W,qy):x.moveTo(t*W,qy); }
+    x.stroke();
+    x.strokeStyle='rgba(255,252,244,'+(a*1.1).toFixed(3)+')'; x.lineWidth=(2.4+phash(i*5.1,sd)*4)*S;
+    x.beginPath();
+    for(let j=0;j<=24;j++){ const t=j/24, qy=y+Math.sin(t*7+i*1.7)*amp+2.6*S; j?x.lineTo(t*W,qy):x.moveTo(t*W,qy); }
+    x.stroke();
+  }
+}
+function pSpatter(x,W,H,k,sd,dens){
+  const S=W/300, n=Math.round(k*0.45*(dens||180));
+  for(let i=0;i<n;i++){
+    const px=phash(i*2.3,sd)*W, py=phash(i*7.1+1.3,sd)*H, r=(0.35+phash(i*4.7,sd)*1.5)*S;
+    x.fillStyle='rgba(96,86,66,'+((.05+phash(i*3.9,sd)*.10)*0.45).toFixed(3)+')';
+    x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+  }
+}
+/* ---------- ความเปียก สี่แพทเทิร์น ---------- */
+function wetEdge(x,W,H,k,sd){
+  const S=W/300; pCockle(x,W,H,k,sd);
+  const n=Math.round(3+k*9);
+  for(let i=0;i<n;i++){
+    let u=phash(i*12.9,sd), v=phash(i*7.7+2.1,sd);
+    u = u<.5 ? u*.30 : 1-(1-u)*.30;
+    if(v>.20&&v<.82) v = (i%2) ? v*.24 : 1-(1-v)*.22;
+    pBlob(x,clamp(u,0,1)*W,clamp(v,0,1)*H,(9+phash(i*3.3,sd)*26)*(0.55+k)*S,i,sd,k);
+  }
+  pSpatter(x,W,H,k,sd);
+}
+function wetDripDown(x,W,H,k,sd){
+  const S=W/300; pCockle(x,W,H,k,sd); x.lineCap='round';
+  const n=Math.round(3+k*10);
+  for(let i=0;i<n;i++){
+    const px=(0.06+phash(i*5.7,sd)*0.88)*W;
+    const len=(30+phash(i*2.7,sd)*95)*S*(0.4+k);
+    const wob=(phash(i*6.1,sd)-0.5)*7*S;
+    x.strokeStyle='rgba(92,82,62,'+(.035+k*.070).toFixed(3)+')';
+    x.lineWidth=(1.6+phash(i*4.3,sd)*3.6)*S;
+    x.beginPath(); x.moveTo(px,0);
+    x.bezierCurveTo(px+wob,len*.4, px-wob*.6,len*.7, px+wob*.3,len);
+    x.stroke();
+    pBlob(x,px+wob*.3,len,(4+phash(i*8.1,sd)*9)*(0.5+k)*S,i,sd,k,1.25);
+  }
+  pSpatter(x,W,H,k,sd,90);
+}
+function wetCorner(x,W,H,k,sd){
+  const S=W/300; pCockle(x,W,H,k,sd);
+  const q=Math.floor(phash(3.7,sd)*4);
+  const cx=(q===1||q===2)?W:0, cy=(q>=2)?H:0;
+  const rad=Math.min(W,H)*(0.34+k*0.42), pts=[], N=34;
+  for(let j=0;j<=N;j++){
+    const a=j/N*6.2832, wob=1+Math.sin(a*2.3+q)*0.13+Math.sin(a*4.1+q*2)*0.08;
+    pts.push([cx+Math.cos(a)*rad*wob, cy+Math.sin(a)*rad*wob]);
+  }
+  x.save(); x.beginPath(); x.rect(0,0,W,H); x.clip();
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath();
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,rad);
+  g.addColorStop(0,'rgba(92,84,66,'+(.075+k*.085).toFixed(3)+')');
+  g.addColorStop(.80,'rgba(92,84,66,'+(.050+k*.060).toFixed(3)+')');
+  g.addColorStop(1,'rgba(92,84,66,'+(.070+k*.080).toFixed(3)+')');
+  x.fillStyle=g; x.fill();
+  x.strokeStyle='rgba(80,70,50,'+(.06+k*.11).toFixed(3)+')';
+  x.lineWidth=(1.0+k*1.1)*S;
+  x.beginPath(); pts.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.closePath(); x.stroke();
+  x.restore();
+  const m=Math.round(2+k*4);
+  for(let i=0;i<m;i++){
+    const a=phash(i*3.1,sd)*6.2832, d=rad*(1.05+phash(i*5.3,sd)*0.35);
+    pBlob(x,cx+Math.cos(a)*d,cy+Math.sin(a)*d,(5+phash(i*7.7,sd)*11)*(0.5+k)*S,i,sd,k*0.8);
+  }
+  pSpatter(x,W,H,k,sd,70);
+}
+function wetMist(x,W,H,k,sd){
+  const S=W/300; pCockle(x,W,H,k*0.7,sd);
+  const n=Math.round(14+k*30);
+  for(let i=0;i<n;i++)
+    pBlob(x,phash(i*3.7,sd)*W,phash(i*9.1+1.1,sd)*H,(2.5+phash(i*5.9,sd)*7)*(0.5+k)*S,i,sd,k*0.85,1.0);
+  pSpatter(x,W,H,k,sd,380);
+}
+
+/* ---------- รอยพับ ----------
+   ⚠️ ต้องมีทั้งเงาและด้านสว่าง ไม่งั้นตาอ่านเป็น *ขีด* ไม่ใช่ *พับ* */
+function pCrease(x,S,x0,y0,x1,y1,k,widK){
+  const dx=x1-x0, dy=y1-y0, len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len, off=1.5*S*(widK||1);
+  x.lineCap='round';
+  x.strokeStyle='rgba(96,86,66,'+(.05+k*.11).toFixed(3)+')';
+  x.lineWidth=(0.9+k*1.1)*S*(widK||1);
+  x.beginPath(); x.moveTo(x0,y0); x.lineTo(x1,y1); x.stroke();
+  x.strokeStyle='rgba(255,252,244,'+(.05+k*.12).toFixed(3)+')';
+  x.lineWidth=(0.7+k*0.9)*S*(widK||1);
+  x.beginPath(); x.moveTo(x0+nx*off,y0+ny*off); x.lineTo(x1+nx*off,y1+ny*off); x.stroke();
+}
+function pBranch(x,S,x0,y0,x1,y1,k,sd,i,n){
+  for(let b=0;b<n;b++){
+    const t=0.3+phash(i*3.7+b,sd)*0.55;
+    const bx=x0+(x1-x0)*t, by=y0+(y1-y0)*t;
+    const ang=Math.atan2(y1-y0,x1-x0)+(phash(i*9.1+b,sd)-0.5)*1.6;
+    const bl=Math.hypot(x1-x0,y1-y0)*(0.15+phash(i*5.5+b,sd)*0.30);
+    pCrease(x,S,bx,by,bx+Math.cos(ang)*bl,by+Math.sin(ang)*bl,k*0.72,0.75);
+  }
+}
+function pEdgeShade(x,W,H,k){
+  const e=x.createLinearGradient(0,0,0,H);
+  e.addColorStop(0,'rgba(92,80,58,'+(k*.14)+')');
+  e.addColorStop(.12,'rgba(92,80,58,0)');
+  e.addColorStop(.88,'rgba(92,80,58,0)');
+  e.addColorStop(1,'rgba(92,80,58,'+(k*.14)+')');
+  x.fillStyle=e;x.fillRect(0,0,W,H);
+}
+/* ---------- รอยยับจากพายุ สี่แพทเทิร์น — พายุกดไปทางเดียว ---------- */
+function stormFoldV(x,W,H,k,sd){
+  const S=W/300, cx=W*(0.40+phash(1.3,sd)*0.20);
+  pCrease(x,S,cx,-4,cx+(phash(2.1,sd)-0.5)*W*0.10,H+4,k,1.7);
+  pBranch(x,S,cx,0,cx,H,k,sd,1,3);
+  const n=Math.round(1+k*3);
+  for(let i=0;i<n;i++){
+    const y=(0.15+phash(i*4.3,sd)*0.7)*H, w=(0.10+phash(i*6.1,sd)*0.26)*W;
+    pCrease(x,S,cx-w,y,cx+w,y+(phash(i*2.7,sd)-0.5)*H*0.10,k*0.8,1.0);
+  }
+  pEdgeShade(x,W,H,k);
+}
+function stormRoll(x,W,H,k,sd){
+  const S=W/300, n=Math.round(3+k*4);
+  for(let i=0;i<n;i++){
+    const y=(i+0.6)/(n+0.2)*H+(phash(i*5.1,sd)-0.5)*H*0.05;
+    pCrease(x,S,-4,y,W+4,y+(phash(i*3.3,sd)-0.5)*H*0.06,k,1.35);
+    pBranch(x,S,0,y,W,y,k,sd,i,1);
+  }
+  pEdgeShade(x,W,H,k);
+}
+function stormCrush(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.3+phash(2.9,sd)*0.4)*W, cy=(0.3+phash(4.7,sd)*0.4)*H;
+  const n=Math.round(5+k*8);
+  for(let i=0;i<n;i++){
+    const a=i/n*6.2832+phash(i,sd)*0.5;
+    const len=Math.min(W,H)*(0.22+phash(i*3.1,sd)*0.52)*(0.5+k);
+    pCrease(x,S,cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len,k,1.1);
+    pBranch(x,S,cx,cy,cx+Math.cos(a)*len,cy+Math.sin(a)*len,k,sd,i,1);
+  }
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,Math.min(W,H)*0.4);
+  g.addColorStop(0,'rgba(96,86,66,'+(k*.10).toFixed(3)+')');
+  g.addColorStop(1,'rgba(96,86,66,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  pEdgeShade(x,W,H,k*0.6);
+}
+function stormEdge(x,W,H,k,sd){
+  const S=W/300, n=Math.round(2+k*5);
+  for(let i=0;i<n;i++){
+    const side=i%2, y0=(phash(i*4.1,sd)*.9+.05)*H, len=(30+k*95)*S;
+    const x0=side?W:0, x1=side?W-len:len, y1=y0+(side?1:-1)*len*0.55;
+    pCrease(x,S,x0,y0,x1,y1,k,1.25);
+    pBranch(x,S,x0,y0,x1,y1,k,sd,i,1+Math.round(phash(i*7.3,sd)*2));
+  }
+  if(k>0.3){
+    const cs=(14+k*30)*S;
+    const g=x.createLinearGradient(W-cs,H-cs,W,H);
+    g.addColorStop(0,'rgba(255,252,244,0)');
+    g.addColorStop(1,'rgba(96,86,66,'+(k*.16).toFixed(3)+')');
+    x.fillStyle=g; x.beginPath();
+    x.moveTo(W-cs,H); x.lineTo(W,H-cs); x.lineTo(W,H); x.closePath(); x.fill();
+  }
+  pEdgeShade(x,W,H,k);
+}
+/* ---------- รอยปั่นจากลมกระโชก สี่แพทเทิร์น ----------
+   ถูกปั่น ไม่ใช่ถูกทับ (ข้อ 96) — ทุกแพทเทิร์นจึงไม่มีทิศหลัก */
+function pWrinkles(x,W,H,k,sd,n){
+  const S=W/300; x.lineCap='round';
+  for(let i=0;i<n;i++){
+    const px=phash(i*8.1,sd)*W, py=phash(i*4.3+3,sd)*H;
+    const ang=phash(i*6.7,sd)*6.2832, len=(2+phash(i*2.9,sd)*7)*S;
+    x.strokeStyle='rgba(96,86,66,'+(.020+k*.045).toFixed(3)+')';
+    x.lineWidth=0.7*S;
+    x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(ang)*len,py+Math.sin(ang)*len); x.stroke();
+  }
+}
+function gustCross(x,W,H,k,sd){
+  const S=W/300, n=Math.round(4+k*11);
+  for(let i=0;i<n;i++){
+    const x0=phash(i*3.1,sd)*W, y0=phash(i*7.9,sd)*H;
+    const ang=phash(i*5.5,sd)*6.2832, len=(20+phash(i*2.3,sd)*66)*S*(0.4+k);
+    pCrease(x,S,x0,y0,x0+Math.cos(ang)*len,y0+Math.sin(ang)*len,k,0.9);
+  }
+  pWrinkles(x,W,H,k,sd,Math.round(k*90));
+}
+function gustSwirl(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.28+phash(1.7,sd)*0.44)*W, cy=(0.28+phash(3.3,sd)*0.44)*H;
+  const n=Math.round(5+k*9);
+  for(let i=0;i<n;i++){
+    const r0=Math.min(W,H)*(0.06+phash(i*2.7,sd)*0.30);
+    const a0=phash(i*4.1,sd)*6.2832, sweep=(0.6+phash(i*6.3,sd)*1.5)*(phash(i,sd)>0.5?1:-1);
+    let px=cx+Math.cos(a0)*r0, py=cy+Math.sin(a0)*r0;
+    for(let s=1;s<=5;s++){
+      const a=a0+sweep*s/5, r=r0*(1+s/5*0.35);
+      const qx=cx+Math.cos(a)*r, qy=cy+Math.sin(a)*r;
+      pCrease(x,S,px,py,qx,qy,k*(1-s/5*0.35),0.85);
+      px=qx; py=qy;
+    }
+  }
+  pWrinkles(x,W,H,k,sd,Math.round(k*70));
+}
+function gustWave(x,W,H,k,sd){
+  const S=W/300;
+  for(const dir of [0,1]){
+    const n=Math.round(3+k*5);
+    for(let i=0;i<n;i++){
+      const t=(i+0.5)/n, jit=(phash(i*3.7+dir*9,sd)-0.5)*0.12;
+      for(let s=0;s<10;s++){
+        const f0=s/10, f1=(s+1)/10;
+        const a0=dir? [f0*W,(t+jit)*H+Math.sin(f0*6+i)*H*0.05] : [(t+jit)*W+Math.sin(f0*6+i)*W*0.05, f0*H];
+        const a1=dir? [f1*W,(t+jit)*H+Math.sin(f1*6+i)*H*0.05] : [(t+jit)*W+Math.sin(f1*6+i)*W*0.05, f1*H];
+        pCrease(x,S,a0[0],a0[1],a1[0],a1[1],k*0.8,0.8);
+      }
+    }
+  }
+  pWrinkles(x,W,H,k,sd,Math.round(k*60));
+}
+function gustCrumple(x,W,H,k,sd){
+  pWrinkles(x,W,H,k*1.25,sd,Math.round(60+k*260));
+  const S=W/300, n=Math.round(2+k*4);
+  for(let i=0;i<n;i++){
+    const x0=phash(i*5.1,sd)*W, y0=phash(i*9.3,sd)*H;
+    const ang=phash(i*7.7,sd)*6.2832, len=(14+phash(i*3.1,sd)*26)*S;
+    pCrease(x,S,x0,y0,x0+Math.cos(ang)*len,y0+Math.sin(ang)*len,k*0.7,0.7);
+  }
+}
+/* ---------- รอยแตกจากฝนแข็งตัว สี่แพทเทิร์น ----------
+   ของที่ *ค้างอยู่* — น้ำระเหยได้ แต่รอยแตกไม่หาย
+   ขอบรอยแตกขาวกว่าเนื้อกระดาษ เพราะเส้นใยด้านในโผล่ออกมา */
+function pCrack(x,S,px,py,ang,len,depth,k,sd){
+  if(depth<=0||len<2*S) return;
+  const segs=2+Math.round(phash(px*0.7+py*1.3,sd)*2);
+  let cx=px, cy=py, ca=ang;
+  const path=[[cx,cy]];
+  for(let s=0;s<segs;s++){
+    ca+=(phash(cx*1.7+cy*0.9+s,sd)-0.5)*0.9;
+    const sl=len/segs; cx+=Math.cos(ca)*sl; cy+=Math.sin(ca)*sl; path.push([cx,cy]);
+  }
+  x.lineCap='round'; x.lineJoin='round';
+  x.strokeStyle='rgba(76,68,50,'+(.15+k*.24).toFixed(3)+')';
+  x.lineWidth=(0.7+k*0.75)*S*(depth/3);
+  x.beginPath(); path.forEach(([qx,qy],j)=>j?x.lineTo(qx,qy):x.moveTo(qx,qy)); x.stroke();
+  x.strokeStyle='rgba(255,253,248,'+(.10+k*.18).toFixed(3)+')';
+  x.lineWidth=(0.55+k*0.55)*S*(depth/3);
+  x.beginPath();
+  path.forEach(([qx,qy],j)=>j?x.lineTo(qx+0.9*S,qy+0.9*S):x.moveTo(qx+0.9*S,qy+0.9*S));
+  x.stroke();
+  const bn=depth>1?(1+Math.round(phash(px*2.3+py,sd)*2)):0;
+  for(let b=0;b<bn;b++)
+    pCrack(x,S,cx,cy,ca+(phash(px+b*3.1,sd)-0.5)*2.0,len*(0.35+phash(py+b*1.7,sd)*0.3),depth-1,k*0.8,sd);
+}
+function pPinholes(x,W,H,k,sd){
+  if(k<=0.55) return;
+  const S=W/300, m=Math.round((k-0.55)*14);
+  for(let i=0;i<m;i++){
+    const px=(0.12+phash(i*6.1,sd)*0.76)*W, py=(0.12+phash(i*9.7,sd)*0.76)*H;
+    const r=(0.8+phash(i*3.7,sd)*1.8)*S;
+    x.fillStyle='rgba(70,62,46,'+((k-0.55)*.45).toFixed(3)+')';
+    x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+    x.strokeStyle='rgba(255,252,246,'+((k-0.55)*.29).toFixed(3)+')';
+    x.lineWidth=0.6*S; x.beginPath(); x.arc(px,py,r*1.5,0,6.2832); x.stroke();
+  }
+}
+function iceEdge(x,W,H,k,sd){
+  const S=W/300, n=Math.round(3+k*6);
+  for(let i=0;i<n;i++){
+    const side=i%4, t=0.08+phash(i*4.7,sd)*0.84;
+    const px=side===0?t*W:side===1?W:side===2?t*W:0;
+    const py=side===0?0:side===1?t*H:side===2?H:t*H;
+    const inward=side===0?Math.PI/2:side===1?Math.PI:side===2?-Math.PI/2:0;
+    pCrack(x,S,px,py,inward+(phash(i*2.9,sd)-0.5)*1.1,(20+phash(i*3.3,sd)*44)*S*(0.5+k),3,k,sd);
+  }
+  pPinholes(x,W,H,k,sd);
+}
+function iceRadial(x,W,H,k,sd){
+  const S=W/300;
+  const cx=(0.32+phash(2.1,sd)*0.36)*W, cy=(0.32+phash(5.3,sd)*0.36)*H;
+  const n=Math.round(4+k*6);
+  for(let i=0;i<n;i++)
+    pCrack(x,S,cx,cy,i/n*6.2832+phash(i,sd)*0.6,(18+phash(i*3.7,sd)*40)*S*(0.5+k),3,k,sd);
+  pPinholes(x,W,H,k,sd);
+}
+function iceFold(x,W,H,k,sd){
+  const S=W/300, n=Math.round(2+k*3);
+  for(let i=0;i<n;i++){
+    const vert=phash(i*3.1,sd)>0.5, t=0.18+phash(i*6.7,sd)*0.64;
+    let cx=vert?t*W:0, cy=vert?0:t*H;
+    const ang=vert?Math.PI/2:0, segs=Math.round(4+k*4);
+    for(let s=0;s<segs;s++){
+      const sl=(vert?H:W)/segs;
+      pCrack(x,S,cx,cy,ang+(phash(i*2.3+s,sd)-0.5)*0.5,sl,2,k,sd);
+      cx+=Math.cos(ang)*sl; cy+=Math.sin(ang)*sl;
+    }
+  }
+  pPinholes(x,W,H,k,sd);
+}
+function iceNet(x,W,H,k,sd){
+  const S=W/300, n=Math.round(5+k*8), nodes=[];
+  for(let i=0;i<n;i++) nodes.push([(0.10+phash(i*4.1,sd)*0.80)*W,(0.10+phash(i*7.9,sd)*0.80)*H]);
+  for(let i=0;i<n;i++){
+    let best=-1, bd=1e9;
+    for(let j=0;j<n;j++){ if(j===i) continue;
+      const d=Math.hypot(nodes[i][0]-nodes[j][0],nodes[i][1]-nodes[j][1]);
+      if(d<bd){ bd=d; best=j; } }
+    if(best<0) continue;
+    const ang=Math.atan2(nodes[best][1]-nodes[i][1],nodes[best][0]-nodes[i][0]);
+    pCrack(x,S,nodes[i][0],nodes[i][1],ang,bd,2,k,sd);
+    if(phash(i*5.5,sd)>0.5){
+      const k2=(i+2)%n;
+      const a2=Math.atan2(nodes[k2][1]-nodes[i][1],nodes[k2][0]-nodes[i][0]);
+      const d2=Math.hypot(nodes[i][0]-nodes[k2][0],nodes[i][1]-nodes[k2][1]);
+      pCrack(x,S,nodes[i][0],nodes[i][1],a2,d2*0.7,2,k*0.8,sd);
+    }
+  }
+  pPinholes(x,W,H,k,sd);
+}
+const WET_PAT=[wetEdge,wetDripDown,wetCorner,wetMist];
+const STORM_PAT=[stormFoldV,stormRoll,stormCrush,stormEdge];
+const GUST_PAT=[gustCross,gustSwirl,gustWave,gustCrumple];
+const ICE_PAT=[iceEdge,iceRadial,iceFold,iceNet];
+const patOf=(arr,sd,salt)=>arr[Math.floor(phash(salt,sd)*arr.length)%arr.length];
+
+/* กระดาษตอนเปิดอ่าน — นิ่ง อ่านง่าย ร่องรอยห้ามกลบตัวหนังสือ */
 function drawPaper(cv,traces){
   const ctx=cv.getContext('2d');
   const DPR=Math.min(devicePixelRatio||1,2);
@@ -3343,51 +3714,54 @@ function drawPaper(cv,traces){
   cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.clearRect(0,0,W,H);
   /* เพดานร่องรอย: ต้องยังอ่านว่า "ผ่านการเดินทางมา" ไม่ใช่ "เสียหาย" */
-  const age=clamp(traces.days/7,0,1), storm=clamp(traces.storm/3,0,1), rain=clamp(traces.rain,0,1);
+  const age=clamp(traces.days/7,0,1);
+  let wetK=clamp(traces.wet!==undefined?traces.wet:(traces.rain||0),0,1);
+  let stormK=clamp((traces.storm||0)/3,0,1);
+  let gustK=clamp((traces.gust||0)/6,0,1);
+  let iceK=clamp((traces.ice||0)/4,0,1);
+  /* ⚠️ เพดานรวม — ยิ่งเจอหลายชนิดพร้อมกัน แต่ละชนิดยิ่งต้องเบาลง
+     ไม่งั้นจดหมายที่เจอครบสี่อย่างจะกลายเป็นกระดาษที่อ่านไม่ออก
+     ซึ่งข้ามเส้นจาก "ผ่านการเดินทางมา" ไปเป็น "เสียหาย"
+     เจออย่างเดียวยังเข้มเต็มที่ได้ เพราะผลรวมยังไม่ถึงเพดาน */
+  const load=wetK+stormK+gustK+iceK;
+  if(load>1.35){ const d=1.35/load; wetK*=d; stormK*=d; gustK*=d; iceK*=d; }
+  const sd=seedOf(traces.id);
+  const S=W/300;
   const base=mix([243,239,230],[216,203,171],age*.72);
-  /* เนื้อกระดาษ */
   const g=ctx.createLinearGradient(0,0,W,H);
   g.addColorStop(0,'rgb('+c255(base[0]+4)+','+c255(base[1]+4)+','+c255(base[2]+4)+')');
   g.addColorStop(1,'rgb('+c255(base[0]-6)+','+c255(base[1]-7)+','+c255(base[2]-8)+')');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   /* เส้นใยกระดาษ — ต้องจางจนแทบไม่เห็น ไม่ใช่เส้นบรรทัด */
   ctx.lineWidth=1;
-  for(let i=0;i<9;i++){
+  for(let i=0;i<14;i++){
     const y=((Math.sin(i*23.7)*.5+.5)*H);
-    ctx.strokeStyle='rgba(120,110,90,'+(.018+(i%3)*.006)+')';
+    ctx.strokeStyle='rgba(120,110,90,'+(.014+(i%3)*.005)+')';
     ctx.beginPath();ctx.moveTo(-4,y);
     ctx.bezierCurveTo(W*.3,y+Math.sin(i*2.1)*6,W*.7,y-Math.sin(i*1.7)*7,W+4,y+Math.sin(i)*3);
     ctx.stroke();
   }
   for(let i=0;i<3;i++){
-    const x=((Math.sin(i*11.3+1)*.5+.5)*W);
+    const x0=((Math.sin(i*11.3+1)*.5+.5)*W);
     ctx.strokeStyle='rgba(120,110,90,.016)';
-    ctx.beginPath();ctx.moveTo(x,-4);
-    ctx.bezierCurveTo(x+5,H*.35,x-6,H*.7,x+2,H+4);
+    ctx.beginPath();ctx.moveTo(x0,-4);
+    ctx.bezierCurveTo(x0+5,H*.35,x0-6,H*.7,x0+2,H+4);
     ctx.stroke();
   }
-  /* คราบฝนที่ขอบ */
-  if(rain>.02) rainBlooms(ctx,rain,(u,v)=>({x:u*W,y:v*H}),0.9);
-  /* รอยยับจากพายุ — เส้นเฉียงที่ขอบ + ขอบช้ำ */
-  if(storm>.02){
-    ctx.lineCap='round';
-    const n=Math.round(2+storm*5);
-    for(let i=0;i<n;i++){
-      const side=i%2, y0=(Math.sin(i*4.1)*.5+.5)*H;
-      const len=(20+storm*70);
-      ctx.strokeStyle='rgba(96,86,66,'+(.06+storm*.12)+')';
-      ctx.lineWidth=1+storm*1.2;
-      ctx.beginPath();
-      if(side){ ctx.moveTo(W,y0); ctx.quadraticCurveTo(W-len*.6,y0+len*.3,W-len,y0+len*.7); }
-      else    { ctx.moveTo(0,y0); ctx.quadraticCurveTo(len*.6,y0-len*.3,len,y0-len*.7); }
-      ctx.stroke();
-    }
-    const e=ctx.createLinearGradient(0,0,0,H);
-    e.addColorStop(0,'rgba(92,80,58,'+(storm*.16)+')');
-    e.addColorStop(.12,'rgba(92,80,58,0)');
-    e.addColorStop(.88,'rgba(92,80,58,0)');
-    e.addColorStop(1,'rgba(92,80,58,'+(storm*.16)+')');
-    ctx.fillStyle=e;ctx.fillRect(0,0,W,H);
+  /* ลำดับคือความหมาย: เปียกก่อน (น้ำซึมเข้าเนื้อ) แล้วจึงถูกยับ แล้วจึงแตก */
+  if(wetK>.02)   patOf(WET_PAT,sd,1.1)(ctx,W,H,wetK,sd);
+  if(gustK>.02)  patOf(GUST_PAT,sd,3.7)(ctx,W,H,gustK,sd);
+  if(stormK>.02) patOf(STORM_PAT,sd,2.3)(ctx,W,H,stormK,sd);
+  if(iceK>.02)   patOf(ICE_PAT,sd,5.1)(ctx,W,H,iceK,sd);
+  /* จุดด่างอายุ — จุดสนิมที่ขึ้นตามกาลเวลาบนกระดาษจริง */
+  const fx=Math.round(age*28);
+  for(let i=0;i<fx;i++){
+    const px=phash(i*4.1,sd)*W, py=phash(i*8.7+2,sd)*H, r=(0.7+phash(i*2.9,sd)*2.6)*S;
+    const a=(0.05+phash(i*6.3,sd)*0.09)*0.4;
+    const fg=ctx.createRadialGradient(px,py,0,px,py,r);
+    fg.addColorStop(0,'rgba(146,110,66,'+a.toFixed(3)+')');
+    fg.addColorStop(1,'rgba(146,110,66,0)');
+    ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(px,py,r,0,6.2832); ctx.fill();
   }
   /* ขอบเก่า */
   const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.72);
@@ -3519,16 +3893,35 @@ addEventListener('pointercancel',e=>{ G.drag=false; PTR.delete(e.pointerId); });
 
 /* ---------- ข้อมูลย่อย ---------- */
 function tracesOf(L,upto){
-  let pre=0, st=0;
+  let pre=0, st=0, gu=0, ic=0;
   const n = upto===undefined ? L.lg.length : upto+1;
-  for(let i=0;i<Math.min(n,L.lg.length);i++){ const l=L.lg[i]; pre+=l[4]*l[0]; if(l[6]>0) st++; }
-  /* การเคลือบตัดร่องรอยที่มันกันได้ (ข้อ 13) — ความเก่าตามวันยังอยู่เสมอ เพราะเวลาไม่มีอะไรกันได้ */
+  for(let i=0;i<Math.min(n,L.lg.length);i++){
+    const l=L.lg[i];
+    pre+=l[4]*l[0];                     /* ปริมาณน้ำฟ้า × ชั่วโมง — หิมะรวมอยู่ในนี้ด้วย (ข้อ 98) */
+    if(l[6]>=2) st++;                   /* ลมแรงถึงขั้นเสี่ยงหาย = รอยยับแบบพายุ */
+    else if(l[6]>0) gu++;               /* กระโชกถึงเกณฑ์เฉย ๆ = รอยปั่น ไม่ใช่รอยกด */
+    if(wcx(l[8])===2) ic++;             /* ฝนแข็งตัว = รอยแตก ของที่ค้างอยู่ */
+  }
+  /* การเคลือบตัดร่องรอยที่มันกันได้ (ข้อ 13) — ความเก่าตามวันยังอยู่เสมอ เพราะเวลาไม่มีอะไรกันได้
+     กอล์ฟตัดสิน 26 ส.ค. (ข้อ 98): กันน้ำกันความเปียกทั้งหมด · เคลือบหนากันรอยแตกและรอยยับทั้งหมด */
   const ct=L.ct|0;
   return {
-    rain:  ct===1||ct===2 ? 0 : clamp(pre/40,0,1),
+    id:    L.id||'',
+    wet:   ct>=1 ? 0 : clamp(pre/40,0,1),
     storm: ct===2 ? 0 : Math.min(3,st),
+    gust:  ct===2 ? 0 : Math.min(4,gu),
+    ice:   ct===2 ? 0 : Math.min(4,ic),
     days:  L.th/24
   };
+}
+/* รหัสจดหมาย → ตัวเลข สำหรับสุ่มลายร่องรอย (ข้อ 98)
+   ⚠️ ต้องมาจาก id เท่านั้น ห้ามใช้ Math.random — ผู้ส่งกับผู้รับต้องเห็นกระดาษใบเดียวกัน
+   และเปิดกี่ครั้งก็ต้องได้ลายเดิม ไม่งั้นร่องรอยจะกลายเป็นของที่เปลี่ยนไปทุกครั้งที่มอง */
+function seedOf(id){
+  let h=2166136261;
+  const s=String(id||'');
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0)%9973;
 }
 const llOf = p => ({lat:p.la, lng:p.lo});
 
