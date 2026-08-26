@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — จดหมายไปต่อไม่ได้: งานภาพ</title>
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 60px)}
+.wrap{max-width:820px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:24px;line-height:1.9}
+.lead b{font-weight:normal;color:#8b6a33}
+section{margin-bottom:38px}
+h2{font-size:14px;font-weight:normal;letter-spacing:.16em;margin-bottom:4px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:14px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{text-align:center}
+.cell canvas{width:100%;aspect-ratio:1/1;display:block;border:1px solid var(--line);border-radius:3px}
+.cap{font-size:11.5px;color:var(--dim);letter-spacing:.04em;margin-top:5px;line-height:1.7}
+.cap b{display:block;font-weight:normal;color:var(--txt);font-size:12.5px;letter-spacing:.06em;margin-bottom:2px}
+.cap i{font-style:normal;color:#8b6a33}
+.ctl{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px;color:var(--dim)}
+.ctl label{flex:0 0 104px;letter-spacing:.05em}
+.ctl input[type=range]{flex:1;accent-color:#c69a54;height:32px}
+.ctl output{flex:0 0 46px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--txt)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.btn{border:1px solid var(--line);border-radius:999px;padding:8px 15px;background:rgba(255,255,255,.42);
+  font:inherit;font-size:12px;letter-spacing:.05em;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.9);border-color:rgba(198,154,84,.55)}
+.note{font-size:12px;color:var(--dim);line-height:1.95;border-left:2px solid var(--line);padding-left:12px;margin-top:16px}
+.note b{font-weight:normal;color:#8b6a33}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>จดหมายไปต่อไม่ได้</h1>
+<p class="lead">
+กอล์ฟ: <i>"ผมอยากซื่อสัตย์ตรงที่ว่า เวลาเราบอกวน คือวน เวลาบอกติดอยู่ในพายุ คือติดจริง ๆ"</i><br>
+ตอนนี้แอปบอกว่า <b>"จอดรอให้พายุสงบ"</b> แล้ววาดเป็นจุดกะพริบอยู่กับที่<br>
+กระดาษไม่มีสมอ ไม่มีที่กำบัง ไม่มีเจตจำนง — <b>มันจอดไม่ได้</b>
+</p>
+
+<div class="bar">
+  <button class="btn on" data-sev="1">ลมกระโชก · ไม่มีศูนย์กลาง</button>
+  <button class="btn" data-sev="3">พายุหมุน · มีตาให้วนรอบ</button>
+  <button class="btn on" data-anim="1">เคลื่อนไหว</button>
+  <button class="btn" data-trail="1">ทิ้งรอย</button>
+</div>
+<div class="ctl"><label>ความแรง</label><input type="range" id="pw" min="20" max="100" value="60"><output id="pwo">60</output></div>
+<div class="ctl"><label>ความเร็วเวลา</label><input type="range" id="sp" min="20" max="200" value="100"><output id="spo">100</output></div>
+
+<div class="rule"></div>
+
+<section>
+<h2>หกแบบ</h2>
+<p class="q">จุดทองคือจดหมาย · เส้นจาง ๆ คือเส้นทางที่มันควรจะไป · วงประคือตำแหน่งที่มันควรอยู่ตอนนี้<br>
+<b>เกณฑ์: คำที่เขียนใต้ภาพต้องตรงกับสิ่งที่ตาเห็นจริง ๆ</b></p>
+<div class="grid" id="grid"></div>
+</section>
+
+<div class="note">
+<b>ข้อจำกัดที่ต้องรู้:</b> ไม่ว่าเลือกแบบไหน จดหมายต้องกลับมาอยู่ที่จุดเดิมพอดีเมื่อหมดเวลา<br>
+เพราะ <code>hold</code> เป็นเวลาที่เสียไป ไม่ใช่การเดินทาง — เส้นทางจริงและเวลารวมห้ามเปลี่ยน<br>
+ทุกแบบในหน้านี้จึงเป็น <b>การเคลื่อนไหวรอบจุดเดียว</b> ไม่ใช่การย้ายที่
+</div>
+</div>
+
+<script>
+'use strict';
+const col = a => 'rgba(84,90,104,'+a+')';
+const hs = n => { const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+let T=0, ANIM=true, TRAIL=false, SEV=1, PW=0.60, SPD=1;
+
+/* ---------- พื้นหลัง: ริ้วลม + เส้นทางจดหมาย ---------- */
+function backdrop(x,W,H,t){
+  x.lineCap='round';
+  /* ลมกระโชก = ริ้วถี่และเข้ม (ข้อ 92) · พายุหมุน = ริ้ววนรอบตา (ข้อ 62.7) */
+  const cx=W*0.5, cy=H*0.5;
+  if(SEV>=3){
+    for(let l=0;l<26;l++){
+      const r0=W*0.10+l*W*0.016, ph=hs(l*3.7)*6.283;
+      x.beginPath();
+      for(let i=0;i<=40;i++){
+        const a=ph+i/40*2.1+l*0.05, r=r0*(1+i/40*0.55);
+        const px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r*0.98;
+        i?x.lineTo(px,py):x.moveTo(px,py);
+      }
+      const wave=(Math.sin(l*0.7-t*0.9)*0.5+0.5);
+      x.strokeStyle=col((0.05+0.13*wave).toFixed(3)); x.lineWidth=0.9;
+      x.stroke();
+    }
+  }else{
+    for(let l=0;l<22;l++){
+      const y0=H*(0.06+l*0.042), amp=6+hs(l*3.1)*7, ph=hs(l*7.7)*6.283;
+      for(let i=0;i<48;i++){
+        const f0=i/48, f1=(i+1)/48;
+        const xx0=-8+f0*(W+16), xx1=-8+f1*(W+16);
+        const yy0=y0+Math.sin(f0*4+ph)*amp, yy1=y0+Math.sin(f1*4+ph)*amp;
+        const d=Math.abs(f0-0.5)*2;
+        const g=1-clamp(d*1.4,0,1);
+        const wave=(Math.sin(f0*9-t*1.4+ph)*0.5+0.5);
+        x.strokeStyle=col(((0.04+0.10*wave)*(1+g*2.2)).toFixed(3));
+        x.lineWidth=0.9;
+        x.beginPath(); x.moveTo(xx0,yy0); x.lineTo(xx1,yy1); x.stroke();
+      }
+    }
+  }
+  /* เส้นทางที่จดหมายควรจะไป */
+  x.setLineDash([3,5]); x.strokeStyle='rgba(198,154,84,.30)'; x.lineWidth=1.4;
+  x.beginPath(); x.moveTo(W*0.12,H*0.78); x.lineTo(cx,cy); x.lineTo(W*0.88,H*0.20); x.stroke();
+  x.setLineDash([]);
+  /* ตำแหน่งที่มันควรอยู่ */
+  x.setLineDash([2,4]); x.strokeStyle='rgba(198,154,84,.42)'; x.lineWidth=1;
+  x.beginPath(); x.arc(cx,cy,5.5,0,6.2832); x.stroke(); x.setLineDash([]);
+}
+
+/* ---------- จุดจดหมาย ---------- */
+const trail=[];
+function paper(x,px,py,alpha){
+  const g=x.createRadialGradient(px,py,0,px,py,9);
+  g.addColorStop(0,'rgba(198,154,84,'+(0.5*alpha).toFixed(3)+')');
+  g.addColorStop(1,'rgba(198,154,84,0)');
+  x.fillStyle=g; x.beginPath(); x.arc(px,py,9,0,6.2832); x.fill();
+  x.fillStyle='rgba(198,154,84,'+(0.95*alpha).toFixed(3)+')';
+  x.beginPath(); x.arc(px,py,2.6,0,6.2832); x.fill();
+}
+function drawAt(x,W,H,px,py,key){
+  if(TRAIL){
+    trail[key]=trail[key]||[];
+    const a=trail[key];
+    if(ANIM) a.push([px,py]);
+    if(a.length>90) a.shift();
+    x.strokeStyle='rgba(198,154,84,.22)'; x.lineWidth=1.1;
+    x.beginPath(); a.forEach(([tx,ty],i)=>{ i?x.lineTo(tx,ty):x.moveTo(tx,ty); }); x.stroke();
+  }
+  paper(x,px,py,1);
+}
+
+/* ---------- หกแบบ ---------- */
+const R = W => W*0.085*(0.5+PW);
+
+const WAYS=[
+ {name:'ก. กะพริบอยู่กับที่', word:'"จอดรอให้พายุสงบ"', bad:true,
+  desc:'ของเดิม — กระดาษจอดไม่ได้ และกะพริบเป็นภาษาของ UI ไม่ใช่ของลม',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2;
+    const pulse=.55+Math.sin(t*2.2)*.25;
+    paper(x,cx,cy,pulse); }},
+
+ {name:'ข. วนเป็นวงกลม', word:'"วนอยู่ในพายุ"',
+  desc:'วนจริง สม่ำเสมอ — แต่ลมกระโชกไม่มีศูนย์กลางให้วนรอบ',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2, r=R(W);
+    const a=t*(0.5+PW*0.7);
+    drawAt(x,W,H,cx+Math.cos(a)*r, cy+Math.sin(a)*r, 'b'); }},
+
+ {name:'ค. ก้นหอยเข้า-ออก', word:'"ถูกดูดเข้าไปในพายุ"',
+  desc:'เข้าใกล้ตาแล้วถูกเหวี่ยงออก วนไม่รู้จบ — ต้องมีตาจริงถึงจะซื่อสัตย์',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2, r0=R(W);
+    const a=t*(0.6+PW*0.9);
+    const r=r0*(0.35+0.65*(0.5+0.5*Math.sin(t*0.45)));
+    drawAt(x,W,H,cx+Math.cos(a)*r, cy+Math.sin(a)*r, 'c'); }},
+
+ {name:'ง. ถูกปั่นไปมา', word:'"ถูกลมปั่นจนไปต่อไม่ได้"',
+  desc:'ไม่มีศูนย์กลาง ไม่มีจังหวะซ้ำ — ตรงกับลมกระโชกที่สุด',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2, r=R(W);
+    const dx=(Math.sin(t*1.7)+Math.sin(t*2.9+1.3)*0.7+Math.sin(t*4.7+2.1)*0.4)/2.1;
+    const dy=(Math.cos(t*1.3+0.8)+Math.cos(t*3.3+2.6)*0.7+Math.cos(t*5.1)*0.4)/2.1;
+    drawAt(x,W,H,cx+dx*r, cy+dy*r, 'd'); }},
+
+ {name:'จ. ดันไปแล้วถูกตีกลับ', word:'"ดันไปข้างหน้าไม่ไหว"',
+  desc:'พยายามไปตามเส้นทาง แล้วถูกลมพัดถอยกลับมาที่เดิมซ้ำ ๆ',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2, r=R(W)*1.5;
+    /* ทิศตามเส้นทาง (ขึ้นขวา) */
+    const ux=0.86, uy=-0.51;
+    const u=(Math.sin(t*0.9-1.57)*0.5+0.5);
+    const push=Math.pow(u,0.6);
+    const jx=Math.sin(t*7.3)*r*0.10*push, jy=Math.cos(t*6.1)*r*0.10*push;
+    drawAt(x,W,H,cx+ux*r*push+jx, cy+uy*r*push+jy, 'e'); }},
+
+ {name:'ฉ. ค้างนิ่ง สั่นเล็กน้อย', word:'"ติดอยู่ตรงนั้น"',
+  desc:'แทบไม่ขยับ สั่นแค่พอรู้ว่ายังมีชีวิต — เงียบที่สุด ใกล้ของเดิมที่สุด',
+  fn:(x,W,H,t)=>{ const cx=W/2,cy=H/2, r=R(W)*0.22;
+    const dx=Math.sin(t*3.1)*0.6+Math.sin(t*7.7)*0.4;
+    const dy=Math.cos(t*2.7)*0.6+Math.cos(t*8.3)*0.4;
+    drawAt(x,W,H,cx+dx*r, cy+dy*r, 'f'); }}
+];
+
+const grid=document.getElementById('grid');
+const cvs=[];
+WAYS.forEach(w=>{
+  const d=document.createElement('div'); d.className='cell';
+  const c=document.createElement('canvas');
+  const cap=document.createElement('div'); cap.className='cap';
+  cap.innerHTML='<b>'+w.name+'</b><i>'+w.word+'</i><br>'+w.desc;
+  d.appendChild(c); d.appendChild(cap); grid.appendChild(d);
+  cvs.push(c);
+});
+
+function draw(){
+  cvs.forEach((c,i)=>{
+    const dpr=Math.min(2,devicePixelRatio||1);
+    const w=c.clientWidth, h=c.clientHeight;
+    if(c.width!==w*dpr){ c.width=w*dpr; c.height=h*dpr; }
+    const x=c.getContext('2d');
+    x.setTransform(dpr,0,0,dpr,0,0);
+    x.clearRect(0,0,w,h);
+    backdrop(x,w,h,T);
+    WAYS[i].fn(x,w,h,T);
+  });
+}
+function loop(){ if(ANIM) T+=SPD/60; draw(); requestAnimationFrame(loop); }
+
+document.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>{
+  SEV=+b.dataset.sev;
+  document.querySelectorAll('[data-sev]').forEach(o=>o.classList.toggle('on',o===b));
+});
+document.querySelector('[data-anim]').onclick=function(){ ANIM=!ANIM; this.classList.toggle('on',ANIM); };
+document.querySelector('[data-trail]').onclick=function(){
+  TRAIL=!TRAIL; this.classList.toggle('on',TRAIL); trail.length=0;
+};
+const pw=document.getElementById('pw'), pwo=document.getElementById('pwo');
+pw.oninput=()=>{ PW=+pw.value/100; pwo.value=pw.value; };
+const sp=document.getElementById('sp'), spo=document.getElementById('spo');
+sp.oninput=()=>{ SPD=+sp.value/100; spo.value=sp.value; };
+
+loop();
+</script>
+</body>
+</html>
