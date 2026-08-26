@@ -2180,13 +2180,58 @@ function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale,wc){
   else if(kind===1) wxWind(ctx,cx,cy,t,intensity,dir,scale);
   else if(kind===2) wxDrizzle(ctx,cx,cy,t,intensity,lean,scale);
   else if(kind===3) wxRain(ctx,cx,cy,t,intensity,lean,scale);
-  /* 4 ลมกระโชกแรง · 5 ฝนฟ้าคะนอง · 6 พายุ — ใช้ภาพก้นหอยเหมือนกันแต่ความเข้มต่างกัน
-     ความเข้มมาจาก stormIntensity(กระโชก) อยู่แล้ว จึงไล่ระดับเองตามความแรงจริง
-     ฝนฟ้าคะนองยังต้องเห็นเม็ดฝนด้วย ไม่งั้นจะอ่านเป็นลมล้วน */
-  else{
-    if(kind===5) wxRain(ctx,cx,cy,t,intensity*0.8,lean,scale);
-    wxStorm(ctx,cx,cy,t,intensity,true,scale);
+  /* ---------- ก้นหอยสงวนให้พายุหมุนจริงเท่านั้น (ข้อ 97) ----------
+     ของเดิม kind 4/5/6 ใช้ก้นหอยเหมือนกันหมด ต่างแค่ความเข้ม
+     ข้อ 92-93 แยกลมกระโชกออกจากพายุหมุนไปแล้ว *บนลูกโลก* แต่ลืมการ์ดใบนี้
+     ผลคือการ์ดเขียนว่า "ลมกระโชกแรง" แล้ววาดก้นหอยพายุให้ดู — ขัดกันเอง
+
+     ต้องพูดภาษาเดียวกับลูกโลก:
+       4 ลมกระโชกแรง  = ลมชุดเดิมที่แรงขึ้น (ริ้วถี่ เข้ม เร็ว) ไม่ใช่วัตถุ
+       5 ฝนฟ้าคะนอง   = ฝน + ฟ้าแลบ ไม่ใช่ระบบหมุน
+       6 พายุหมุนจริง = ก้นหอยเท่านั้น */
+  else if(kind===4){
+    /* ริ้วชุดเดียวกับ wxWind แต่ถี่ขึ้นและเข้มขึ้น — ตรงกับ gustAt บนลูกโลก */
+    wxWind(ctx,cx,cy,t,Math.min(1,intensity*1.35),dir,scale);
+    ctx.save(); ctx.translate(cx,cy); ctx.scale(scale||1,scale||1);
+    ctx.rotate(0.10*(dir>=0?1:-1));
+    wxWind(ctx,0,0,t*1.6+2.1,Math.min(1,intensity*1.1),dir,1);
+    ctx.restore();
   }
+  else if(kind===5){
+    wxRain(ctx,cx,cy,t,intensity,lean,scale);
+    wxCardBolt(ctx,cx,cy,t,intensity,scale);
+  }
+  else wxStorm(ctx,cx,cy,t,intensity,true,scale);
+}
+/* ฟ้าแลบบนการ์ด (ข้อ 97) — วาบเป็นจังหวะ ไม่ใช่เส้นค้าง
+   ต่างจาก G.bolts บนลูกโลกที่วางตามพิกัดจริง อันนี้เป็นไอคอน จึงอยู่กลางภาพ */
+function wxCardBolt(ctx,cx,cy,t,intensity,scale){
+  const s=scale||1;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);ctx.lineCap='round';ctx.lineJoin='round';
+  /* ⚠️ ต้องมีเมฆค้างไว้ ไม่ใช่มีแต่ฟ้าแลบ (ข้อ 85)
+     ฟ้าแลบวาบแค่เสี้ยววินาที ระหว่างที่ไม่วาบการ์ดจะแยกจาก "ฝนหนัก" ไม่ออกเลย
+     แถบเมฆด้านบนคือสิ่งที่บอกว่าเป็นฝนฟ้าคะนองตลอดเวลา ไม่ใช่แค่ตอนวาบ */
+  ctx.strokeStyle=col(.30); ctx.lineWidth=1.15;
+  for(let i=0;i<5;i++){
+    const yy=-40+i*4.4, w=26-Math.abs(i-2)*3.5;
+    ctx.beginPath();
+    ctx.moveTo(-w,yy+Math.sin(i*1.7)*1.2);
+    ctx.lineTo(w,yy+Math.sin(i*2.3+1)*1.2);
+    ctx.stroke();
+  }
+  /* วาบทุก ~1.2 วินาที นาน ~0.3 วินาที — ถี่พอให้เห็นระหว่างดูการ์ด
+     แต่ยังเป็นการวาบ ไม่ใช่เส้นค้าง ซึ่งจะกลายเป็นสัญลักษณ์ */
+  const cyc=(t*0.85)%1;
+  const flash=cyc<0.24 ? Math.pow(1-cyc/0.24,1.5) : 0;
+  if(flash>0.02){
+    const a=(0.34+0.46*intensity)*flash;
+    ctx.strokeStyle='rgba(48,53,66,'+a.toFixed(3)+')';
+    ctx.lineWidth=1.6;
+    ctx.beginPath();
+    ctx.moveTo(-3,-24); ctx.lineTo(-10,-2); ctx.lineTo(-2,-2); ctx.lineTo(-8,22);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /* ---------- ชายฝั่งโลก ----------
