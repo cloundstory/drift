@@ -346,6 +346,29 @@ const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me' };
    เรียกว่า "พายุ" จึงเป็นการพูดเกินความจริง และทำให้คนไม่เชื่อแอปเมื่อเทียบกับของจริง */
 const KIND = ['clear','wind','drizzle','rain','gust','thunder','storm'];
 
+/* ---------- อากาศที่ไม่ใช่ฝน (ข้อ 88.4) ----------
+   หิมะ หมอก ฝนแข็งตัว เข้าแอปเป็น *ภาพ* ไปแล้วในข้อ 88 แต่ยังไม่มีคำเรียก
+   การ์ดพยากรณ์จึงเรียกหิมะว่า "ฝนหนัก" และเรียกหมอกล้วนว่า "ฟ้าเปิด"
+
+   ⛔ ห้ามต่อท้าย KIND — `kind` ถูกใช้เป็น *บันไดความรุนแรง* สองที่:
+      renderSky หา `l[5]>worst` · drawWx ถือว่า kind>=4 คือภาพก้นหอยพายุ
+      ต่อเป็น 7,8,9 = หิมะรุนแรงกว่าพายุ และหมอกจะถูกวาดเป็นก้นหอย
+   ใช้ชั้นคำแยกที่อ่าน `wc` (leg ช่อง 8) แทน — อยู่ในลิงก์อยู่แล้ว URL ไม่โตสักไบต์
+   ลิงก์เก่าที่ไม่มี wc ได้ 0 = ไม่มีอะไรทับ คำเดิมทำงานต่อเหมือนเดิม
+
+   เงื่อนไขต้องตรงกับตารางในข้อ 88 เป๊ะ ไม่งั้นคำกับภาพจะพูดคนละเรื่อง
+   จึงให้ทั้งงานวาดและงานคำเรียกฟังก์ชันตัวเดียวกันนี้ */
+function wcx(wc){
+  wc=wc|0;
+  if(wc>=71&&wc<=77) return 1;                      /* หิมะ */
+  if(wc===56||wc===57||wc===66||wc===67) return 2;  /* ฝนแข็งตัว */
+  if(wc===45||wc===48) return 3;                    /* หมอก */
+  return 0;
+}
+/* 3 คำ ไม่แยกเบา/หนัก — งานวาดในข้อ 88 ไม่ได้แยกความหนักไว้เหมือนกัน
+   ถ้าคำละเอียดกว่าภาพ คนอ่านจะหาสิ่งที่คำบอกไม่เจอบนจอ */
+const WCX_WORD = ['','หิมะ','ฝนแข็งตัว','หมอก'];
+
 /* ---------- คณิตศาสตร์ทรงกลม (ยกจาก globe-study) ---------- */
 function toXYZ(latDeg,lngDeg){
   const lat=latDeg*RAD, lng=lngDeg*RAD;
@@ -1078,10 +1101,11 @@ function rainMarks(L,tf){
   if(L.lg) for(let i=0;i<L.lg.length;i++){
     const wc=L.lg[i][8]||0;
     let kind=0, mass=0;
-    if(wc>=95)                          { kind=1; mass=2.4; }   /* ฟ้าคะนอง */
-    else if(wc>=71&&wc<=77)             { kind=2; mass=1.5; }   /* หิมะ — เมฆเรียบ ไม่มีแกนหนัก */
-    else if(wc===56||wc===57||wc===66||wc===67) { kind=3; mass=1.9; }  /* ฝนแข็งตัว */
-    else if(wc===45||wc===48)           { kind=4; mass=0; }     /* หมอก — ไม่มีมวลเมฆ */
+    const x=wcx(wc);                    /* 1 หิมะ · 2 ฝนแข็งตัว · 3 หมอก — ตัวเดียวกับที่คำเรียกใช้ */
+    if(wc>=95)      { kind=1; mass=2.4; }   /* ฟ้าคะนอง */
+    else if(x===1)  { kind=2; mass=1.5; }   /* หิมะ — เมฆเรียบ ไม่มีแกนหนัก */
+    else if(x===2)  { kind=3; mass=1.9; }   /* ฝนแข็งตัว */
+    else if(x===3)  { kind=4; mass=0; }     /* หมอก — ไม่มีมวลเมฆ */
     if(!kind) continue;
     const q=fromXYZ(posVAt(L,(i+0.5)/L.lg.length));
     /* แปลงเป็นพิกัดในกรอบเส้นทางครั้งเดียว แล้ววัดระยะในกรอบนั้นตรง ๆ
@@ -1102,6 +1126,28 @@ function rainMarks(L,tf){
   };
   /* ปริมาณฝนที่ใช้ *วาด* — ของจริง × โครงสร้างขอบ + มวลของเมฆฟ้าคะนอง */
   const mmDraw=(al,cr,q)=>rainAt(f,q.lat,q.lng,bucket/6)*(0.35+1.35*nzAt(al,cr))+2.4*sbAt(al,cr);
+
+  /* รัศมีของก้อนอากาศหนัก — ใช้ร่วมกันระหว่างการวางหิมะ/น้ำแข็ง/หมอก
+     และการห้ามเม็ดฝนร่วงในก้อนเดียวกัน สองที่นี้ต้องเป็นค่าเดียวกันเสมอ */
+  const wxR=half*0.20;
+  /* ---------- ในก้อนหิมะหรือฝนแข็งตัว ห้ามมีเม็ดฝนร่วง (ข้อ 88.1) ----------
+     ข้อ 88 เพิ่มมวลเมฆให้หิมะกับฝนแข็งตัว เพื่อไม่ให้มันร่วงออกมาจากฟ้าโล่ง — ถูกแล้ว
+     แต่ `mmDraw` เอามวลก้อนนั้นไปเลี้ยง *เม็ดฝน* ด้วย เพราะ fall รู้จักแต่ปริมาณน้ำฟ้า
+     วัดแล้ว: ใส่หิมะหนึ่งช่วงทำให้เม็ดฝนเพิ่มจาก 276 เป็น 413 เส้น (+137)
+     ฝนแข็งตัว +158 · หมอกไม่เพิ่มเลยเพราะมวลเป็นศูนย์อยู่แล้ว
+
+     ผลที่ตาเห็นคือจุดขาวส่ายช้ากับขีดฝนเอียงตามลม *ร่วงทับกัน* ในก้อนเดียว
+     ซึ่งขัดกฎแกนของงานภาพชุดนี้: แต่ละอย่างต้องใช้ช่องทางการมองเห็นคนละช่อง
+     ตัดเฉพาะของที่ร่วง ไม่แตะมวลเมฆ — เมฆที่หิมะตกลงมาจากต้องมีอยู่ต่อไป */
+  const solidR2=wxR*wxR;
+  const inSolid=(al,cr)=>{
+    for(const w of WX){
+      if(w.kind!==2&&w.kind!==3) continue;   /* 2 หิมะ · 3 ฝนแข็งตัว */
+      const dx=al-w.al, dy=cr-w.cr;
+      if(dx*dx+dy*dy<solidR2) return true;
+    }
+    return false;
+  };
 
   /* ---------- ฝนที่ตกลงมาจากเมฆ (ข้อ 85) ----------
      ข้อ 67 เคยวาดขีดฝนทั่วสนามแล้วข้อ 70 ลบทิ้ง เพราะ *ไม่มีเมฆให้มันตกลงมาจาก*
@@ -1129,6 +1175,9 @@ function rainMarks(L,tf){
     const p0=llAt(al0,cr0);
     const mm=mmDraw(al0,cr0,p0);
     if(mm<CORE) continue;                       /* ฝนออกจาก *แกน* ของระบบเท่านั้น */
+    /* เช็กหลังเกณฑ์แกน ไม่ใช่ก่อน — จุดส่วนใหญ่ถูกตัดด้วย CORE ไปแล้ว
+       วนลูป WX ให้เฉพาะจุดที่รอดมาถึงตรงนี้จึงถูกกว่ามาก */
+    if(inSolid(al0,cr0)) continue;              /* ในก้อนหิมะ/ฝนแข็งตัว ห้ามมีฝน */
     const d=Math.min(1,(mm-CORE)/1.3);
     const n=r*97+c*31;
     if(hs(n)>0.30+0.55*d) continue;
@@ -1153,7 +1202,7 @@ function rainMarks(L,tf){
        หิมะ    = จุดสว่างที่ *ยกกระดาษ* ไม่ใช่รอยที่ลงบนกระดาษ · ส่ายไปมา · ช้ามาก
        หมอก    = ยางลบ ไม่ใช่สีที่ทาทับ · ไม่เคลื่อน หายใจช้า ๆ
        ฝนแข็งตัว = ร่วงตรงสนิท เร็วกว่าฝน + ประกายที่หัว + รอยแตกที่ค้างอยู่ */
-  const wxR=half*0.20, snow=[], fogp=[], ice=[], crack=[];
+  const snow=[], fogp=[], ice=[], crack=[];   /* wxR ประกาศไว้ข้างบนแล้ว ใช้ร่วมกับ inSolid */
   for(let wi=0;wi<WX.length;wi++){
     const w=WX[wi];
     if(w.kind===2){
@@ -1699,11 +1748,11 @@ function trailUpto(L,prog){
 /* ---------- สถานะจดหมาย ณ เวลาหนึ่ง ---------- */
 function letterState(L, now){
   const legs=L.lg, elapsed=(now-L.s)/3600000;   // ชม.
-  let acc=0, prog=0, parked=false, legIdx=0, kind=0, sev=0;
+  let acc=0, prog=0, parked=false, legIdx=0, kind=0, sev=0, wc=0;
   const perLeg=1/legs.length;
   for(let i=0;i<legs.length;i++){
-    const [dur,hold,,,,kd,sv]=legs[i];
-    legIdx=i; kind=kd; sev=sv;
+    const [dur,hold,,,,kd,sv,,wcd]=legs[i];
+    legIdx=i; kind=kd; sev=sv; wc=wcd||0;   /* ลิงก์เก่าไม่มีช่อง 8 → 0 = ไม่มีคำทับ */
     if(elapsed < acc+dur){ prog=(i+(elapsed-acc)/dur)*perLeg; break; }
     acc+=dur;
     if(elapsed < acc+hold){ prog=(i+1)*perLeg; parked=true; break; }
@@ -1714,7 +1763,7 @@ function letterState(L, now){
   const arrived = elapsed>=L.th && L.lo<0;
   if(gone) prog=Math.min(prog,(L.lo+0.5)/legs.length);   /* หายแล้ว = ค้างอยู่ตรงนั้น */
   return {
-    prog: clamp(prog,0,1), parked, legIdx, kind, sev, arrived, gone,
+    prog: clamp(prog,0,1), parked, legIdx, kind, sev, wc, arrived, gone,
     remain: Math.max(0, L.th-elapsed), elapsed
   };
 }
@@ -1735,20 +1784,40 @@ function windWord(boost){
 }
 function poemFor(sim){
   const rough=sim.legs.filter(l=>l[6]>0);
-  const rain=sim.legs.filter(l=>l[5]===2||l[5]===3).length;
+  /* นับเฉพาะช่วงที่เป็นฝนจริง — หิมะกับฝนแข็งตัวมี kind 2/3 เหมือนกัน (ปริมาณน้ำฟ้าเท่ากัน)
+     ถ้าไม่กรอง บทสรุปจะบอกว่า "ฝนตกเป็นระยะ" ทั้งที่จอเต็มไปด้วยหิมะ */
+  const rain=sim.legs.filter(l=>(l[5]===2||l[5]===3) && !wcx(l[8])).length;
+  const wxN=[0,0,0,0];
+  sim.legs.forEach(l=>{ wxN[wcx(l[8])]++; });
+  /* เรียงตามความ "แปลก" — หิมะหายากกว่าฝนแข็งตัว ฝนแข็งตัวหายากกว่าหมอก
+     หมอกต้องเจอเกินหนึ่งช่วงถึงจะพูด เพราะหมอกช่วงเดียวเป็นเรื่องปกติของเช้าทุกที่
+     ทุกประโยคต้องยืนเดี่ยวได้ เพราะมันถูกใช้ทั้งแบบต่อท้ายพายุและแบบแทนที่ประโยคฝน */
+  const wxTail = wxN[1] ? ' ระหว่างทางมีหิมะโปรย'
+               : wxN[2] ? ' ระหว่างทางมีฝนแข็งตัวเกาะกระดาษ'
+               : wxN[3]>1 ? ' ช่วงหนึ่งจดหมายหายเข้าไปในหมอก' : '';
   let p=windWord(sim.boost);
-  if(sim.worst===2) p+=' แต่กลางทางมีพายุใหญ่รออยู่';
+  if(sim.worst===2) p+=' แต่กลางทางมีพายุใหญ่รออยู่'+wxTail;
   else if(rough.length){
     /* เรียกตามสิ่งที่เจอจริง ไม่เหมาโหลว่าเป็นฝนฟ้าคะนองทั้งหมด
        ช่วงเดียวกันอาจเป็นแค่ลมกระโชกโดยไม่มีฟ้าคะนองก็ได้ — รหัสอากาศเป็นคนบอก */
     const word = rough.some(l=>l[5]===5) ? 'ฝนฟ้าคะนอง' : 'ลมกระโชกแรง';
-    p+=' มี'+word+'ขวางทาง '+rough.length+' ช่วง จดหมายจะหลบรอจนลมสงบ';
+    p+=' มี'+word+'ขวางทาง '+rough.length+' ช่วง จดหมายจะหลบรอจนลมสงบ'+wxTail;
   }
+  /* หิมะ/ฝนแข็งตัว *แทนที่* ประโยคฝน ไม่ใช่ต่อท้าย — ไม่งั้นได้ "ฟ้าเปิดตลอดทาง มีหิมะโปรย"
+     ซึ่งขัดกันเอง (หิมะกับฝนแข็งตัวถูกกรองออกจาก rain ไปแล้วข้างบน จึงตกมาที่ "ฟ้าเปิด")
+     และของแปลกควรได้พูดก่อนฝน ซึ่งเป็นของที่คนเห็นอยู่ทุกวัน */
+  else if(wxTail) p+=wxTail;
   else if(rain>2) p+=' ระหว่างทางฝนตกเป็นระยะ';
   else p+=' ฟ้าเปิดตลอดทาง';
   return p+'.';
 }
-function kindWord(k){ return ['ฟ้าเปิด','ลมพัด','ฝนปรอย','ฝนหนัก','ลมกระโชกแรง','ฝนฟ้าคะนอง','พายุ'][k]; }
+/* `wc` เป็นตัวเลือก — เรียกโดยไม่ส่งมาได้ ได้คำเดิมเหมือนก่อนข้อ 88.4
+   ลำดับ: ลมกระโชกถึงเกณฑ์ (sev>0 → kind>=4) ชนะเสมอ เพราะนั่นคือสิ่งที่ทำให้จดหมายจอดรอ
+   หิมะที่ลมสงบต้องได้ชื่อของตัวเอง แต่หิมะกลางพายุยังต้องเรียกว่าพายุ */
+function kindWord(k,wc){
+  if(k<4){ const x=wcx(wc); if(x) return WCX_WORD[x]; }
+  return ['ฟ้าเปิด','ลมพัด','ฝนปรอย','ฝนหนัก','ลมกระโชกแรง','ฝนฟ้าคะนอง','พายุ'][k];
+}
 
 /* ============================================================
    งานวาด — Canvas 2D, procedural line-art
@@ -1828,6 +1897,98 @@ function wxRain(ctx,cx,cy,t,intensity,lean,scale){
   }
   ctx.restore();
 }
+/* ---------- หิมะ · ฝนแข็งตัว · หมอก บนการ์ดพยากรณ์ (ข้อ 88.4) ----------
+   บนลูกโลกสามอันนี้มีอยู่แล้ว แต่การ์ดพยากรณ์วาดคนละระบบ (drawWx ไม่ใช่ marks)
+   ถ้าไม่ทำ การ์ดจะโชว์ภาพฝนให้กับเส้นทางที่ทั้งเส้นเป็นหิมะ
+   ยึดช่องทางการมองเห็นเดิมจากข้อ 88.1 ให้ตรงกับที่ตาเห็นบนลูกโลก */
+
+/* หิมะ = จุด ไม่ใช่ขีด · ส่ายไปมา · ช้ากว่าฝนสามเท่า
+   ความสว่างคือตัวมันเอง (กลับขั้วกับฝนที่เป็นรอยหมึก) */
+function wxSnow(ctx,cx,cy,t,intensity,lean,scale){
+  const s=scale||1, zoneW=50, zoneH=50;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  const n=Math.round(26+intensity*22);
+  for(let i=0;i<n;i++){
+    /* หิมะมีจำนวนเม็ดมากกว่าฝนเกือบสองเท่า พอใช้ hash ตัวเดียวกับฝน ลายซ้ำของ sin จะโผล่
+       ให้ตาเห็นเป็นกระจุกอยู่ซีกเดียว — ใช้อัตราส่วนทองคำกระจายแทน แล้วค่อยกวนด้วย hash */
+    const bx=(frac(i*0.6180339+frac(Math.sin(i*12.9)*.5+.5)*.14)-.5)*zoneW*2;
+    const sp=.16+frac(Math.sin(i*5.1)*.5+.5)*.12;      /* ช้ามาก */
+    let by=(frac(Math.sin(i*7.7)*.5+.5)+t*sp); by=(by%1)*zoneH*2-zoneH;
+    const ph=frac(Math.sin(i*3.7)*.5+.5)*6.2832;
+    const sway=Math.sin(t*.7+ph)*7;                     /* นี่คือสิ่งที่บอกว่าไม่ใช่ฝน */
+    const depth=frac(Math.sin(i*9.3)*.5+.5), r=.9+depth*1.4;
+    const a=(.42+intensity*.45)*(.45+depth*.55);
+    ctx.fillStyle='rgba(255,254,250,'+a.toFixed(3)+')';
+    ctx.beginPath();ctx.arc(bx+sway+lean*3,by,r,0,6.2832);ctx.fill();
+  }
+  ctx.restore();
+}
+/* ฝนแข็งตัว = ขีดที่ *ตรงสนิท* ไม่เอียงตามลมเลย + ประกายที่หัว + รอยแตกที่ค้างอยู่
+   น้ำแข็งคือสิ่งที่ค้าง ไม่ใช่สิ่งที่ไหลผ่าน — รอยแตกจึงไม่ขยับตาม t */
+function wxIce(ctx,cx,cy,t,intensity,scale){
+  const s=scale||1, zoneW=50, zoneH=50;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);ctx.lineCap='round';
+  /* ขีดน้อยลงแต่ยาวขึ้น — ขีดสั้นจำนวนมากบวกรอยแตกทำให้ทั้งช่องเป็นเศษขีดกระจาย
+     แยกไม่ออกว่าอะไรร่วงอะไรค้าง เส้นที่ยาวและตรงคือสิ่งที่บอกว่า "ร่วง" */
+  const n=Math.round(9+intensity*9);
+  for(let i=0;i<n;i++){
+    const bx=(frac(i*0.6180339+frac(Math.sin(i*12.9)*.5+.5)*.16)-.5)*zoneW*2;
+    const sp=1.3+frac(Math.sin(i*5.1)*.5+.5)*.7;        /* เร็วกว่าฝน */
+    let by=(frac(Math.sin(i*7.7)*.5+.5)+t*sp); by=(by%1)*zoneH*2-zoneH;
+    const depth=frac(Math.sin(i*9.3)*.5+.5), len=11+depth*7;
+    ctx.strokeStyle=col((.20+intensity*.32)*(.5+depth*.5));
+    ctx.lineWidth=.7+depth*.7;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by+len);ctx.stroke();   /* lean=0 เสมอ */
+    ctx.fillStyle='rgba(255,254,250,'+(.30+depth*.35).toFixed(3)+')';
+    ctx.beginPath();ctx.arc(bx,by,.9+depth*.5,0,6.2832);ctx.fill();
+  }
+  /* รอยแตก — หักมุมน้อย ๆ และท่อนที่สองสั้นกว่ามาก
+     มุมกว้าง (1.9 rad) กับสองท่อนยาวเท่ากันทำให้อ่านเป็นลูกศรหรือเครื่องหมายถูก ไม่ใช่รอยแตก */
+  /* รอยแตกน้อยลง ยาวขึ้น เข้มกว่าขีดที่ร่วง — ต้องอ่านออกว่าเป็นคนละชั้นกัน
+     ของที่ค้างอยู่ควรหนักแน่นกว่าของที่กำลังผ่านไป */
+  for(let i=0;i<5;i++){
+    const ax=(frac(Math.sin(i*4.7)*.5+.5)-.5)*zoneW*1.6;
+    const ay=(frac(Math.sin(i*8.3)*.5+.5)-.5)*zoneH*1.4;
+    const ang=frac(Math.sin(i*2.9)*.5+.5)*6.2832, ln=6+frac(Math.sin(i*6.1)*.5+.5)*5;
+    const bend=(frac(Math.sin(i*7.3)*.5+.5)-.5)*1.1;   /* ±0.55 rad */
+    const mx=ax+Math.cos(ang)*ln, my=ay+Math.sin(ang)*ln;
+    ctx.strokeStyle=col(.26+intensity*.14); ctx.lineWidth=.85;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(mx,my);
+    ctx.lineTo(mx+Math.cos(ang+bend)*ln*.45, my+Math.sin(ang+bend)*ln*.45);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+/* หมอก = ยางลบ ไม่ใช่สีที่ทาทับ (ข้อ 88.1)
+   บนการ์ดจึงต้องมีอะไรให้ลบก่อน — วาดฟ้าเปิดไว้ข้างใต้ แล้วให้หมอกกลืนมันหายไป
+   ถ้าวาดหมอกบนพื้นว่าง มันจะกลายเป็นก้อนสีขาว ซึ่งคือสิ่งที่ข้อ 88 ปฏิเสธ */
+function wxFog(ctx,cx,cy,t,intensity,scale){
+  wxClear(ctx,cx,cy,t,scale);
+  const s=scale||1;
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  /* วงกลมโทนพื้นทำให้การ์ดว่างเปล่า — ลบได้จริงแต่ไม่เหลืออะไรให้อ่านว่า "นี่คือหมอก"
+     แก้เป็นแถบแนวนอน (สเกลแกน y ให้แบน) สีนวลกว่าพื้น: อ่านเป็นชั้นฝ้าที่ลอยทับ
+     แนวนอนคือสิ่งที่บอกว่าเป็นหมอก — เมฆแรเงาเป็นมุมเฉียง ฝนเป็นแนวดิ่ง
+     และเว้นบน-ล่างไว้ให้เส้นฟ้าเปิดโผล่ ไม่งั้นจะกลายเป็นก้อนขาวทึบ ซึ่งข้อ 88 ปฏิเสธ */
+  for(let i=0;i<5;i++){
+    const yy=-24+i*12, ph=i*1.37;
+    /* แถบต้องพาดกว้างกว่าดวงอาทิตย์ที่อยู่ข้างใต้มาก ไม่งั้นอ่านเป็น "ฟ้าเปิดที่เบลอ"
+       หมอกจริงกลืนทั้งช่อง ไม่ใช่กลืนแค่ตรงกลาง */
+    const rad=64+12*Math.sin(t*.34+ph);
+    const a=(.46+intensity*.26)*(.6+.4*Math.sin(t*.42+ph));
+    ctx.save();
+    ctx.translate(Math.sin(t*.18+ph)*9,yy);
+    ctx.scale(1,.20);                       /* แบนเป็นแถบ ไม่ใช่ก้อนกลม */
+    const g=ctx.createRadialGradient(0,0,0,0,0,rad);
+    g.addColorStop(0,'rgba(243,241,235,'+a.toFixed(3)+')');
+    g.addColorStop(.5,'rgba(240,237,229,'+(a*.62).toFixed(3)+')');
+    g.addColorStop(1,'rgba(238,235,227,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,rad,0,6.2832);ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 /* พายุ = ริ้วม้วนสองชั้น (ข้อ 36)
    แบบเดิมเป็น log-spiral 3 แขน x 2 ชั้น + ghost band หนา 5px = ก้อนทึบชิ้นเดียว
    ในแอปที่เหลือเป็นเส้นโปร่งทั้งหมด จึงหลุดธีม
@@ -1874,8 +2035,15 @@ function wxStorm(ctx,x,y,t,intensity,rich,scale){
    ยึดเกณฑ์จริงเป็นหมุด: เริ่มมีภาพที่ GUST_HOLD · เต็มที่ราวสองเท่าของเกณฑ์นั้น
    ของเดิมอิงลมต่อเนื่อง (40→110) ซึ่งกับสเกลกระโชกจะอิ่มตัวตั้งแต่พายุอ่อน */
 function stormIntensity(gst){ return clamp((gst-CFG.GUST_HOLD)/60,.25,1); }
-function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale){
+function drawWx(ctx,cx,cy,t,kind,intensity,dir,scale,wc){
   const lean=dir*.55;
+  /* ลำดับเดียวกับคำเรียก (kindWord): ลมกระโชกถึงเกณฑ์ชนะเสมอ เพราะนั่นคือสิ่งที่ทำให้จดหมายจอดรอ
+     ต่ำกว่านั้นค่อยให้หิมะ/ฝนแข็งตัว/หมอก ทับภาพฝนกับฟ้าเปิด
+     ถ้าลำดับตรงนี้ไม่ตรงกับคำ การ์ดจะเขียนว่าหิมะแต่วาดฝน */
+  const x = kind<4 ? wcx(wc) : 0;
+  if(x===1)      return wxSnow(ctx,cx,cy,t,intensity,lean,scale);
+  if(x===2)      return wxIce(ctx,cx,cy,t,intensity,scale);
+  if(x===3)      return wxFog(ctx,cx,cy,t,intensity,scale);
   if(kind===0) wxClear(ctx,cx,cy,t,scale);
   else if(kind===1) wxWind(ctx,cx,cy,t,intensity,dir,scale);
   else if(kind===2) wxDrizzle(ctx,cx,cy,t,intensity,lean,scale);
@@ -3290,10 +3458,18 @@ function renderSky(){
   let worst=0, spd=0;
   sim.legs.forEach(l=>{ if(l[5]>worst) worst=l[5]; spd+=l[2]; });
   spd/=sim.legs.length;
+  /* อากาศที่ไม่ใช่ฝนหนึ่งตัวเป็นตัวแทนทั้งเส้นทาง (ข้อ 88.4)
+     เรียงตามความ "แปลก" — หิมะหายากกว่าฝนแข็งตัว ฝนแข็งตัวหายากกว่าหมอก
+     เอาเฉพาะช่วงที่ลมยังไม่ถึงเกณฑ์ ไม่งั้นจะไปแย่งภาพพายุซึ่งสำคัญกว่า */
+  let wcRep=0;
+  for(const want of [1,2,3]){
+    const l=sim.legs.find(l=>l[5]<4 && wcx(l[8])===want);
+    if(l){ wcRep=l[8]; break; }
+  }
   /* ทิศ+ความแรงของ "ลมก้อนเดียวกัน" → องศาเอียงของฝนแปรตามลมจริง ไม่ fix ที่ 30° */
   const dir = clamp(sim.boost/CFG.WIND_CAP, -1, 1);
   const intensity = clamp(spd/85,.15,1);
-  drawWx(ctx,w*.5,h*.46,T,worst,intensity,dir,Math.min(1,w/300));
+  drawWx(ctx,w*.5,h*.46,T,worst,intensity,dir,Math.min(1,w/300),wcRep);
   drawFlutter(ctx,w*.5,h*.5,42,58,T,clamp(spd/90,.1,1),0,null);
 }
 
@@ -3483,6 +3659,15 @@ function showForecast(){
       wrap.innerHTML='<div class="warn">มี'+(th?'ฝนฟ้าคะนอง':'ลมกระโชกแรง')
         +'ระหว่างทาง — '+(th?'เคลือบกันน้ำจะกันคราบฝนได้':'จดหมายจะหลบรอจนลมสงบ')+'</div>';
     }
+    /* ไม่มีลมกระโชกถึงเกณฑ์ แต่ยังมีของที่เปียกกระดาษได้ (ข้อ 88.4)
+       ที่นี่คือจุดเดียวที่คนตัดสินใจเคลือบ — ถ้าไม่พูดตรงนี้ ก็ไม่มีที่ให้พูดอีกแล้ว
+       หมอกไม่เข้าเงื่อนไข: หมอกไม่ทำให้กระดาษเปียกจนการเคลือบมีความหมาย */
+    else{
+      const x=sim.legs.some(l=>wcx(l[8])===1) ? 1
+            : sim.legs.some(l=>wcx(l[8])===2) ? 2 : 0;
+      if(x) wrap.innerHTML='<div class="warn">มี'+WCX_WORD[x]
+        +'ระหว่างทาง — เคลือบกันน้ำจะกันไม่ให้ตัวหนังสือบวมน้ำ</div>';
+    }
     const mk=(ct,title,desc,cost)=>{
       const b=document.createElement('button');
       b.className='pick'+(p.ct===ct?' on':'');
@@ -3591,7 +3776,7 @@ function openRead(L){
   }else if(L.dir==='in' && !st.arrived){
     const pct=Math.round(st.prog*100);
     stage.innerHTML='<div class="waiting"><b>ยังอยู่กลางลม</b>'
-      +(st.parked?'ตอนนี้จอดรอให้พายุสงบ':'ตอนนี้กำลังผ่านช่วง'+kindWord(st.kind))
+      +(st.parked?'ตอนนี้จอดรอให้พายุสงบ':'ตอนนี้กำลังผ่านช่วง'+kindWord(st.kind,st.wc))
       +'<br>อีกราว '+fmtDur(st.remain)+'จะถึงมือคุณ<br><br>'
       +'<span style="opacity:.7">'+(pct<2?'เพิ่งออกเดินทาง':'เดินทางมาแล้ว '+pct+'% ของทาง')+'</span></div>'
       +'<div class="row"><button class="btn" id="btnCal">เตือนด้วยปฏิทิน</button>'
@@ -3619,12 +3804,16 @@ function buildLog(L,st){
   const log=$('#rLog'); let h='';
   let acc=0;
   L.lg.forEach((l,i)=>{
-    const [dur,hold,spd,,pre,kind,sev,gst]=l;
-    let txt=kindWord(kind);
+    const [dur,hold,spd,,pre,kind,sev,gst,wc]=l;
+    const x=wcx(wc);
+    let txt=kindWord(kind,wc);
     /* spd/gst มาจากลิงก์ของผู้ส่ง = ข้อมูลของคนอื่น ต้อง esc ก่อนต่อเข้า innerHTML เสมอ (ข้อ 57.1)
        ตอนพายุต้องรายงาน "กระโชก" เพราะนั่นคือค่าที่ตัดสินว่าเป็นพายุ (ข้อ 62)
        รายงานลมต่อเนื่องตรงนี้จะกลายเป็นตัวเลขที่ขัดกับคำว่าพายุที่อยู่ข้าง ๆ */
-    if(sev>0) txt=kindWord(kind)+' ลมกระโชก '+esc(gst??spd)+' กม./ชม. — หลบรอ '+fmtDur(hold);
+    if(sev>0) txt=kindWord(kind,wc)+' ลมกระโชก '+esc(gst??spd)+' กม./ชม. — หลบรอ '+fmtDur(hold);
+    /* หิมะ/ฝนแข็งตัว/หมอก มาก่อนคำว่าฝน — ไม่งั้นหิมะจะถูกรายงานว่า "ฝนหนัก"
+       และหมอกล้วน (ลมสงบ ไม่มีฝน) จะตกไปที่ else แล้วกลายเป็น "ฟ้าเปิด" ซึ่งตรงข้ามกับความจริง */
+    else if(x) txt=WCX_WORD[x];
     else if(kind>=2) txt=(kind===3?'ฝนหนัก':'ฝนปรอย');
     else if(kind===1) txt='ลมพัด '+esc(spd)+' กม./ชม.';
     else txt='ฟ้าเปิด';
