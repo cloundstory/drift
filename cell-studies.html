@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — เซลล์ฝนฟ้าคะนอง: งานภาพ</title>
+<style>
+:root{--gold:#c69a54;--line:rgba(84,90,104,.15);--txt:rgba(51,51,58,.92);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.38)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);background-attachment:fixed;color:var(--txt);
+  font-family:Georgia,"Times New Roman","Noto Serif Thai",serif;font-size:15px;line-height:1.8;
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 60px)}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:14px;font-weight:normal;letter-spacing:.3em;color:var(--faint);text-align:center;margin-bottom:6px}
+.lead{font-size:12.5px;color:var(--dim);text-align:center;margin-bottom:26px;line-height:1.9}
+section{margin-bottom:40px}
+h2{font-size:14px;font-weight:normal;letter-spacing:.16em;margin-bottom:4px}
+.q{font-size:12.5px;color:var(--dim);line-height:1.9;margin-bottom:14px}
+.q b{font-weight:normal;color:#8b6a33}
+.rule{height:1px;background:var(--line);margin:0 0 30px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:620px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{text-align:center}
+.cell canvas{width:100%;aspect-ratio:1/1.15;display:block;border:1px solid var(--line);border-radius:3px}
+.cap{font-size:11.5px;color:var(--dim);letter-spacing:.04em;margin-top:5px;line-height:1.75}
+.cap b{display:block;font-weight:normal;color:var(--txt);font-size:12.5px;letter-spacing:.07em;margin-bottom:2px}
+.ctl{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:12px;color:var(--dim)}
+.ctl label{flex:0 0 96px;letter-spacing:.05em}
+.ctl input[type=range]{flex:1;accent-color:#c69a54;height:32px}
+.ctl output{flex:0 0 46px;text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--txt)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.btn{border:1px solid var(--line);border-radius:999px;padding:8px 15px;background:rgba(255,255,255,.42);
+  font:inherit;font-size:12px;letter-spacing:.05em;color:var(--txt);cursor:pointer}
+.btn.on{background:rgba(255,255,255,.9);border-color:rgba(198,154,84,.55)}
+.note{font-size:12px;color:var(--dim);line-height:1.95;border-left:2px solid var(--line);padding-left:12px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ลมกระโชกแรง</h1>
+<p class="lead">กระโชก 50-94 · ไม่ใช่พายุหมุน<br>
+วัดจากข้อมูลจริง 96 วัน 20 จุดทั่วไทย: <b style="color:#8b6a33">กระโชกแรงมีฝนฟ้าคะนองแค่ 2.9%</b><br>
+48% เกิดตอนฟ้าโปร่ง — <b style="color:#8b6a33">จึงห้ามวาดเป็นก้อนเมฆ</b><br>
+ลมแรงต้องแสดงตัวด้วยภาษาของลม: ถี่ขึ้น เข้มขึ้น</p>
+
+<div class="rule"></div>
+
+<section>
+<h2>ริ้วที่ถี่ขึ้นและเข้มขึ้น</h2>
+<p class="q">ทุกช่องมีลมปกติอยู่ครึ่งซ้าย และลมกระโชกอยู่ครึ่งขวา — <b>ต้องอ่านความต่างออกโดยไม่มีเส้นแบ่ง</b><br>
+ไม่มีก้อน ไม่มีขอบ ไม่มีศูนย์กลาง มีแต่ลมที่หนาแน่นขึ้น</p>
+<div class="grid" id="grid2"></div>
+</section>
+
+<div class="rule"></div>
+
+<section>
+<h2 style="opacity:.55">บันทึก — แนวก้อน ที่ตกไปแล้ว</h2>
+<p class="q">เก็บไว้เพราะเหตุผลที่ตกมีค่า: <b>ครึ่งหนึ่งของลมกระโชกเกิดตอนฟ้าโปร่ง</b><br>
+วาดเป็นก้อนเมฆ = ขึ้นเมฆบนฟ้าที่ไม่มีเมฆ · และจะกลืนกับเมฆจริงที่วาดจากสนามฝนอยู่แล้ว</p>
+
+<div class="bar">
+  <button class="btn on" data-bg="wind">มีริ้วลมพื้นหลัง</button>
+  <button class="btn" data-bg="bare">ไม่มีริ้วลม</button>
+  <button class="btn on" data-anim="1">เคลื่อนไหว</button>
+</div>
+<div class="ctl"><label>ขนาดบนจอ</label><input type="range" id="sz" min="18" max="90" value="42"><output id="szo">42</output></div>
+<div class="ctl"><label>ความเข้ม</label><input type="range" id="ink" min="20" max="100" value="60"><output id="inko">60</output></div>
+
+<div class="rule"></div>
+
+<section>
+<h2>หกแบบ</h2>
+<p class="q">ทุกแบบวาดด้วยเส้นหมึกเดียวกับทั้งแอป · <b>ไม่มีแบบไหนต้องอ่านทิศ</b><br>
+เกณฑ์: เห็นปุ๊บรู้ว่ามีอะไรอยู่ตรงนั้น โดยไม่ต้องเรียนสัญลักษณ์</p>
+<div class="grid" id="grid"></div>
+</section>
+
+<div class="note">
+เทียบกับพายุหมุนที่ยังเป็นก้นหอยเหมือนเดิม — ก้นหอยมีศูนย์กลางให้มอง<br>
+เซลล์ไม่ควรมีศูนย์กลาง เพราะของจริงไม่ได้หมุน มันคือก้อนเมฆที่ตกลงมา
+</div>
+</div>
+
+<script>
+'use strict';
+const col = a => 'rgba(84,90,104,'+a+')';
+const hs = n => { const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
+let T=0, ANIM=true, BG='wind', SZ=42, INK=0.60;
+
+/* ---------- พื้นหลัง: ริ้วลมแบบเดียวกับในแอป ---------- */
+function drawWind(x,W,H,t){
+  if(BG!=='wind') return;
+  x.lineCap='round';
+  for(let l=0;l<7;l++){
+    const y0=H*(0.10+l*0.13), amp=7+hs(l*3.1)*6, ph=hs(l*7.7)*6.283;
+    const steps=40;
+    for(let i=0;i<steps;i++){
+      const f0=i/steps, f1=(i+1)/steps;
+      const xx0=-10+f0*(W+20), xx1=-10+f1*(W+20);
+      const yy0=y0+Math.sin(f0*4+ph)*amp, yy1=y0+Math.sin(f1*4+ph)*amp;
+      /* คลื่นสว่างวิ่งบนเส้นที่อยู่กับที่ — กฎข้อ 84.6 */
+      const wave=(Math.sin((f0*3-t*0.5+ph))*0.5+0.5);
+      x.strokeStyle=col((0.05+0.10*wave).toFixed(3));
+      x.lineWidth=0.9;
+      x.beginPath(); x.moveTo(xx0,yy0); x.lineTo(xx1,yy1); x.stroke();
+    }
+  }
+}
+
+/* ---------- ตัวช่วย: ขอบหยักรอบวง ---------- */
+/* ⚠️ ขอบต้องเป็น *คลื่นนุ่ม* ไม่ใช่ hash ต่อจุด
+   hash ต่อจุดทำให้ได้ฟันปลาถี่ ๆ ที่อ่านเป็นฟันเฟือง ไม่ใช่ก้อนเมฆ
+   ผลรวมของ sin สามความถี่ให้ขอบที่ต่อเนื่อง มีทั้งโป่งใหญ่และหยักเล็ก */
+function blobPath(x,cx,cy,r,seed,rough,t){
+  const N=72, p1=seed*1.7, p2=seed*3.1, p3=seed*0.7;
+  x.beginPath();
+  for(let i=0;i<=N;i++){
+    const a=i/N*6.2832;
+    const n = Math.sin(a*2+p1)*0.5 + Math.sin(a*3+p2)*0.32 + Math.sin(a*5+p3)*0.18;
+    const breathe = ANIM ? Math.sin(t*0.5+seed)*0.025 : 0;
+    const rr = r*(1 + n*rough*0.5 + breathe);
+    const px=cx+Math.cos(a)*rr, py=cy+Math.sin(a)*rr;
+    i? x.lineTo(px,py) : x.moveTo(px,py);
+  }
+  x.closePath();
+}
+
+/* ---------- 1. ทรงกลมถมด้วยเส้นหยัก ---------- */
+function artHatch(x,cx,cy,r,t){
+  x.save(); blobPath(x,cx,cy,r,11,0.16,t); x.clip();
+  x.lineCap='round';
+  const step=3.0, ang=-28*Math.PI/180;
+  const ca=Math.cos(ang), sa=Math.sin(ang);
+  for(let k=-40;k<40;k++){
+    const off=k*step;
+    x.strokeStyle=col((INK*0.42).toFixed(3)); x.lineWidth=1.0;
+    x.beginPath();
+    for(let s=-r*1.6;s<r*1.6;s+=2.4){
+      const jx=cx+s*ca-off*sa+ (hs(k*31+s)*1.4-0.7);
+      const jy=cy+s*sa+off*ca+ (hs(k*17+s)*1.4-0.7);
+      s===-r*1.6? x.moveTo(jx,jy) : x.lineTo(jx,jy);
+    }
+    x.stroke();
+  }
+  x.restore();
+  x.strokeStyle=col((INK*0.5).toFixed(3)); x.lineWidth=1.1;
+  blobPath(x,cx,cy,r,11,0.16,t); x.stroke();
+}
+
+/* ---------- 2. ทรงกลมขอบหยัก โปร่งกลาง ---------- */
+function artOutline(x,cx,cy,r,t){
+  for(let L=0;L<3;L++){
+    x.strokeStyle=col((INK*(0.55-L*0.14)).toFixed(3));
+    x.lineWidth=1.2-L*0.25;
+    blobPath(x,cx,cy,r*(1-L*0.13),11+L*40,0.17,t);
+    x.stroke();
+  }
+}
+
+/* ---------- 3. เส้นชั้นความสูงซ้อน ---------- */
+function artContour(x,cx,cy,r,t){
+  const N=6;
+  for(let L=0;L<N;L++){
+    const f=1-L/N;
+    x.strokeStyle=col((INK*(0.22+0.42*(1-f))).toFixed(3));
+    x.lineWidth=0.95;
+    blobPath(x,cx,cy,r*f,11+L*23,0.14+L*0.02,t);
+    x.stroke();
+  }
+}
+
+/* ---------- 4. ถมไล่ระดับ เข้มที่ใจกลาง ---------- */
+function artFill(x,cx,cy,r,t){
+  x.save(); blobPath(x,cx,cy,r,11,0.16,t); x.clip();
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+  g.addColorStop(0,col((INK*0.62).toFixed(3)));
+  g.addColorStop(0.55,col((INK*0.26).toFixed(3)));
+  g.addColorStop(1,col(0));
+  x.fillStyle=g; x.fillRect(cx-r*1.4,cy-r*1.4,r*2.8,r*2.8);
+  x.restore();
+  x.strokeStyle=col((INK*0.42).toFixed(3)); x.lineWidth=1.0;
+  blobPath(x,cx,cy,r,11,0.16,t); x.stroke();
+}
+
+/* ---------- 5. เส้นหยักแนวนอนซ้อน (ภาษาเดียวกับเมฆข้อ 84) ---------- */
+function artBands(x,cx,cy,r,t){
+  x.save(); blobPath(x,cx,cy,r,11,0.15,t); x.clip();
+  x.lineCap='round';
+  for(let i=-14;i<14;i++){
+    const yy=cy+i*3.2;
+    x.strokeStyle=col((INK*(0.30+0.28*hs(i*5.3))).toFixed(3));
+    x.lineWidth=1.05;
+    x.beginPath();
+    for(let s=-r*1.5;s<r*1.5;s+=3){
+      const jy=yy+Math.sin(s*0.14+i*0.8+(ANIM?t*0.35:0))*1.5;
+      s===-r*1.5? x.moveTo(cx+s,jy) : x.lineTo(cx+s,jy);
+    }
+    x.stroke();
+  }
+  x.restore();
+  x.strokeStyle=col((INK*0.44).toFixed(3)); x.lineWidth=1.0;
+  blobPath(x,cx,cy,r,11,0.15,t); x.stroke();
+}
+
+/* ---------- 6. ก้อนถม + ฝนร่วงใต้ก้อน ---------- */
+function artRain(x,cx,cy,r,t){
+  artHatch(x,cx,cy,r*0.92,t);
+  x.lineCap='round';
+  const n=14;
+  for(let i=0;i<n;i++){
+    const bx=cx+(hs(i*12.9)-0.5)*r*1.7;
+    const sp=0.8+hs(i*5.1)*0.5;
+    let by=(hs(i*7.7)+(ANIM?t*sp*0.32:0))%1;
+    const yy=cy+r*0.8+by*r*1.5;
+    const len=r*0.16+hs(i*3.1)*r*0.12;
+    const d=hs(i*9.3);
+    x.strokeStyle=col((INK*(0.30+0.35*d)).toFixed(3));
+    x.lineWidth=0.8+d*0.6;
+    x.beginPath(); x.moveTo(bx,yy); x.lineTo(bx+len*0.22,yy+len); x.stroke();
+  }
+}
+
+const ARTS=[
+  {fn:artHatch,   name:'ถมด้วยเส้นหยัก',  desc:'ภาษาเดียวกับเมฆในข้อ 84 — พื้นที่ที่ถูกถม'},
+  {fn:artOutline, name:'ขอบหยักซ้อนชั้น', desc:'เบาที่สุด ไม่แย่งความสนใจจากลม'},
+  {fn:artContour, name:'เส้นชั้นซ้อน',     desc:'เข้มเข้าใจกลาง บอกความแรงในตัว'},
+  {fn:artFill,    name:'ถมไล่ระดับ',       desc:'มีมวลชัด แต่เสี่ยงเป็นคราบเปื้อน'},
+  {fn:artBands,   name:'เส้นหยักแนวนอน',   desc:'แนวนอนแยกจากเมฆที่เอียง 28°'},
+  {fn:artRain,    name:'ก้อน + ฝนร่วงใต้', desc:'บอกว่าเป็นฝนฟ้าคะนอง ไม่ใช่แค่ก้อน'}
+];
+
+/* ============================================================
+   แนวใหม่ — ลมที่ถี่ขึ้นและเข้มขึ้น ไม่มีก้อน
+   ทุกแบบวาดสนามลมเดียวกันทั้งช่อง แล้วให้ครึ่งขวา "แรงขึ้น" ตามสูตรของแต่ละแบบ
+   ตัวแปรที่เล่นได้มีสามตัว: ระยะห่างระหว่างเส้น · ความเข้ม · ความยาวของคลื่นสว่าง
+   ============================================================ */
+function windField(x,W,H,t,opt){
+  x.lineCap='round';
+  const O=Object.assign({lines:24,ink:1,waveLen:3,waveSpeed:0.5,amp:1,dash:0},opt||{});
+  /* ความแรงที่ตำแหน่ง fx (0-1 จากซ้ายไปขวา) — ไล่ขึ้นตรงกลางแบบนุ่ม ไม่มีเส้นแบ่ง */
+  const gust=fx=>{ const u=clamp((fx-0.24)/0.42,0,1); return u*u*(3-2*u); };
+  const NL=O.lines;
+  for(let l=0;l<NL;l++){
+    const y0=H*(0.08+l*(0.84/(NL-1))), a0=7+hs(l*3.1)*6, ph=hs(l*7.7)*6.283;
+    const steps=76;
+    for(let i=0;i<steps;i++){
+      const f0=i/steps, f1=(i+1)/steps;
+      const g0=gust(f0);
+      if(O.dash && hs(Math.floor(f0*40)+l*13.7)>1-O.dash*g0*0.55) continue;
+      const xx0=-10+f0*(W+20), xx1=-10+f1*(W+20);
+      const am=a0*(1+(O.amp-1)*g0);
+      const yy0=y0+Math.sin(f0*4+ph)*am, yy1=y0+Math.sin(f1*4+ph)*am;
+      const wl=O.waveLen, sp=O.waveSpeed*(1+g0*0.9);
+      const wave=(Math.sin(f0*wl-t*sp+ph)*0.5+0.5);
+      const base=0.05+0.10*wave;
+      x.strokeStyle=col((base*(1+(O.ink-1)*g0)).toFixed(3));
+      x.lineWidth=0.9*(1+g0*(O.ink>1?0.35:0));
+      x.beginPath(); x.moveTo(xx0,yy0); x.lineTo(xx1,yy1); x.stroke();
+    }
+  }
+}
+/* เส้นแทรกกลาง — วิธีทำให้ "ถี่ขึ้น" โดยไม่ขยับเส้นเดิม */
+function windExtra(x,W,H,t,n,inkMul){
+  x.lineCap='round';
+  const gust=fx=>{ const u=clamp((fx-0.24)/0.42,0,1); return u*u*(3-2*u); };
+  for(let l=0;l<n;l++){
+    const y0=H*(0.08+(l+0.5)*(0.84/n)), a0=6+hs(l*5.7+99)*6, ph=hs(l*11.3+7)*6.283;
+    const steps=76;
+    for(let i=0;i<steps;i++){
+      const f0=i/steps, f1=(i+1)/steps, g0=gust(f0);
+      if(g0<=0.02) continue;
+      const xx0=-10+f0*(W+20), xx1=-10+f1*(W+20);
+      const yy0=y0+Math.sin(f0*4+ph)*a0, yy1=y0+Math.sin(f1*4+ph)*a0;
+      const wave=(Math.sin(f0*3-t*0.85+ph)*0.5+0.5);
+      x.strokeStyle=col(((0.05+0.10*wave)*g0*inkMul).toFixed(3));
+      x.lineWidth=0.85;
+      x.beginPath(); x.moveTo(xx0,yy0); x.lineTo(xx1,yy1); x.stroke();
+    }
+  }
+}
+
+const WINDS=[
+  {name:'ก. เข้มขึ้นอย่างเดียว', desc:'เส้นเท่าเดิม แค่หมึกหนักขึ้นทางขวา',
+   fn:(x,W,H,t)=>windField(x,W,H,t,{ink:4.0})},
+  {name:'ข. ถี่ขึ้นอย่างเดียว', desc:'แทรกเส้นใหม่เข้าไประหว่างเส้นเดิม ความเข้มคงที่',
+   fn:(x,W,H,t)=>{ windField(x,W,H,t,{}); windExtra(x,W,H,t,24,1.0); }},
+  {name:'ค. ถี่ + เข้ม', desc:'สองอย่างพร้อมกัน — ที่กอล์ฟเลือก',
+   fn:(x,W,H,t)=>{ windField(x,W,H,t,{ink:3.2}); windExtra(x,W,H,t,24,2.4); }},
+  {name:'ง. ถี่ + เข้ม + แน่นกว่า', desc:'แทรกสองชั้น หนาแน่นจนเกือบเป็นเนื้อเดียว',
+   fn:(x,W,H,t)=>{ windField(x,W,H,t,{ink:3.2}); windExtra(x,W,H,t,24,2.4); windExtra(x,W,H,t,48,1.6); }},
+  {name:'จ. ถี่ + เข้ม + คลื่นสั้น', desc:'คลื่นสว่างถี่ขึ้นด้วย อ่านเป็นลมที่กระชากเป็นห้วง',
+   fn:(x,W,H,t)=>{ windField(x,W,H,t,{ink:3.2,waveLen:9}); windExtra(x,W,H,t,24,2.4); }},
+  {name:'ฉ. ถี่ + เข้ม + แกว่งกว้าง', desc:'เส้นแกว่งกว้างขึ้นตรงที่ลมแรง',
+   fn:(x,W,H,t)=>{ windField(x,W,H,t,{ink:3.2,amp:1.9}); windExtra(x,W,H,t,24,2.4); }}
+];
+
+const grid2=document.getElementById('grid2');
+const cvs2=[];
+WINDS.forEach((a,i)=>{
+  const d=document.createElement('div'); d.className='cell';
+  const c=document.createElement('canvas');
+  const cap=document.createElement('div'); cap.className='cap';
+  cap.innerHTML='<b>'+a.name+'</b>'+a.desc;
+  d.appendChild(c); d.appendChild(cap); grid2.appendChild(d);
+  cvs2.push(c);
+});
+
+const grid=document.getElementById('grid');
+const cvs=[];
+ARTS.forEach((a,i)=>{
+  const d=document.createElement('div'); d.className='cell';
+  const c=document.createElement('canvas');
+  const cap=document.createElement('div'); cap.className='cap';
+  cap.innerHTML='<b>'+(i+1)+'. '+a.name+'</b>'+a.desc;
+  d.appendChild(c); d.appendChild(cap); grid.appendChild(d);
+  cvs.push(c);
+});
+
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+function draw(){
+  cvs2.forEach((c,i)=>{
+    const dpr=Math.min(2,devicePixelRatio||1);
+    const w=c.clientWidth, h=c.clientHeight;
+    if(c.width!==w*dpr){ c.width=w*dpr; c.height=h*dpr; }
+    const x=c.getContext('2d');
+    x.setTransform(dpr,0,0,dpr,0,0);
+    x.clearRect(0,0,w,h);
+    WINDS[i].fn(x,w,h,T);
+  });
+  cvs.forEach((c,i)=>{
+    const dpr=Math.min(2,devicePixelRatio||1);
+    const w=c.clientWidth, h=c.clientHeight;
+    if(c.width!==w*dpr){ c.width=w*dpr; c.height=h*dpr; }
+    const x=c.getContext('2d');
+    x.setTransform(dpr,0,0,dpr,0,0);
+    x.clearRect(0,0,w,h);
+    drawWind(x,w,h,T);
+    ARTS[i].fn(x,w/2,h*0.5,SZ*(w/240),T);
+  });
+}
+function loop(){ if(ANIM) T+=1/60; draw(); requestAnimationFrame(loop); }
+
+document.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{
+  BG=b.dataset.bg;
+  document.querySelectorAll('[data-bg]').forEach(o=>o.classList.toggle('on',o===b));
+});
+document.querySelector('[data-anim]').onclick=function(){
+  ANIM=!ANIM; this.classList.toggle('on',ANIM);
+};
+const sz=document.getElementById('sz'), szo=document.getElementById('szo');
+sz.oninput=()=>{ SZ=+sz.value; szo.value=SZ; };
+const ink=document.getElementById('ink'), inko=document.getElementById('inko');
+ink.oninput=()=>{ INK=+ink.value/100; inko.value=ink.value; };
+
+loop();
+</script>
+</body>
+</html>

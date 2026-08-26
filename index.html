@@ -1550,13 +1550,32 @@ const _streamCache=new Map();
    ⚠️ ห้ามให้กระแสวนนี้แตะการคำนวณเส้นทาง — รัศมีพายุเป็นสมมติฐาน ไม่ใช่ข้อมูลจริง
    ถ้าเอาไปกำหนดเส้นทาง = ให้ของที่แต่งขึ้นตัดสินผลลัพธ์ ซึ่งขัดกับทั้งเล่ม
    CUR_STORMS จึงเป็น null เสมอตอน driftRun และตั้งค่าเฉพาะตอนสร้างริ้วลม */
-const VORTEX={ INFLOW_DEG:38, NEAR:0.55, FAR:2.40 };
+/* EYE — รัศมีของตาพายุ วัดเป็นสัดส่วนของรัศมีพายุ (ข้อ 91)
+   ในตาพายุจริง ลมสงบ *และทิศไม่ถูกการหมุนกำหนดอีกแล้ว*
+   ของเดิมหมุนทิศเต็มที่ตลอดจนถึงใจกลาง ริ้วจึงวนเป็นวงจนกองกันแล้วหายไปหมด */
+const VORTEX={ INFLOW_DEG:38, NEAR:0.55, FAR:2.40, EYE:0.13 };
 let CUR_STORMS=null;
 const vhash=n=>{ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); };
 /* รัศมีพายุ — สมมติฐานที่ประกาศไว้ ช่วง 800-1800 กม. มาจากข้อ 46.6
    พยากรณ์ให้ความเร็วลมต่อจุด ไม่ได้ให้ขอบเขตของพายุ จะวัดจากสนาม 15x15 ก็ไม่ได้
    เพราะระยะห่างจุดแปรตามความยาวเส้นทาง พายุลูกเดียวกันจะได้ขนาดต่างกันตามเส้นที่มองมัน */
 const stormKm = inten => 800 + (inten-0.25)/0.75*1000;
+/* ---------- ลมกระโชกไม่ใช่พายุหมุน (ข้อ 92) ----------
+   ข้อ 62 แก้ *คำ* ให้เลิกเรียกกระโชก 50-94 ว่า "พายุ" แล้ว แต่ไม่ได้แก้ *ภาพ*
+   แอปจึงเขียนว่า "ลมกระโชกแรง" แล้ววาดก้นหอย 800 กม. ให้ดู — ขัดกันเอง
+
+   กอล์ฟจับได้จากเส้นฉะเชิงเทรา→เลย · วัดจาก Open-Meteo จริง 96 ชม.
+   จุดแถวชัยภูมิกระโชกสูงสุด 61.2 แตะเกณฑ์ 34 ชั่วโมง → ได้ก้นหอยที่กลืนอีสานทั้งภาค
+
+   ทางอุตุนิยมวิทยาเป็นคนละสิ่งกัน:
+     ฝนฟ้าคะนอง = เซลล์ 10-50 กม. ลม *ตกลงมาแล้วแผ่ออก* ไม่ใช่ระบบหมุน
+                  ขอบลมที่แผ่ออก (outflow) ไปได้ราว 60-160 กม.
+     พายุหมุน   = 800-1,800 กม. หมุนรอบตา มีกำแพงตา */
+/* บริเวณที่ลมแรงพร้อมกัน — ไม่ใช่ขนาดของ "ก้อน" อะไรทั้งนั้น
+   สมมติฐานที่ประกาศไว้ ไม่ได้มาจากข้อมูล (พยากรณ์ให้ความเร็วต่อจุด ไม่ให้ขอบเขต)
+   อ้างอิงจากสิ่งที่ข้อมูลของเราเองแสดง: บนเส้นฉะเชิงเทรา→เลย จุดที่ 6 ได้ 55
+   และจุดที่ 7 ได้ 61 — ห่างกัน 320 กม. และแรงทั้งคู่ ลมแรงจึงเป็นเรื่องของ *ย่าน* ไม่ใช่จุด */
+const gustKm = inten => 220 + (inten-0.25)/0.75*260;
 function stormsOf(L){
   const out=[];
   if(!L.lg) return out;
@@ -1564,7 +1583,9 @@ function stormsOf(L){
     if(l[6]<=0) return;
     const p=posAt(L,(i+0.5)/L.lg.length);
     const g=l[7]??l[2], inten=stormIntensity(g);
-    out.push({ lat:p.lat, lng:p.lng, R:stormKm(inten), inten, gust:g,
+    const cyc=l[6]>=2;                              /* กระโชก ≥ GUST_LOST เท่านั้นที่หมุน */
+    out.push({ lat:p.lat, lng:p.lng, cyc,
+               R: cyc ? stormKm(inten) : gustKm(inten), inten, gust:g,
                spin: p.lat>=0 ? 1 : -1 });        /* ซีกเหนือทวนเข็ม ซีกใต้ตามเข็ม — ข้อ 34 */
   });
   return out;
@@ -1576,6 +1597,15 @@ function stormsOf(L){
 function vortexEN(lat,lng,S){
   const d=gcDist({lat:S.lat,lng:S.lng},{lat,lng}), rn=d/S.R;
   if(rn>VORTEX.FAR) return null;
+  /* ---------- ลมกระโชกไม่ดัดสนามเลย (ข้อ 92) ----------
+     ลองมาแล้วสองแบบ ตกทั้งคู่เพราะทั้งคู่สร้าง *วัตถุ* ขึ้นมาบนฟ้า:
+       ริ้วพุ่งออกจากจุด → กอล์ฟเห็นเป็นดอกไม้ตั้งแต่แรกเห็น
+       ริ้วอ้อมรอบจุด    → กลายเป็นก้อนไข่ที่ลมไหลผ่านไม่ได้
+     ทั้งสองแบบยังบังคับให้คนอ่าน *ทิศ* ถึงจะเข้าใจ ซึ่งเรียกร้องมากเกินไป
+
+     ลมกระโชกไม่ใช่วัตถุและไม่มีรูปทรง มันคือ **ลมชุดเดิมที่แรงขึ้น**
+     จึงไม่แตะทิศและไม่แตะความเร็ว — แสดงตัวด้วยความหนาแน่นของริ้วแทน (ดู gustAt) */
+  if(!S.cyc) return null;
   const WALL=0.16;
   const v = rn<WALL ? rn/WALL : Math.pow(WALL/rn,0.5);
   const wl=clamp((rn-0.07)/0.26,0,1);
@@ -1583,7 +1613,38 @@ function vortexEN(lat,lng,S){
   const brg=bearing({lat:S.lat,lng:S.lng},{lat,lng});
   const wb=(brg-(90+inflow)*S.spin)*RAD;
   const k=1-clamp((rn-VORTEX.NEAR)/(VORTEX.FAR-VORTEX.NEAR),0,1);
-  return { e:Math.sin(wb)*v, n:Math.cos(wb)*v, blend:k*k*(3-2*k), rn };
+  /* ---------- ตาพายุคืนทิศให้ลมพยากรณ์ (ข้อ 91) ----------
+     ขาออก น้ำหนักของพายุจางลงตามระยะ (k) แต่ *ขาเข้า* ไม่เคยจางเลย
+     ทิศจึงถูกหมุนเต็ม 100% ไปจนถึงใจกลาง ทุกริ้วในตาวนเป็นวงซ้อนกันแล้วกองหายไป
+     ผลคือซูมสุดแล้วได้จอว่างเปล่า ซึ่งอ่านเหมือนแอปค้าง ไม่ใช่ความสงบ
+
+     ในตาพายุจริงลมเบาและทิศไม่แน่นอน — ปล่อยให้ลมพยากรณ์เดิมพาไปตามเดิม
+     ริ้วจึงเกือบตรง ตัดกับกำแพงตาที่วนแน่นอยู่รอบ ๆ โดยไม่ต้องวาดวงตาสักเส้น
+
+     ⚠️ ทิศกับความเร็วต้องแยกกัน — `grip` คือน้ำหนักของพายุที่ *ไม่* จางในตา
+     ใช้หรี่ความเร็วต่อไป เพราะตาพายุยังต้องสงบ ถ้าใช้ blend ตัวเดียวกันทั้งสองอย่าง
+     ตาพายุจะกลายเป็นที่ที่ลมแรงเท่าปกติ ซึ่งกลับหัวกับความจริง */
+  const ey=clamp(rn/VORTEX.EYE,0,1);
+  const eye=ey*ey*(3-2*ey);
+  const grip=k*k*(3-2*k);
+  return { e:Math.sin(wb)*v, n:Math.cos(wb)*v, blend:grip*eye, grip, rn };
+}
+/* ---------- น้ำหนักลมกระโชกที่จุดหนึ่ง (ข้อ 92) ----------
+   0 = ลมปกติ · 1 = ใจกลางย่านที่ลมแรงที่สุด
+   ค่านี้ไม่แตะทิศและไม่แตะความเร็วของลมเลย — มันคุมแค่ *การวาด* สามอย่าง:
+     ริ้วถี่ขึ้น (โปรยเมล็ดเพิ่ม) · หมึกเข้มขึ้น · คลื่นสว่างถี่ขึ้น
+   กอล์ฟเลือกแบบ จ. จาก cell-studies.html หลังตกแนวก้อนและแนวทิศทางไปแล้ว */
+function gustAt(lat,lng){
+  if(!CUR_STORMS) return 0;
+  let g=0;
+  for(const S of CUR_STORMS){
+    if(S.cyc) continue;
+    const rn=gcDist({lat:S.lat,lng:S.lng},{lat,lng})/S.R;
+    if(rn>=1) continue;
+    const u=1-rn, w=u*u*(3-2*u)*(0.55+0.45*S.inten);
+    if(w>g) g=w;
+  }
+  return g;
 }
 /* สนามรวม = ลมพยากรณ์ที่ถูก *หมุนทิศ* เข้าหาพายุ ไม่ใช่บวกพลังงานเข้าไป
    ความเร็วลมเป็นข้อมูลจริง ห้ามแตะ · การหมุนวนคือรูปที่ตาราง 15x15 หยาบเกินจะเก็บได้
@@ -1594,13 +1655,17 @@ function blendStorms(w,lat,lng){
   let ve=0, vn=0, wt=0, calm=1;
   for(const S of CUR_STORMS){
     const v=vortexEN(lat,lng,S);
-    if(!v||v.blend<=0.002) continue;
+    if(!v||v.grip<=0.002) continue;
     const m=Math.hypot(v.e,v.n)||1;
     ve+=v.e/m*v.blend; vn+=v.n/m*v.blend;
     wt=Math.max(wt,v.blend);
-    calm=Math.min(calm, 1-v.blend*Math.max(0,1-v.rn/0.22)*0.8);
+    /* หรี่ด้วย grip ไม่ใช่ blend — ความสงบของตาพายุต้องไม่หายไปพร้อมกับการหมุน
+       เซลล์ฝนฟ้าคะนองไม่มีตา ตรงกลางคือที่ที่ลมตกลงมา แรงที่สุด ห้ามหรี่ (ข้อ 92) */
+    if(!v.out) calm=Math.min(calm, 1-v.grip*Math.max(0,1-v.rn/0.22)*0.8);
   }
-  if(wt<=0.002) return w;
+  /* ในตาพายุ wt เข้าใกล้ศูนย์ (ไม่หมุนทิศแล้ว) แต่ calm ยังต่ำอยู่
+     ถ้าออกตรงนี้ด้วย wt อย่างเดียว ความสงบจะถูกข้ามไปทั้งก้อน */
+  if(wt<=0.002 && calm>=0.999) return w;
   const sp=Math.hypot(w.e,w.n);
   if(sp<0.01) return w;
   const a0=Math.atan2(w.e,w.n), a1=Math.atan2(ve,vn);
@@ -1622,26 +1687,48 @@ function stormStrands(L,tf){
   const zdens=clamp(Math.sqrt(G.R*Math.sin(1200/ER)/150),1,2.4);
   const field=wfOf(L), out=[];
   CUR_STORMS.forEach((S,si)=>{
-    const layers=[
-      {n:Math.round((14+S.inten*10)*zdens), steps:46, w:1.00, r0:0.10, r1:1.05},
-      {n:Math.round((20+S.inten*18)*zdens), steps:13, w:0.72, r0:0.07, r1:0.42}
+    /* ชั้นที่ 3 = ริ้วใน *ตา* พายุ (ข้อ 91)
+       ก้าวสั้นกว่าชั้นนอกสี่เท่าเพราะพื้นที่เล็กกว่ามาก · เส้นเบา · ไม่หยุดที่กำแพงตา
+       เกณฑ์ลมต่ำกว่าชั้นอื่น เพราะจุดประสงค์ทั้งหมดของมันคือที่ที่ลมช้าที่สุด
+       ถ้าใช้เกณฑ์ 0.5 เท่าชั้นนอก ริ้วในตาจะถูกทิ้งทุกเส้น แล้วตาก็ว่างเหมือนเดิม */
+    /* เซลล์ฝนฟ้าคะนองไม่มีกำแพงตาให้วิ่งเข้า ริ้วจึงเริ่มใกล้ใจกลางแล้ว *ออก*
+       สั้นและน้อยกว่าพายุหมุนมาก เพราะของจริงก็เล็กกว่ากันสิบเท่า
+       ถ้าให้จำนวนเท่าพายุหมุน มันจะกลายเป็นก้อนดำเล็ก ๆ แทนที่จะเป็นลมที่แผ่ออก */
+    const layers = S.cyc ? [
+      {n:Math.round((14+S.inten*10)*zdens), steps:46, w:1.00, r0:0.10, r1:1.05, step:0.055, wall:true,  min:0.5},
+      {n:Math.round((20+S.inten*18)*zdens), steps:13, w:0.72, r0:0.07, r1:0.42, step:0.055, wall:true,  min:0.5},
+      {n:Math.round((9+S.inten*7)*zdens),   steps:26, w:0.40, r0:0.01, r1:0.11, step:0.014, wall:false, min:0.04}
+    ] : [
+      /* ⚠️ ลมกระโชกไม่มีรูปทรงของตัวเอง — ริ้วชุดนี้คือ *ริ้วลมธรรมดา* ที่โปรยเพิ่ม
+         เพื่อให้ย่านนั้นหนาแน่นกว่าที่อื่น ไม่ใช่การวาดวัตถุ
+         มันเดินตามสนามเดียวกับริ้วพื้นหลังเป๊ะ (สนามไม่ถูกดัดเลย) จึงกลืนกันสนิท
+         ที่ต่างคือ *มีเยอะกว่า* ซึ่งเป็นสิ่งเดียวที่ตาต้องอ่าน
+
+         ⚠️ ต้องโปรยเมล็ดกว้างกว่าย่านมาก แล้วค่อยทิ้งเส้นที่ไม่ผ่านย่านทีหลัง
+         โปรยในวงพอดีย่านทำให้ทุกเส้นเริ่มจากกระจุกเดียวแล้ววิ่งไปทางเดียวกัน
+         = ได้พู่อีกแบบหนึ่ง ซึ่งเป็นความผิดพลาดเดิมที่เพิ่งตกไป
+         ริ้วต้อง *ผ่าน* ย่าน ไม่ใช่ *เกิด* ที่ย่าน */
+      {n:Math.round((190+S.inten*140)*zdens), steps:26, w:0.80, r0:0.02, r1:2.60, step:0.135, wall:false, min:0.5, keep:0.16}
     ];
     layers.forEach((LY,li)=>{
       for(let i=0;i<LY.n;i++){
         const h1=vhash(i*7.3+li*131.7+si*17.9), h2=vhash(i*19.1+li*57.3+si*3.1);
-        let p=destPoint(S.lat,S.lng,h2*360,S.R*(LY.r0+LY.r1*Math.sqrt(h1)));
-        const stepKm=S.R*0.055, pts=[toXYZ(p.lat,p.lng)];
-        let acc=0, ok=true;
+        let p = destPoint(S.lat,S.lng,h2*360,S.R*(LY.r0+LY.r1*Math.sqrt(h1)));
+        const stepKm=S.R*LY.step, pts=[toXYZ(p.lat,p.lng)];
+        const gs=S.cyc?null:[gustAt(p.lat,p.lng)];
+        let acc=0, ok=true, gMax=gs?gs[0]:0;
         for(let k=0;k<LY.steps;k++){
           const w = field ? wfAt(field,p.lat,p.lng,clamp(tf||0,0,1)) : {e:0,n:0};
           const sp=Math.hypot(w.e,w.n);
-          if(sp<0.5){ ok=false; break; }
+          if(sp<LY.min){ ok=false; break; }
           acc+=sp;
           p=destPoint(p.lat,p.lng, Math.atan2(w.e,w.n)*DEG, stepKm);
           pts.push(toXYZ(p.lat,p.lng));
-          if(gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.085) break;   /* ถึงกำแพงตา */
+          if(gs){ const gg=gustAt(p.lat,p.lng); gs.push(gg); if(gg>gMax) gMax=gg; }
+          if(LY.wall && gcDist({lat:S.lat,lng:S.lng},p) < S.R*0.085) break;   /* ถึงกำแพงตา */
         }
-        if(ok&&pts.length>2){ pts.spd=acc/LY.steps; pts.w=LY.w; out.push(pts); }
+        if(LY.keep && gMax<LY.keep) continue;    /* ไม่ได้ผ่านย่านลมแรงจริง ทิ้ง */
+        if(ok&&pts.length>2){ pts.spd=acc/LY.steps; pts.w=LY.w; if(gs) pts.g=gs; out.push(pts); }
       }
     });
   });
@@ -1697,6 +1784,11 @@ function baseStreams(L,tf){
         let p = off===0 ? {lat:c.lat,lng:c.lng} : destPoint(c.lat,c.lng,(brg0+90)%360,off);
         if(jitR>0.5) p=destPoint(p.lat,p.lng,jitA,jitR);
         const pts=[toXYZ(p.lat,p.lng)];
+        /* น้ำหนักลมกระโชกต่อจุด (ข้อ 92) — เก็บคู่ขนานไปกับพิกัด
+           ต้องเป็นต่อจุด ไม่ใช่ต่อเส้น เพราะริ้วเส้นเดียวยาวข้ามย่านลมแรงเข้าออกได้
+           ถ้าเข้มทั้งเส้น ขอบของย่านจะกลายเป็นเส้นตรงยาวที่ไม่มีอยู่จริง */
+        const gs=[gustAt(p.lat,p.lng)];
+        let gMax=gs[0];
         let ok=true, spd=0, turn=0, prevBrg=null;
         for(let k=0;k<STREAM.STEPS;k++){
           const w=field ? wfAt(field,p.lat,p.lng,tfb) : windAtNodes(nodes,p.lat,p.lng);
@@ -1710,6 +1802,7 @@ function baseStreams(L,tf){
           prevBrg=br;
           p=destPoint(p.lat,p.lng,br, stepKm);
           pts.push(toXYZ(p.lat,p.lng));
+          const gg=gustAt(p.lat,p.lng); gs.push(gg); if(gg>gMax) gMax=gg;
         }
         /* จางลงเมื่อห่างจากเส้นทาง — เรารู้ลมจริงแค่บนแนวเส้นทาง (13 จุด)
            ยิ่งออกข้างยิ่งเป็นการเดาจากการถ่วงน้ำหนัก จึงไม่ควรวาดเข้มเท่ากัน
@@ -1718,6 +1811,7 @@ function baseStreams(L,tf){
           const q=Math.abs(j/(STREAM.COLS-1)-0.5)*2;
           pts.w=Math.pow(1-q*q,0.9);
           pts.spd=spd;
+          if(gMax>0.01) pts.g=gs;        /* ไม่มีลมกระโชกก็ไม่ต้องแบก array เปล่า */
           lines.push(pts);
         }
       }
@@ -2926,10 +3020,20 @@ const G = {
         if((p0.y<-8&&p1.y<-8)||(p0.y>this.H+8&&p1.y>this.H+8)) continue;
         const f=i/last;
         const along=Math.pow(1-f,.75);                     /* เข้มต้นลม จางปลายลม — บอกทิศในตัว */
-        const near=Math.max(0,1-Math.abs(f-head)*4.5);     /* ช่วงที่คลื่นกำลังไหลผ่าน */
+        /* ---------- ลมกระโชก: เข้มขึ้น + คลื่นถี่ขึ้น (ข้อ 92 · แบบ จ.) ----------
+           g มาจาก gustAt() ตอนสร้างริ้ว ไม่ต้องคำนวณระยะทางใหม่ทุกเฟรม
+           ความถี่ของคลื่นคือสิ่งที่แยกแบบ จ. ออกจากแบบ ค. — ลมแรงกระชากเป็นห้วงถี่
+           ไม่ใช่คลื่นลูกเดียวที่ไหลเรียบ จึงใส่ลูกที่สองเหลื่อมครึ่งเฟสเข้าไป */
+        const g=ln.g ? ln.g[i] : 0;
+        let near=Math.max(0,1-Math.abs(f-head)*(4.5+g*3.6));
+        if(g>0.02){
+          const h2=(head+0.62)%1.35;
+          const n2=Math.max(0,1-Math.abs(f-h2)*(4.5+g*3.6));
+          near=Math.max(near, n2*g);
+        }
         const depth=.35+.65*Math.sqrt(Math.max(0,(r0.z+r1.z)*.5));
         const w=(ln.w===undefined?1:ln.w);
-        let a=alpha*w*depth*((.20+inten*.42)*along + near*(.30+inten*.55)*along);
+        let a=alpha*w*depth*((.20+inten*.42)*along + near*(.30+inten*.55)*along)*(1+g*1.7);
         if(a<=.006) continue;
         if(a>.55) a=.55;
         const ai=Math.min(17,Math.round(a*32));
