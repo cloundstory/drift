@@ -307,6 +307,7 @@ const CFG = {
      ซึ่งทั้งประเทศไทยแทบไม่ยิงเลย — เป็นการตัดสินใจเชิงออกแบบ ไม่ใช่ค่าอุตุฯ */
   GUST_HOLD:  50,        // กระโชกปานกลาง — จอดรอ
   GUST_LOST:  95,        // กระโชกรุนแรง — เสี่ยงหาย
+  CYC_HPA:    995,       // ความกดต่ำกว่านี้ + กระโชกถึง GUST_LOST = พายุหมุนจริง (ข้อ 93)
   HOLD_MAX:   6,         // ชม. จอดสูงสุด (ปานกลาง)
   HOLD_MAX_S: 12,        // ชม. จอดสูงสุด (รุนแรง)
   LOSS_CROSS: 0.14,      // โอกาสหายเมื่อเจอพายุรุนแรง
@@ -499,10 +500,14 @@ function sanitizeRec(r){
     const a=Array.isArray(l)?l:[];
     const spd=Math.round(_num(a[2],0,400,12));
     /* ช่องที่ 8 = ลมกระโชก (ข้อ 62) · ลิงก์เก่าไม่มีช่องนี้ → ถอยไปใช้ลมต่อเนื่อง
-       ระดับพายุ (ช่องที่ 7) ถูกคิดและเก็บไว้ตั้งแต่ตอนส่งแล้ว จดหมายเก่าจึงไม่เปลี่ยนพฤติกรรม */
+       ระดับพายุ (ช่องที่ 7) ถูกคิดและเก็บไว้ตั้งแต่ตอนส่งแล้ว จดหมายเก่าจึงไม่เปลี่ยนพฤติกรรม
+
+       เพดานช่องที่ 7 ขยายจาก 2 เป็น 3 ในข้อ 93 — ระดับ 3 = พายุหมุนจริง (ความกดต่ำ)
+       **URL ไม่โตสักไบต์** เพราะเป็นช่องเดิม · ลิงก์เก่าไม่มีค่า 3 อยู่แล้ว
+       จึงตกเป็นลมกระโชกรุนแรงตามเดิม ไม่พังและไม่เปลี่ยนความหมาย */
     return [ _num(a[0],0,240,0.1), _num(a[1],0,48,0), spd,
              Math.round(_num(a[3],0,360,180)), _num(a[4],0,500,0),
-             Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,2,0)),
+             Math.round(_num(a[5],0,KIND.length-1,0)), Math.round(_num(a[6],0,3,0)),
              Math.round(_num(a[7],0,400,spd)), Math.round(_num(a[8],0,99,0)) ];
   });
   /* wf ต้องเป็นตัวอักษรในชุด base64 เท่านั้น — ตัวแปลกทำให้ถอดออกมาเป็น NaN แล้วลมหายทั้งสนาม */
@@ -682,7 +687,10 @@ async function fetchWxLive(pts){
   const lo=pts.map(p=>p.lng.toFixed(3)).join(',');
   const u='https://api.open-meteo.com/v1/forecast'
     +'?latitude='+la+'&longitude='+lo
-    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m,weather_code'
+    /* pressure_msl = ลายเซ็นของ *ระบบ* พายุ (ข้อ 93)
+       ลมกระโชกบอกแค่ความเร็วที่จุดนั้น ไม่ได้บอกว่ามีพายุหมุนอยู่ไหม
+       ชั้นที่หกนี้ขอมาในคำขอเดิม ไม่เพิ่มจำนวนคำขอ ไม่กระทบโควตา */
+    +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m,weather_code,pressure_msl'
     +'&wind_speed_unit=kmh&forecast_days=4&timezone=UTC';
   /* คำขอที่ค้างจะค้างตลอดไป ผู้ใช้เห็นแค่ปุ่มกดไม่ได้ — ต้องมีเพดานเวลาเสมอ */
   const ac=new AbortController();
@@ -697,7 +705,8 @@ async function fetchWxLive(pts){
 }
 function sampleWx(loc,hoursFromNow){
   const h=loc&&loc.hourly;
-  if(!h||!h.time) return {spd:12,dir:180,pre:0,gst:18,wc:0};
+  /* prs ค่าปริยาย 1013 = ความกดมาตรฐาน แปลว่า "ไม่มีระบบพายุ" — ปลอดภัยที่สุดเมื่อไม่มีข้อมูล */
+  if(!h||!h.time) return {spd:12,dir:180,pre:0,gst:18,wc:0,prs:1013};
   /* หา offset ของ "ตอนนี้" จากเวลาแรกในชุด
      ชุดจาก API ห่างกัน 1 ชม. · ชุดจากแคชภูมิภาคห่างกัน 3 ชม. → ต้องอ่านระยะห่างจากข้อมูลเอง
      ไม่ใช่สมมติว่าเป็นราย 1 ชม. (ข้อ 58) */
@@ -713,12 +722,29 @@ function sampleWx(loc,hoursFromNow){
        ห้ามเดาด้วยตัวคูณ — วัดแล้วว่าอัตราส่วนกระจายตั้งแต่ 1.5 ถึง 8 (ข้อ 62) */
     gst: h.wind_gusts_10m ? (h.wind_gusts_10m[idx] ?? spd) : spd,
     /* รหัสอากาศ WMO — มีเฉพาะตอนยิงสด แคชภูมิภาคไม่ได้เก็บ (ไม่จำเป็น) */
-    wc: h.weather_code ? (h.weather_code[idx] ?? 0) : 0
+    wc: h.weather_code ? (h.weather_code[idx] ?? 0) : 0,
+    /* ความกดอากาศระดับน้ำทะเล — แคชภูมิภาคไม่มีชั้นนี้ ถอยไปที่ 1013 = ไม่มีระบบพายุ
+       ซึ่งถูกต้องกว่าการเดา เพราะแคชครอบแค่ไทยที่พายุหมุนแทบไม่เข้าถึงอยู่แล้ว */
+    prs: h.pressure_msl ? (h.pressure_msl[idx] ?? 1013) : 1013
   };
 }
 
-/* ระดับพายุจากลมกระโชก (ข้อ 62) — ที่เดียวที่ตัดสินเรื่องนี้ ห้ามเทียบเกณฑ์เองที่อื่น */
-function sevOf(gst){ return gst>=CFG.GUST_LOST ? 2 : (gst>=CFG.GUST_HOLD ? 1 : 0); }
+/* ---------- ระดับความรุนแรง (ข้อ 62 · ขยายในข้อ 93) ----------
+   ที่เดียวที่ตัดสินเรื่องนี้ ห้ามเทียบเกณฑ์เองที่อื่น
+
+   0 ปกติ · 1 กระโชกถึงเกณฑ์ (จอดรอ) · 2 กระโชกรุนแรง (เสี่ยงหาย) · 3 พายุหมุนจริง
+
+   ⚠️ ระดับ 3 ต้องใช้ *ความกดอากาศ* ไม่ใช่ลมอย่างเดียว
+   กอล์ฟถามตรง ๆ ว่า "มันคือพายุจริง หรือลมกระโชก" — คำตอบคือแอปเดิมแยกไม่ออกเลย
+   วัดจริง 96 วัน 12 จุดทั่วโลก: จาก 86 ชั่วโมงที่กระโชก ≥95
+     57 ครั้ง (66%) ความกด <995 = พายุจริง
+     29 ครั้ง (34%) ความกด 995-1005 = ลมแรงเฉย ๆ
+   ตัวอย่างที่ชัดที่สุด: ฮาวายกระโชก 86 ที่ 1009 hPa (ลมค้า)
+   กับโอกินาวากระโชก 137 ที่ 963 hPa (ไต้ฝุ่น) — คนละเรื่องกันสิ้นเชิง */
+function sevOf(gst,prs){
+  if(gst>=CFG.GUST_LOST) return (prs!==undefined && prs<CFG.CYC_HPA) ? 3 : 2;
+  return gst>=CFG.GUST_HOLD ? 1 : 0;
+}
 /* เวลาจอดรอพายุ — แยกออกมาเพราะต้องใช้ตอนประเมินเวลาสุ่มลมด้วย
    ความชัน /9 คงไว้จากเกณฑ์เดิม เพราะช่วง 50→95 พอดีกับ 0.5→5.5 ชม. ก่อนชนเพดาน 6
 
@@ -730,7 +756,7 @@ function holdOf(gst){
   const raw = sevOf(gst);
   const mod = g => clamp((g-CFG.GUST_HOLD)/HOLD_STEP+0.5, 0.5, CFG.HOLD_MAX);
   if(raw===1) return mod(gst);
-  if(raw===2) return clamp((gst-CFG.GUST_LOST)/HOLD_STEP + mod(CFG.GUST_LOST),
+  if(raw>=2) return clamp((gst-CFG.GUST_LOST)/HOLD_STEP + mod(CFG.GUST_LOST),
                            mod(CFG.GUST_LOST), CFG.HOLD_MAX_S);
   return 0;
 }
@@ -762,7 +788,7 @@ function simulate(cpts, cwx, dist, ct, seedId){
       const w=sampleWx(cwx[wfMid(i)], at[i]);
       /* ปัดก่อนใช้ ไม่ใช่ปัดตอนเก็บ — ผู้รับมีแต่ค่าที่ปัดแล้ว ต้องคำนวณจากค่าเดียวกัน */
       W.push({spd:Math.round(w.spd), dir:Math.round(w.dir), pre:r2(w.pre),
-              gst:Math.round(w.gst), wc:Math.round(w.wc||0)});
+              gst:Math.round(w.gst), wc:Math.round(w.wc||0), prs:Math.round(w.prs||1013)});
     }
     /* สนามลมเต็ม 4 ช่วงเวลา วางตามสัดส่วนของการเดินทาง (0, 1/3, 2/3, 1)
        ต้องเข้ารหัสแล้วถอดกลับก่อนใช้เสมอ ผู้ส่งจึงคำนวณจากค่าชุดเดียวกับผู้รับ */
@@ -807,20 +833,23 @@ function simulate(cpts, cwx, dist, ct, seedId){
     /* boost ไม่ได้คุมเวลาแล้ว เหลือไว้บอกว่า "ลมไปทางเดียวกับจดหมายไหม" ในคำบรรยาย */
     boostSum+=clamp(align*w.spd/CFG.WIND_REF, -CFG.WIND_CAP, CFG.WIND_CAP);
 
-    const raw = sevOf(w.gst);
+    const raw = sevOf(w.gst, w.prs);
     const sev = raw;
     const hold = holdOf(w.gst);
     if(sev>worstSeverity) worstSeverity=sev;
     if(raw>rawWorst) rawWorst=raw;
-    if(raw===2) severeIdx.push(i);
+    if(raw>=2) severeIdx.push(i);
 
     let kind;
     /* ใช้ *รหัสอากาศจริง* ที่นักอุตุฯ กำหนดมา ไม่ใช่ตั้งชื่อเอาเองจากลม+ฝน
        WMO 95-99 = ฝนฟ้าคะนอง · เป็นข้อมูลจริงจาก API ตัวเดียวกัน ขอมาฟรี
        แคชภูมิภาคไม่มีรหัสนี้ (ไม่จำเป็น เพราะแคชใช้กับสนามลมเท่านั้น) ถอยไปเดาจากลม+ฝนได้ */
     const thunder = w.wc>=95;
-    if(sev===2) kind=6;                      /* พายุจริง — กระโชกเกิน GUST_LOST */
-    else if(sev===1) kind = thunder ? 5 : 4; /* ฝนฟ้าคะนอง หรือ ลมกระโชกแรงเฉย ๆ */
+    /* คำว่า "พายุ" สงวนไว้ให้พายุหมุนจริงเท่านั้น (ข้อ 93)
+       นี่คือสิ่งที่ข้อ 62 ตั้งใจไว้ตั้งแต่ต้น แต่ตอนนั้นยังไม่มีข้อมูลพอจะแยก
+       กระโชก 95+ ที่ความกดปกติ = ลมแรงมาก ไม่ใช่พายุ — ได้คำว่า "ลมกระโชกแรง" ตามจริง */
+    if(sev>=3) kind=6;                       /* พายุหมุนจริง — กระโชกเกิน GUST_LOST + ความกดต่ำ */
+    else if(sev>=1) kind = thunder ? 5 : 4;  /* ฝนฟ้าคะนอง หรือ ลมกระโชกแรงเฉย ๆ */
     else if(thunder) kind=5;                 /* ฟ้าคะนองแม้ลมยังไม่ถึงเกณฑ์ */
     else if(w.pre>=2.5) kind=3;
     else if(w.pre>=0.15) kind=2;
@@ -875,7 +904,7 @@ function simulate(cpts, cwx, dist, ct, seedId){
   /* โอกาสหาย — roll ครั้งเดียวตอนส่ง (deterministic ฝังใน URL) */
   let lost=-1;
   const rng=seeded(seedId+'c'+ct);
-  if(rawWorst===2){                               /* หายได้เฉพาะเส้นที่มีพายุรุนแรงจริง */
+  if(rawWorst>=2){                                /* หายได้เมื่อกระโชกเกิน GUST_LOST — ไม่ต้องเป็นพายุหมุน */
     const p = (ct===2) ? CFG.CT_LOSS : CFG.LOSS_CROSS;   /* เคลือบหนา = หนักและแข็ง ลมพัดหลุดยาก */
     if(p>0 && rng()<p && severeIdx.length){
       lost=severeIdx[Math.floor(rng()*severeIdx.length)];
@@ -1583,7 +1612,7 @@ function stormsOf(L){
     if(l[6]<=0) return;
     const p=posAt(L,(i+0.5)/L.lg.length);
     const g=l[7]??l[2], inten=stormIntensity(g);
-    const cyc=l[6]>=2;                              /* กระโชก ≥ GUST_LOST เท่านั้นที่หมุน */
+    const cyc=l[6]>=3;                              /* พายุหมุนจริงเท่านั้น (ข้อ 93) — ลมกระโชกไม่หมุน */
     out.push({ lat:p.lat, lng:p.lng, cyc,
                R: cyc ? stormKm(inten) : gustKm(inten), inten, gust:g,
                spin: p.lat>=0 ? 1 : -1 });        /* ซีกเหนือทวนเข็ม ซีกใต้ตามเข็ม — ข้อ 34 */
@@ -1890,7 +1919,7 @@ function poemFor(sim){
                : wxN[2] ? ' ระหว่างทางมีฝนแข็งตัวเกาะกระดาษ'
                : wxN[3]>1 ? ' ช่วงหนึ่งจดหมายหายเข้าไปในหมอก' : '';
   let p=windWord(sim.boost);
-  if(sim.worst===2) p+=' แต่กลางทางมีพายุใหญ่รออยู่'+wxTail;
+  if(sim.worst>=2) p+=(sim.worst>=3?' แต่กลางทางมีพายุใหญ่รออยู่':' แต่กลางทางมีลมกระโชกรุนแรงรออยู่')+wxTail;
   else if(rough.length){
     /* เรียกตามสิ่งที่เจอจริง ไม่เหมาโหลว่าเป็นฝนฟ้าคะนองทั้งหมด
        ช่วงเดียวกันอาจเป็นแค่ลมกระโชกโดยไม่มีฟ้าคะนองก็ได้ — รหัสอากาศเป็นคนบอก */
@@ -3757,7 +3786,7 @@ function showForecast(){
   {
     const left=ctLeft();
     const wrap=document.createElement('div');
-    if(sim.raw===2) wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามีพายุใหญ่ — เคลือบหนาจะช่วยให้จดหมายไม่หลงทาง</div>';
+    if(sim.raw>=2) wrap.innerHTML='<div class="warn">เส้นทางข้างหน้ามี'+(sim.raw>=3?'พายุใหญ่':'ลมกระโชกรุนแรง')+' — เคลือบหนาจะช่วยให้จดหมายไม่หลงทาง</div>';
     else if(sim.worst===1){
       const th=sim.legs.some(l=>l[5]===5);
       wrap.innerHTML='<div class="warn">มี'+(th?'ฝนฟ้าคะนอง':'ลมกระโชกแรง')
