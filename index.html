@@ -265,6 +265,12 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #cAsk.on{display:block}
 #cAsk b{display:block;font-weight:normal;font-size:12.5px;line-height:1.7}
 #cAsk i{display:block;font-style:normal;font-size:11px;color:var(--warn,#a8574a);line-height:1.7;margin-bottom:8px}
+
+/* ---------- drift port (ข้อ 104) ---------- */
+.addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;letter-spacing:.12em;
+  text-align:center;padding:14px 8px;border:1px solid rgba(198,154,84,.45);border-radius:12px;
+  background:rgba(255,255,255,.5);color:#7d5f2e;line-height:1.7;word-break:break-all;
+  -webkit-user-select:text;user-select:text}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -289,12 +295,79 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <!-- เมนู — ทางเข้าเดียวของทุกอย่างที่ไม่ใช่การเขียน (ข้อ 100.2)
      ยังมีสองบรรทัด เพราะ "คนที่เขียนถึงได้" กับ "drift port ของฉัน" ยังไม่มีจริง
      ⛔ ห้ามใส่บรรทัดที่กดแล้วไม่มีอะไร — เมนูจะโตเองตอน port มาถึง -->
+<!-- ที่อยู่ของฉัน · ให้ครั้งเดียว เขาเขียนถึงเราได้ตลอดไป (ข้อ 104) -->
+<section class="sheet" id="mine">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>drift port ของฉัน</h2>
+    <p class="sub">ให้ครั้งเดียว เขาเขียนถึงคุณได้ตลอดไป</p>
+    <div class="addr" id="myAddr"></div>
+    <div class="row" style="margin-top:11px">
+      <button class="btn" id="btnMyCopy">คัดลอก</button>
+      <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
+    </div>
+    <div class="rule"></div>
+    <table class="tbl" style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr><td style="padding:6px 0">ชื่อบนจดหมาย</td><td id="myWho" style="text-align:right;color:var(--dim)"></td></tr>
+      <tr><td style="padding:6px 0">ต้นทาง</td><td id="mySub" style="text-align:right;color:var(--dim)"></td></tr>
+    </table>
+    <div class="rule"></div>
+    <p class="note faint" id="myCount"></p>
+    <p class="note faint" style="margin-top:8px">ที่อยู่นี้เดาไม่ได้ และไม่มีสมุดรายชื่อ<br>
+    ไม่มีใครหาคุณเจอ ถ้าคุณไม่ให้เอง</p>
+  </div>
+</section>
+
+<!-- รับที่อยู่ของคนอื่น — ⚠️ ที่อยู่เดินทางทางเดียว ปุ่มสองปุ่มบอกผลต่างกัน (ข้อ 99.10ค) -->
+<section class="sheet" id="gotport">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap" style="text-align:center;padding-top:40px">
+    <div class="act" id="gpStamp"></div>
+    <div style="font-size:19px;letter-spacing:.05em;margin:6px 0 6px" id="gpName"></div>
+    <p class="sub" id="gpWhere"></p>
+    <div style="height:14px"></div>
+    <button class="btn wide gold" id="btnGpSwap">แลกที่อยู่กัน
+      <small style="display:block;font-size:10.5px;color:var(--faint);margin-top:2px">เขาเขียนถึงคุณได้ด้วย</small></button>
+    <button class="btn wide" id="btnGpKeep" style="margin-top:6px">เก็บไว้เฉย ๆ
+      <small style="display:block;font-size:10.5px;color:var(--faint);margin-top:2px">เขาจะเขียนกลับหาคุณไม่ได้</small></button>
+    <button class="btn wide ghost" data-close style="margin-top:6px">ไม่เก็บ</button>
+  </div>
+</section>
+
+<section class="sheet" id="ports">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2 id="portsTitle">คนที่เขียนถึงได้</h2>
+    <p class="sub">แตะชื่อเพื่อดูฟ้าที่เขาอยู่ หรือเขียนถึงเขา</p>
+    <div id="portsList"></div>
+  </div>
+</section>
+
+<section class="sheet" id="port1">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2 id="p1Name"></h2>
+    <p class="sub" id="p1Sub"></p>
+    <div class="fc" style="padding:13px 15px">
+      <div class="act" style="margin-bottom:5px">ฟ้าที่นั่นตอนนี้</div>
+      <div style="font-size:15px;letter-spacing:.03em" id="p1Sky"></div>
+    </div>
+    <p class="note faint" id="p1Count"></p>
+    <div class="rule"></div>
+    <button class="btn wide gold" id="btnP1Write">เขียนถึง</button>
+    <button class="btn wide" id="p1Give" style="margin-top:6px">ให้ที่อยู่ของฉันกับเขา</button>
+    <button class="btn wide ghost" id="btnP1Del" style="margin-top:6px;color:#a8574a">เอาออกจากรายชื่อ</button>
+  </div>
+</section>
+
 <section class="sheet" id="menu">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
     <h2>drift</h2>
     <p class="sub">เก็บในเครื่องนี้เท่านั้น</p>
     <button class="mrow" id="mInbox"><b>กล่องจดหมาย</b><em id="mCount"></em></button>
+    <button class="mrow" id="mPorts"><b>คนที่เขียนถึงได้</b><em id="mPortCount"></em></button>
+    <button class="mrow" id="mMine"><b>drift port ของฉัน</b><em>แบ่งปันที่อยู่</em></button>
     <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
     <div class="rule"></div>
     <p class="note faint">ลมและอากาศจาก Open-Meteo</p>
@@ -323,6 +396,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <div class="ink">
         <div class="meta" id="cOrigin"></div>
         <div class="wline"><span class="lb">ถึง</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></div>
+        <div id="cPick"><button class="btn ghost" id="btnPick" style="font-size:11.5px;padding:4px 0">เลือกจากรายชื่อ</button></div>
         <div class="wline"><span class="lb">ที่</span><input id="cPlace" placeholder="เมืองปลายทาง" autocomplete="off"></div>
         <div class="hits" id="cHits"></div>
         <div id="cDist"></div>
@@ -502,7 +576,7 @@ const CFG = {
 };
 
 const RAD = Math.PI/180, DEG = 180/Math.PI, ER = 6371;
-const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me' };
+const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me', PORTS:'lw.v1.ports' };
 /* ---------- คำเรียกอากาศ (ข้อ 65) ----------
    เดิมมีแค่ 5 ระดับ และอะไรก็ตามที่กระโชกเกินเกณฑ์ถูกเรียกว่า "พายุ" หมด
    กอล์ฟจับได้ว่าเส้นฉะเชิงเทรา→เลย แอปบอกว่ามีพายุ แต่แอปอากาศบอกว่าไม่มี
@@ -4234,6 +4308,97 @@ function piiScan(text){
 }
 
 
+/* ============================================================
+   drift port — ขั้นที่ 2 ยังไม่มีเซิร์ฟเวอร์ (ข้อ 104)
+   ============================================================
+   ที่อยู่เป็นลิงก์ที่ *พก* ชื่อกับพิกัดหยาบไปด้วย แอปจำรายชื่อไว้ในเครื่อง
+   ยังเป็นไฟล์เดียว ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่เสียเงิน
+
+   ⚠️ ขั้นนี้ที่อยู่คือ **นามบัตร ไม่ใช่ตู้จดหมาย** — จดหมายยังส่งด้วยลิงก์เหมือนเดิม
+   สิ่งที่ได้คือ ไม่ต้องพิมพ์เมืองปลายทางอีก และรู้ว่าฟ้าที่เขาเป็นยังไง
+
+   ⚠️ **รหัส 80 บิตเกิดที่ขั้นนี้ และต้องเป็นตัวเดิมตลอดไป**
+   ลิงก์ที่แจกไปวันนี้ ต้องยังใช้ได้วันที่เซิร์ฟเวอร์มาถึง (ข้อ 82.4)
+   ============================================================ */
+/* Crockford base32 — ไม่มี I L O U เพราะสับสนกับ 1 กับ 0 ตอนอ่านออกเสียงหรือจดใส่กระดาษ */
+const B32='0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function newPid(){
+  const b=new Uint8Array(10);                 /* 80 บิต */
+  (crypto&&crypto.getRandomValues) ? crypto.getRandomValues(b)
+    : b.forEach((_,i)=>b[i]=Math.floor(Math.random()*256));
+  let s='', acc=0, bits=0;
+  for(const x of b){ acc=(acc<<8)|x; bits+=8; while(bits>=5){ bits-=5; s+=B32[(acc>>>bits)&31]; } }
+  return s.slice(0,16);
+}
+function pidPretty(p){ return String(p||'').replace(/(.{4})(?=.)/g,'$1-'); }
+/* รหัสเกิดครั้งเดียวตอนถูกถามถึงครั้งแรก แล้วอยู่ยาว */
+function myPid(){
+  const me=store.me()||{};
+  if(!me.pid){ me.pid=newPid(); store.setMe(me); }
+  return me.pid;
+}
+async function myPortLink(){
+  const me=store.me()||{};
+  const pay=await packPayload({v:1, i:myPid(), n:me.name||'', a:me.lat, o:me.lng, p:me.place||''});
+  return location.href.split('#')[0]+'#p'+pay;
+}
+
+/* ---------- ตรวจของที่มาจากลิงก์คนอื่น (ข้อ 57.1) ----------
+   ทุกช่องมาจากภายนอก ห้ามเชื่อสักช่อง · พิกัดต้องอยู่ในโลกจริง ชื่อต้องไม่ยาวเป็นกิโล */
+function sanitizePort(o){
+  if(!o||typeof o!=='object') return null;
+  const num=v=>typeof v==='number'&&isFinite(v)?v:null;
+  const str=(v,n)=>typeof v==='string'?v.slice(0,n):'';
+  const i=str(o.i,32).toUpperCase().replace(/[^0-9A-Z]/g,'');
+  const a=num(o.a), g=num(o.o);
+  if(!i||a===null||g===null||a<-90||a>90||g<-180||g>180) return null;
+  return {i, n:str(o.n,40)||'ไม่ระบุชื่อ', a:coarseLat(a), o:coarseLat(g), p:str(o.p,60)};
+}
+
+/* ---------- รายชื่อในเครื่อง ----------
+   gave = เราส่งที่อยู่ของเรากลับไปให้เขาแล้วหรือยัง
+   ⚠️ ขั้นนี้รู้ได้แค่ว่า *เราส่งไปแล้ว* ไม่รู้ว่า *เขาเก็บไว้ไหม* — ป้ายต้องพูดตามที่รู้จริง */
+Object.assign(store,{
+  ports(){ try{ return JSON.parse(LS.get(K.PORTS)||'[]'); }catch(e){ return []; } },
+  putPort(p){
+    const a=this.ports(), i=a.findIndex(x=>x.i===p.i);
+    if(i>=0) a[i]=Object.assign(a[i],p); else a.push(Object.assign({gave:0,at:Date.now()},p));
+    LS.set(K.PORTS, JSON.stringify(a)); return p;
+  },
+  delPort(id){ LS.set(K.PORTS, JSON.stringify(this.ports().filter(x=>x.i!==id))); }
+});
+
+/* ---------- อากาศ ณ จุดหนึ่ง จากแคชลมก้อนเดิม ----------
+   ⚠️ ราคา 0 คำขอ ถ้าจุดนั้นอยู่ในกล่องแคช (ข้อ 99.6) · นอกกล่อง = ไม่รู้ ซึ่งพูดตรง ๆ ได้
+   ⚠️ แคชไม่มี weather_code (เขียนไว้ในคอมเมนต์ของ fetchWx) จึงเดาชนิดจากลม+ฝนเท่านั้น */
+async function wxAt(lat,lng){
+  try{
+    const man=await wcManifest(); if(!man) return null;
+    const t=wcPick(man,[{lat,lng}]); if(!t) return null;
+    const d=await wcLoad(man,t);
+    const s=wcSeries(t,d,lat,lng), H=s&&s.hourly;
+    if(!H||!H.time||!H.time.length) return null;
+    /* เลือกช่วงเวลาที่ใกล้ "ตอนนี้" ที่สุด ไม่ใช่ช่องแรกของไฟล์ซึ่งอาจเก่าหลายชั่วโมง */
+    const now=Date.now(); let k=0, best=Infinity;
+    for(let j=0;j<H.time.length;j++){
+      const dt=Math.abs(Date.parse(H.time[j]+':00Z')-now);
+      if(dt<best){ best=dt; k=j; }
+    }
+    return {spd:H.wind_speed_10m[k], dir:H.wind_direction_10m[k],
+            pre:H.precipitation[k], gst:H.wind_gusts_10m[k]};
+  }catch(e){ return null; }
+}
+/* คำเรียกอากาศจากค่าที่แคชมี — บันไดเดียวกับ simulate แต่ไม่มี weather_code กับความกดอากาศ
+   จึงไม่มีวันพูดคำว่า "พายุ" ซึ่งถูกแล้ว เพราะพายุต้องดูความกดอากาศ (ข้อ 93) */
+function wxWord(w){
+  if(!w) return null;
+  if(w.gst>=CFG.GUST_HOLD) return 'ลมกระโชกแรง';
+  if(w.pre>=2.5) return 'ฝนหนัก';
+  if(w.pre>=0.15) return 'ฝนปรอย';
+  if(w.spd>=22) return 'ลมพัด';
+  return 'ฟ้าเปิด';
+}
+
 /* ---------- ข้อมูลย่อย ---------- */
 function tracesOf(L,upto){
   let pre=0, st=0, gu=0, ic=0;
@@ -4524,6 +4689,8 @@ function fillInbox(list,now){
     });
   });
   if(!n) box.innerHTML='<p class="note">ยังไม่มีจดหมายในเครื่องนี้</p>';
+  const np=store.ports().length;
+  $('#mPortCount').textContent = np ? np+' คน' : 'ยังไม่มี';
   $('#mCount').textContent = list.length ? (function(){
     const unread=list.filter(L=>L.dir==='in'&&letterState(L,now).arrived&&!L.read).length;
     const coming=list.filter(L=>L.dir==='in'&&!letterState(L,now).arrived).length;
@@ -4531,9 +4698,148 @@ function fillInbox(list,now){
     return p.length?p.join(' · '):list.length+' ฉบับ';
   })() : 'ยังไม่มี';
 }
+/* ---------- หน้าจอของ port ---------- */
+let pendPort=null;          /* port ที่เพิ่งเปิดจากลิงก์ รอผู้ใช้ตัดสิน */
+let pickMode=false;         /* เปิดรายชื่อมาเพื่อ *เลือกผู้รับ* ไม่ใช่มาดู */
+let viewPort=null;          /* port ที่กำลังเปิดดูอยู่ */
+
+function portDist(pt){
+  const me=store.me();
+  return (me&&me.lat!=null) ? gcDist({lat:me.lat,lng:me.lng},{lat:pt.a,lng:pt.o}) : null;
+}
+function portLetters(pt){
+  return store.letters().filter(L=> L.dir==='out' ? (L.tp===pt.i) : (L.f&&L.f.n===pt.n)).length;
+}
+
+/* ---------- drift port ของฉัน ---------- */
+async function openMine(){
+  const me=store.me()||{};
+  $('#myAddr').textContent=pidPretty(myPid());
+  $('#myWho').textContent=me.name||'ยังไม่ได้ตั้งชื่อ';
+  $('#mySub').textContent=me.place||'ยังไม่ได้ตั้งต้นทาง';
+  const n=store.ports().length;
+  $('#myCount').textContent = n ? 'มีคนอยู่ในรายชื่อคุณ '+n+' คน' : 'ยังไม่มีใครอยู่ในรายชื่อคุณ';
+  openSheet('mine');
+  const url=await myPortLink();
+  $('#btnMyCopy').onclick=async()=>{
+    try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่แล้ว'); }
+    catch(e){ toast('คัดลอกไม่ได้ — กดค้างที่รหัสเพื่อคัดลอกเอง'); }
+  };
+  $('#btnMyShare').onclick=async()=>{
+    if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
+    else toast('เบราว์เซอร์นี้ไม่รองรับการส่งต่อ — ใช้คัดลอกแทน');
+  };
+}
+
+/* ---------- รับที่อยู่ของคนอื่น (ข้อ 99.10ค) ----------
+   ⚠️ ที่อยู่เดินทางทางเดียว — รับของเขาไว้ = *เรา* เขียนถึงเขาได้
+   เขาจะเขียนกลับได้ก็ต่อเมื่อเราให้ที่อยู่ของเรากลับไป ปุ่มสองปุ่มจึงต้องบอกผลต่างกันชัด */
+async function ingestPort(payload){
+  const pt=sanitizePort(await unpackPayload(payload));
+  if(!pt) throw new Error('bad port');
+  if(pt.i===myPid()){ toast('นี่คือที่อยู่ของคุณเอง'); return; }
+  pendPort=pt;
+  const known=store.ports().find(x=>x.i===pt.i);
+  const d=portDist(pt);
+  $('#gpStamp').textContent = known ? 'อัปเดตที่อยู่' : 'มีคนให้ที่อยู่คุณ';
+  $('#gpName').textContent = safeName(pt.n);
+  $('#gpWhere').textContent = (pt.p||'ไม่ระบุที่') + (d!=null ? ' · ห่างจากคุณ '+Math.round(d).toLocaleString()+' กม.' : '');
+  openSheet('gotport');
+}
+async function takePort(giveBack){
+  if(!pendPort) return;
+  store.putPort(pendPort);
+  const pt=pendPort; pendPort=null;
+  closeSheet();
+  if(giveBack){
+    const url=await myPortLink();
+    if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
+    else { try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่ของคุณแล้ว — ส่งให้เขาได้เลย'); }catch(e){} }
+    store.putPort({i:pt.i, gave:1});
+  }else toast('เก็บที่อยู่แล้ว');
+  refreshDock();
+}
+
+/* ---------- คนที่เขียนถึงได้ ---------- */
+function openPorts(pick){
+  pickMode=!!pick;
+  $('#portsTitle').textContent = pickMode ? 'เขียนถึงใคร' : 'คนที่เขียนถึงได้';
+  fillPorts();
+  openSheet('ports');
+}
+function fillPorts(){
+  const box=$('#portsList'), a=store.ports().sort((x,y)=>(y.at||0)-(x.at||0));
+  box.innerHTML='';
+  if(!a.length){
+    box.innerHTML='<p class="note">ยังไม่มีใครในรายชื่อ<br><span style="color:var(--faint)">'
+      +'ให้ที่อยู่ของคุณกับใครสักคน แล้วขอที่อยู่เขากลับมา</span></p>';
+    return;
+  }
+  a.forEach(pt=>{
+    const d=portDist(pt);
+    const b=document.createElement('button');
+    b.className='mrow';
+    b.innerHTML='<b>'+esc(safeName(pt.n))+'</b><em>'
+      +esc(pt.p||'')+(d!=null?' · '+Math.round(d).toLocaleString()+' กม.':'')+'</em>';
+    b.onclick=()=>{ pickMode ? pickPort(pt) : openPort(pt); };
+    box.appendChild(b);
+    if(!pt.gave){
+      /* ⚠️ พูดตามที่รู้จริง — ขั้นนี้รู้แค่ว่าเรายังไม่ได้ส่งที่อยู่ให้เขา
+         ไม่รู้ว่าเขาเก็บไว้ไหม ถ้าเขียนว่า "เขาเขียนกลับไม่ได้" จะเกินกว่าที่รู้ */
+      const n=document.createElement('p');
+      n.className='note faint'; n.style.cssText='margin:-4px 0 8px 4px';
+      n.textContent='ยังไม่ได้ให้ที่อยู่ของคุณกับเขา — เขียนกลับหาคุณไม่ได้';
+      box.appendChild(n);
+    }
+  });
+}
+function pickPort(pt){
+  pendTo={lat:pt.a,lng:pt.o,place:pt.p};
+  pendPortTo=pt;
+  $('#cTo').value=safeName(pt.n);
+  $('#cPlace').value=pt.p||'';
+  $('#cHits').innerHTML='';
+  closeSheet(); openSheet('compose'); syncDist();
+}
+
+/* ---------- หน้า port ของอีกฝ่าย ---------- */
+async function openPort(pt){
+  viewPort=pt;
+  const d=portDist(pt);
+  $('#p1Name').textContent=safeName(pt.n);
+  $('#p1Sub').textContent=(pt.p||'ไม่ระบุที่')+(d!=null?' · '+Math.round(d).toLocaleString()+' กม.':'');
+  const n=portLetters(pt);
+  $('#p1Count').textContent = n ? 'เขียนถึงกันมาแล้ว '+n+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน';
+  $('#p1Give').hidden = !!pt.gave;
+  $('#p1Sky').textContent='กำลังดูฟ้าที่นั่น…';
+  openSheet('port1');
+  const w=await wxAt(pt.a,pt.o);
+  /* ยังเปิดหน้าเดิมอยู่ไหม — ถ้าผู้ใช้กดปิดไปแล้วระหว่างรอ อย่าเขียนทับของใหม่ */
+  if(viewPort!==pt) return;
+  $('#p1Sky').textContent = w
+    ? wxWord(w)+' · ลม '+Math.round(w.spd)+' กม./ชม.'
+    : 'ไม่รู้ฟ้าที่นั่น — อยู่นอกเขตที่แอปเก็บลมไว้';
+}
+
 $('#btnMenu').onclick=()=>{ refreshDock(); openSheet('menu'); };
 $('#mInbox').onclick=()=>{ openSheet('inbox'); };
 $('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
+$('#mPorts').onclick=()=>openPorts(false);
+$('#mMine').onclick=openMine;
+$('#btnGpSwap').onclick=()=>takePort(true);
+$('#btnGpKeep').onclick=()=>takePort(false);
+$('#btnP1Write').onclick=()=>{ if(viewPort) pickPort(viewPort); };
+$('#p1Give').onclick=async()=>{
+  if(!viewPort) return;
+  const url=await myPortLink();
+  if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
+  else { try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่ของคุณแล้ว'); }catch(e){} }
+  store.putPort({i:viewPort.i, gave:1}); viewPort.gave=1; $('#p1Give').hidden=true;
+};
+$('#btnP1Del').onclick=()=>{
+  if(!viewPort) return;
+  store.delPort(viewPort.i); viewPort=null; closeSheet(); toast('เอาออกจากรายชื่อแล้ว');
+};
 
 $('#pPlay').onclick=()=>{
   const L=store.letters().find(x=>x.id===selected); if(!L) return;
@@ -4616,13 +4922,18 @@ function syncDist(){
 
 /* ---------- เขียน / ส่ง ---------- */
 let pendTo=null;
+/* port ที่ถูกเลือกเป็นผู้รับ — เก็บรหัสลง จดหมายขาออกเพื่อให้นับ "เขียนถึงกันกี่ฉบับ" ได้
+   ⚠️ ขั้นนี้จดหมาย *ขาเข้า* ยังไม่มีรหัส port เพราะลิงก์รุ่นเก่าไม่มีช่องนั้น */
+let pendPortTo=null;
 /* ผ่านลูกระนาดข้อมูลส่วนตัวไปแล้วหรือยัง — รีเซ็ตทุกครั้งที่เปิดหน้าเขียนใหม่ */
 let sendOK=false;
 function askOff(){ sendOK=false; $('#cAsk').classList.remove('on'); $('#btnSend').textContent='ปล่อยให้ลมพา'; }
 function openCompose(){
   const me=store.me();
   if(me) $('#cFrom').value=me.name||'';
-  syncOriginNote(); syncDist(); askOff(); openSheet('compose');
+  syncOriginNote(); syncDist(); askOff();
+  $('#cPick').hidden = !store.ports().length;
+  openSheet('compose');
   document.documentElement.style.setProperty('--kb','0px');
   paintWritePaper(); syncKB(); windHere();
   if(!wRaf) writeLoop();
@@ -4696,13 +5007,11 @@ function writeLoop(){
 async function windHere(){
   if(WIND_HERE!==null) return;
   const me=store.me(); if(!me||me.lat==null) return;
-  try{
-    const man=await wcManifest(); if(!man) return;
-    const t=wcPick(man,[{lat:me.lat,lng:me.lng}]); if(!t) return;
-    const d=await wcLoad(man,t);
-    const s=wcSeries(t,d,me.lat,me.lng);
-    if(s&&s.length&&s[0]&&typeof s[0].spd==='number') WIND_HERE=s[0].spd;
-  }catch(e){ /* ไม่รู้ลม = กระดาษนิ่ง ไม่ใช่เหตุให้เขียนจดหมายไม่ได้ */ }
+  /* ⚠️ ของเดิมอ่าน s[0].spd ทั้งที่ wcSeries คืน {hourly:{...}} ไม่ใช่อาร์เรย์
+     เงื่อนไขจึงเป็นเท็จเสมอ และกระดาษไม่เคยหายใจเลยตั้งแต่ข้อ 102
+     บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
+  const w=await wxAt(me.lat,me.lng);
+  if(w && typeof w.spd==='number') WIND_HERE=w.spd;
 }
 
 /* วางปากกา = เลิกพิมพ์ ไม่ใช่กดปุ่ม — จับจาก focus/blur ของช่องบนกระดาษ */
@@ -4755,7 +5064,8 @@ async function doSend(){
     const id=uid();
     const sim0=simulate(pts,wx,dist,0,id);
     pending={ id, dist, pts, wx, A, B, me, to, from, body,
-              place:pendTo.place, sim:sim0, sims:[sim0,null,null], ct:0 };
+              place:pendTo.place, tp:(pendPortTo&&pendPortTo.i)||null,
+              sim:sim0, sims:[sim0,null,null], ct:0 };
     showForecast();
     openSheet('forecast');
   }catch(e){
@@ -4849,6 +5159,7 @@ async function confirmSend(){
     t:{n:p.to,   la:coarseLat(p.B.lat),  lo:coarseLat(p.B.lng),  p:p.place},
     s:Date.now(), th:sim.total, ct:p.ct, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
   };
+  if(p.tp) rec.tp=p.tp;   /* รหัส port ผู้รับ — อยู่ในเครื่องเท่านั้น ไม่ได้เข้าลิงก์ */
   store.put(Object.assign({dir:'out'},rec));
   const payload=await packPayload(rec);
   const base=location.href.split('#')[0];
@@ -4873,7 +5184,7 @@ async function confirmSend(){
   if(url.length>CFG.URL_WARN) toast('ลิงก์ยาวผิดปกติ — บางแอปแชทอาจตัดสั้น');
   $('#cTo').value=''; $('#cBody').value=''; $('#cHits').innerHTML=''; $('#cPlace').value='';
   $('#cBody').style.height=''; $('#cCount').textContent=''; $('#cCount').className='';
-  $('#cDist').textContent=''; pendTo=null;
+  $('#cDist').textContent=''; pendTo=null; pendPortTo=null;
   selected=rec.id; refreshDock();
   /* ---------- องก์ปล่อย (ข้อ 44) ----------
      จดหมายถูกบันทึกแล้วก่อนเริ่มแอนิเมชัน — ถ้าผู้ใช้ปิดแอปกลางทาง จดหมายก็ยังออกเดินทางแล้วจริง
@@ -4999,6 +5310,13 @@ async function ingest(payload){
 async function receiveFromHash(){
   const h=location.hash.slice(1);
   if(h.length<10) return;
+  /* ลิงก์จดหมายขึ้นต้นด้วย z หรือ r (จาก packPayload) · ลิงก์ที่อยู่ขึ้นต้นด้วย p
+     แยกที่ตัวอักษรแรกจึงพอ ไม่ต้องเดาจากเนื้อใน */
+  if(h[0]==='p'){
+    try{ await ingestPort(h.slice(1)); }
+    catch(e){ toast('ลิงก์ที่อยู่เสียหาย อ่านไม่ได้'); }
+    return;
+  }
   try{ await ingest(h); }
   catch(e){ toast('ลิงก์จดหมายเสียหาย อ่านไม่ได้'); }
 }
@@ -5007,6 +5325,12 @@ async function receiveFromCode(){
   if(!s) return toast('ยังไม่ได้วางรหัส');
   const i=s.indexOf('#'); if(i>=0) s=s.slice(i+1);
   s=s.replace(/\s+/g,'');
+  /* ช่องนี้รับได้ทั้งรหัสจดหมายและรหัสที่อยู่ — คนวางมาไม่รู้หรอกว่ามันคนละชนิด */
+  if(s[0]==='p'){
+    try{ await ingestPort(s.slice(1)); $('#vCode').value=''; }
+    catch(e){ toast('รหัสไม่ถูกต้องหรือขาดหาย'); }
+    return;
+  }
   try{ await ingest(s); $('#vCode').value=''; toast('รับจดหมายแล้ว'); }
   catch(e){ toast('รหัสไม่ถูกต้องหรือขาดหาย'); }
 }
@@ -5132,6 +5456,7 @@ $('#btnWrite').onclick=openCompose;
 $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
 $('#btnAskNo').onclick=()=>{ askOff(); $('#cBody').focus(); };
+$('#btnPick').onclick=()=>openPorts(true);
 $('#vName').addEventListener('change',saveMe);
 $('#vWF').addEventListener('change',e=>{
   LS.set('drift.wf', e.target.checked?'1':'0');
