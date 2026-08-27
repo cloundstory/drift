@@ -249,6 +249,22 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 }
 @media (prefers-reduced-motion:reduce){#cSheet{transform:none !important}}
 
+
+/* ---------- ม่านคลุมจดหมายที่อาจทำร้ายผู้อ่าน (ข้อ 103) ----------
+   เบลอ ไม่ใช่ลบ — ผู้รับยังเป็นเจ้าของจดหมายของตัวเอง เราแค่ไม่ยัดให้อ่านทันที */
+.shade{position:relative;border:1px solid rgba(168,87,74,.35);border-radius:14px;
+  background:rgba(255,255,255,.3);padding:20px 18px;text-align:center}
+.shade .cat{font-size:11px;letter-spacing:.2em;color:#a8574a;margin-bottom:9px}
+.shade b{display:block;font-weight:normal;font-size:15px;letter-spacing:.04em;margin-bottom:6px}
+.shade p{font-size:12px;color:var(--dim);line-height:1.9;margin-bottom:16px}
+.shade .row{max-width:320px;margin:0 auto}
+.hush{filter:blur(9px);opacity:.5;pointer-events:none;user-select:none}
+/* แถบยืนยันก่อนส่ง — ไม่ใช้ modal เพราะหน้าเขียนหดตามคีย์บอร์ดอยู่แล้ว
+   modal ทับตอนคีย์บอร์ดขึ้น = ปุ่มหายใต้คีย์บอร์ด ซึ่งเป็นบั๊กเดียวกับข้อ 63.4 */
+#cAsk{display:none;border-left:2px solid rgba(168,87,74,.55);padding:0 0 0 12px;margin-bottom:10px}
+#cAsk.on{display:block}
+#cAsk b{display:block;font-weight:normal;font-size:12.5px;line-height:1.7}
+#cAsk i{display:block;font-style:normal;font-size:11px;color:var(--warn,#a8574a);line-height:1.7;margin-bottom:8px}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -316,7 +332,12 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       </div>
     </div>
   </div>
-  <div id="cBar"><button class="btn wide gold" id="btnSend">ปล่อยให้ลมพา</button></div>
+  <div id="cBar">
+    <div id="cAsk"><b>จดหมายนี้มี<span id="cAskWhat"></span>อยู่ข้างใน</b>
+      <i>ลิงก์จดหมายส่งต่อกันได้ ใครเห็นลิงก์ก็อ่านได้</i>
+      <button class="btn" id="btnAskNo" style="margin-bottom:6px">กลับไปแก้</button></div>
+    <button class="btn wide gold" id="btnSend">ปล่อยให้ลมพา</button>
+  </div>
 </section>
 
 <section class="sheet" id="forecast">
@@ -389,6 +410,14 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <textarea id="vCode" placeholder="วางลิงก์ทั้งอัน หรือเฉพาะรหัสหลัง # ก็ได้" style="min-height:84px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5"></textarea></label>
     <button class="btn wide" id="btnCode">รับจดหมาย</button>
     <div class="note" style="margin-top:8px">ใช้ตอนแชทตัดลิงก์ขาด หรือเปิดลิงก์ตรง ๆ ไม่ได้</div>
+    <div class="rule"></div>
+    <label class="f" style="display:flex;align-items:flex-start;gap:10px;margin-bottom:0">
+      <input type="checkbox" id="vWF" checked style="width:auto;margin-top:4px;accent-color:#c69a54">
+      <span style="letter-spacing:0;font-size:12.5px;color:var(--txt);text-transform:none">กรองคำที่อาจทำร้าย
+        <span style="display:block;font-size:11px;color:var(--faint);line-height:1.7">
+        เบลอจดหมายขาเข้าที่มีคำเหยียด ข่มขู่ หรือคุกคามทางเพศ — เปิดอ่านเองได้เสมอ<br>
+        ตรวจในเครื่องนี้เท่านั้น ไม่มีอะไรถูกส่งออก</span></span>
+    </label>
     <div class="rule"></div>
     <div class="note" id="vStat"></div>
     <div class="rule"></div>
@@ -4045,6 +4074,166 @@ stage.addEventListener('pointermove',e=>{
 addEventListener('pointerup',e=>{ G.drag=false; PTR.delete(e.pointerId); });
 addEventListener('pointercancel',e=>{ G.drag=false; PTR.delete(e.pointerId); });
 
+/* ============================================================
+   ตัวกรองคำ (ข้อ 103)
+   ============================================================
+   ⚠️ อ่านสามบรรทัดนี้ก่อนแก้อะไรก็ตามในก้อนนี้
+
+   1. ตัวกรองนี้เป็น "เครื่องป้องกันตัวของผู้รับ" ไม่ใช่ "เครื่องเซ็นเซอร์ของเรา"
+      มันทำงานฝั่งผู้รับเป็นหลัก · ฝั่งผู้ส่งแตะเฉพาะหมวดที่ปกป้องผู้ส่งเอง
+      จดหมายส่วนตัวระหว่างคนที่ยินยอมกันแล้ว ไม่ใช่ของที่เรามีสิทธิ์ตรวจ (ข้อ 79)
+
+   2. **ตัวกรองฝั่งเครื่องข้ามได้ง่ายมาก** เว้นวรรค สลับตัว ใช้เลขแทนสระ ก็หลุดแล้ว
+      มันคือ *ตัวลดความบังเอิญ* ไม่ใช่ *เครื่องกันคนตั้งใจ*
+      ⛔ ห้ามให้มันมาแทนปุ่มบล็อกกับเอาที่อยู่คืน (ข้อ 99.5) ซึ่งเป็นของที่ได้ผลจริง
+
+   3. ⛔ **ไม่มีหมวดการทำร้ายตัวเอง และห้ามเพิ่ม** — กอล์ฟตัดสิน 27 ส.ค.
+      คนที่เขียนถึงเพื่อนว่าตัวเองไม่ไหวแล้ว คือสิ่งที่แอปนี้มีไว้รองรับ
+      เบลอหรือเตือน = ปิดปากคนที่กำลังขอความช่วยเหลือ
+   ============================================================ */
+const CF = {
+  /* ระดับ 2 = เบลอไว้ก่อน ให้ผู้รับเลือกเปิดเอง · 1 = บอกให้รู้ ไม่เบลอ · 0 = นับไว้เฉย ๆ */
+  CAT: {
+    slur:    {sev:2, w:'คำเหยียด'},
+    threat:  {sev:2, w:'การข่มขู่'},
+    harass:  {sev:2, w:'การคุกคามทางเพศ'},
+    sexual:  {sev:1, w:'เนื้อหาทางเพศ'},
+    scam:    {sev:1, w:'สแปมหรือการหลอกลวง'},
+    illegal: {sev:1, w:'ยาเสพติดหรืออาวุธ'},
+    swear:   {sev:0, w:'คำหยาบ'}
+  },
+
+  /* ---------- รายการคำ ----------
+     เขียนเป็น regex เพราะภาษาไทยไม่มีช่องว่างระหว่างคำ การจับแบบ substring ล้วน
+     จะไปโดนคำบริสุทธิ์ที่มีคำหยาบซ่อนอยู่ข้างใน ซึ่งน่ารำคาญกว่าไม่มีตัวกรองเลย
+
+     ⚠️ ทุกตัวที่มี (?!...) คือกับดักที่ทดสอบแล้วว่าเจอจริง อย่าเอาออก:
+        เชี่ย(?!ว)      — เชี่ยวชาญ      ห่า(?!ง)   — ห่างไกล
+        (?:^|[^เ])หี(?!บ) — หีบ · และ *เหี้ย* ซึ่งเป็นคำหยาบ ไม่ใช่เรื่องเพศ
+        แม่ง(?!าน)      — แม่งาน        เสียว(?!ฟัน) — เสียวฟัน
+     ⚠️ และของที่ *จงใจไม่ใส่*: นม (นมวัว) · สัตว์ · หมา · มึง/กู (สรรพนามระหว่างเพื่อน)
+        กัญชา (ถูกกฎหมายในไทยแล้ว) · เบอร์โทร (คนส่งเบอร์ให้กันในจดหมายเป็นเรื่องปกติ) */
+  L: [
+    /* ---- คำเหยียด — เชื้อชาติ ศาสนา เพศ รสนิยม ความพิการ ---- */
+    ['slur', 'ไอ้ดำ|อีดำ|ไอ้เจ๊ก|ไอ้แขก|ไอ้ลาว|ไอ้พม่า|ไอ้เขมร|ไอ้ญวน|ไอ้จีน'],
+    ['slur', 'ไอ้ง่อย|อีง่อย|ปัญญาอ่อน|ไอ้บ้าใบ้|ไอ้เพี้ยน|สมองหมา|ไอ้ปัญญา'],
+    ['slur', 'อีตุ๊ด|ไอ้ตุ๊ด|ไอ้แต๋ว|อีแต๋ว|ไอ้กะเทย|อีกะเทย|ตุ๊ดดัดจริต'],
+    ['slur', 'อีดอก|ดอกทอง|อีตัว|กะหรี่|อีกะหรี่|อีสำส่อน|ผู้หญิงต่ำ'],
+    ['slur', 'nigg[ae]r|n1gg|chink|gook|spic|wetback|towelhead|raghead'],
+    ['slur', 'f[a4]gg?ot|f[a4]gs?\\b|tranny|dyke\\b|shemale'],
+    ['slur', 'retard(ed)?|spastic|cripple\\b|mongoloid'],
+    ['slur', 'kike\\b|jewboy|paki\\b'],
+
+    /* ---- ข่มขู่ · ความรุนแรง ---- */
+    ['threat', 'ฆ่ามึง|ฆ่าแก|ฆ่ามัน|จะฆ่า|ตามไปฆ่า|สั่งเก็บ|จ้างเก็บ|เอาให้ตาย'],
+    ['threat', 'รู้ว่าบ้านอยู่ไหน|รู้ว่ามึงอยู่ไหน|รู้ที่อยู่มึง|ตามไปถึงบ้าน|ไปหาถึงบ้าน'],
+    ['threat', 'ระวังตัวไว้|เจอกันแน่|ตายแน่|ไม่รอดแน่|เผาบ้าน|ตามล่า|ไล่ยิง|ยิงทิ้ง'],
+    ['threat', 'ทำร้ายครอบครัว|จับลูกมึง|เอาลูกมึง'],
+    ['threat', "i('?ll| will| am gonna| gonna)? kill (you|u)\\b|kill (you|u) both"],
+    ['threat', 'i know where (you|u) live|watch your back|you(\'re| are) dead|hunt (you|u) down'],
+    ['threat', 'burn your house|rape (you|u)\\b|beat (you|u) up'],
+
+    /* ---- คุกคามทางเพศ — ต่างจาก "เนื้อหาทางเพศ" ตรงที่ผู้รับไม่ได้ขอ ---- */
+    ['harass', 'อยากเย็ด|ขอเย็ด|อยากเอามึง|อยากเอาแก|ขอเอาหน่อย|เอาไหมล่ะ'],
+    ['harass', 'ขอดูนม|ขอดูหี|ขอดูจิ๋ม|ส่งรูปโป๊|ขอรูปโป๊|ขอรูปแก้ผ้า|ถอดให้ดู'],
+    ['harass', 'อยากดูดนม|อยากจับนม|อยากลูบ|เงี่ยนมึง|หื่นใส่'],
+    ['harass', 'send (me )?nudes|show me your (tits|boobs|body)|want to fuck (you|u)'],
+    ['harass', 'suck my (dick|cock)|sit on my|d[i1]ck ?p[i1]c'],
+
+    /* ---- เนื้อหาทางเพศชัดแจ้ง ---- */
+    ['sexual', 'เย็ด|ควย|(?:^|[^เ])หี(?!บ)|จิ๋ม|เสียว(?!ฟัน)|ช่วยตัวเอง|หนังโป๊|คลิปหลุด|โม๊ก|อมนกเขา'],
+    ['sexual', 'p[o0]rn|blowjob|handjob|c[u\\*]m(shot|ming)?\\b|pussy|cock\\b|dildo|orgasm|masturbat'],
+
+    /* ---- สแปม · หลอกลวง ---- */
+    ['scam', 'กำไรแน่นอน|รวยเร็ว|รวยข้ามคืน|ผลตอบแทนสูง|รับประกันกำไร|ปันผลทุกวัน'],
+    ['scam', 'เครดิตฟรี|สมัครรับเครดิต|ฝากถอนออโต้|บาคาร่า|สล็อตออนไลน์|แทงบอล|เว็บพนัน'],
+    ['scam', 'กู้เงินด่วน|เงินด่วนนอกระบบ|ไม่เช็คบูโร|อนุมัติไว.?ไม่ต้องค้ำ'],
+    ['scam', 'ลงทุนขั้นต่ำ|ทักไลน์ด่วน|กดลิงก์รับ|ยืนยันตัวตนด่วน|บัญชีถูกระงับ'],
+    ['scam', 'guaranteed (profit|return)|get rich quick|free credit|forex signal|crypto (giveaway|doubl)'],
+    ['scam', 'click (this )?link|verify your account|claim your prize|nigerian prince'],
+
+    /* ---- ยาเสพติด · อาวุธ (กัญชาไม่นับ ถูกกฎหมายในไทย) ---- */
+    ['illegal', 'ยาบ้า|ยาไอซ์|ยาอี|เฮโรอีน|โคเคน|ยาเค|ใบกระท่อม.?ผสม|สี่คูณร้อย'],
+    ['illegal', 'ปืนเถื่อน|ขายปืน|ปืนไม่มีทะเบียน|ระเบิดแสวงเครื่อง|ขายกระสุน'],
+    ['illegal', 'meth(amphetamine)?\\b|heroin|cocaine\\b|ketamine|buy (a )?gun|unregistered gun'],
+
+    /* ---- คำหยาบทั่วไป — ไม่เบลอ เพราะเพื่อนด่ากันเล่นเป็นเรื่องปกติ ---- */
+    ['swear', 'เหี้ย|สัส|เชี่ย(?!ว)|ระยำ|ชิบหาย|แม่ง(?!าน)|ห่า(?!ง)|ไอ้เวร|อีเวร|ตอแหล|พ่อง|เย็ดแม่'],
+    ['swear', 'fuck|sh[i1]t\\b|bitch|bastard|asshole|dumbass|motherfuck']
+  ],
+
+  _rx: null,
+  _build(){
+    if(this._rx) return;
+    this._rx = this.L.map(([c,src])=>[c,new RegExp(src,'gi')]);
+  },
+
+  /* ทำให้ตัวหนังสือเป็นรูปเดียวกันก่อนจับ — ไม่งั้นแค่เว้นวรรคก็หลุดแล้ว
+     ⚠️ ห้ามใช้กับตัวเลข เพราะ piiScan ต้องอ่านเลขดิบ */
+  norm(s){
+    return String(s||'').toLowerCase()
+      .replace(/[​-‏﻿­]/g,'')          /* ตัวมองไม่เห็นที่เอาไว้แทรกให้หลุด */
+      .replace(/[4@]/g,'a').replace(/3/g,'e').replace(/[1!|]/g,'i')
+      .replace(/0/g,'o').replace(/[5$]/g,'s').replace(/7/g,'t')
+      .replace(/(.)\1{2,}/g,'$1$1');                        /* เหี้ยยยยย → เหี้ยย */
+  },
+  squeeze(s){ return this.norm(s).replace(/[\s._\-*+=~`'"^()\[\]]/g,''); },
+
+  scan(text){
+    this._build();
+    const a=this.norm(text), b=this.squeeze(text);
+    const cats={}; let sev=0;
+    for(const [c,rx] of this._rx){
+      rx.lastIndex=0; const hit=rx.test(a) || (rx.lastIndex=0,rx.test(b));
+      if(hit){ cats[c]=(cats[c]||0)+1; sev=Math.max(sev,this.CAT[c].sev); }
+    }
+    return {sev, cats:Object.keys(cats)};
+  },
+  /* คำอธิบายสั้น ๆ ที่เอาไปโชว์ได้ — บอกว่าเจอ *หมวดอะไร* ไม่ใช่ *คำอะไร*
+     เพราะการเอาคำนั้นมาโชว์ซ้ำ เท่ากับส่งคำนั้นให้ผู้รับอ่านอยู่ดี */
+  words(cats){ return cats.map(c=>this.CAT[c].w).join(' · '); }
+};
+
+/* ชื่อที่แสดง — เข้มกว่าจดหมาย เพราะชื่อถูกยัดให้คนอื่นเห็นโดยไม่ได้ขอ
+   จดหมายเป็นสิ่งที่ผู้รับเลือกเปิด แต่ชื่อโผล่ในกล่องเลย ไม่มีทางเลี่ยง */
+function wfName(n){
+  const r=CF.scan(n);
+  return r.sev>0 || r.cats.indexOf('swear')>=0 ? r : null;
+}
+/* ชื่อผู้ส่งมาจากลิงก์ = ข้อมูลของคนอื่นที่เราคุมไม่ได้ (ข้อ 57.1)
+   ถ้ามันเป็นคำเหยียด การเอามาโชว์ในกล่องคือการช่วยเขาด่าผู้รับ */
+function safeName(n){ return wfName(n) ? 'ผู้ส่งไม่ระบุชื่อ' : n; }
+
+/* ---------- ข้อมูลส่วนตัวหลุด ----------
+   หมวดเดียวที่ทำงานฝั่งผู้ส่ง เพราะมันปกป้อง *คนเขียน* ไม่ใช่คนอ่าน
+   ⚠️ ตรวจ checksum ไม่ใช่แค่นับหลัก — "เลข 13 หลักใด ๆ" จะไปโดนวันที่ เลขพัสดุ
+   และตัวเลขในจดหมายธรรมดา ซึ่งจะทำให้คำเตือนกลายเป็นเสียงรบกวนที่คนกดข้ามทุกครั้ง */
+function thaiIdOK(d){
+  if(d.length!==13) return false;
+  let s=0; for(let i=0;i<12;i++) s+=(+d[i])*(13-i);
+  return ((11-(s%11))%10)===+d[12];
+}
+function luhnOK(d){
+  if(d.length<13||d.length>19) return false;
+  let s=0, alt=false;
+  for(let i=d.length-1;i>=0;i--){
+    let n=+d[i];
+    if(alt){ n*=2; if(n>9) n-=9; }
+    s+=n; alt=!alt;
+  }
+  return s%10===0;
+}
+function piiScan(text){
+  const t=String(text||''), out=[];
+  const nums=t.replace(/[\s\-.]/g,'').match(/\d{13,19}/g)||[];
+  if(nums.some(n=>thaiIdOK(n.slice(0,13)))) out.push('เลขบัตรประชาชน');
+  if(nums.some(luhnOK)) out.push('เลขบัตรเครดิต');
+  if(/(รหัสผ่าน|พาสเวิร์ด|password|passcode)\s*(คือ|:|=|is)/i.test(t)) out.push('รหัสผ่าน');
+  if(/\b(otp|โอทีพี|รหัสยืนยัน)\b[\s:]*\d{4,8}/i.test(t)) out.push('รหัส OTP');
+  return out;
+}
+
+
 /* ---------- ข้อมูลย่อย ---------- */
 function tracesOf(L,upto){
   let pre=0, st=0, gu=0, ic=0;
@@ -4295,8 +4484,8 @@ function refreshDock(){
   }else{
     const {L,st,rank}=top;
     let head,sub;
-    if(rank==='here'){ head='มีจดหมายถึงคุณ'; sub='จาก '+esc(L.f.n); el.classList.add('here'); }
-    else if(rank==='coming'){ head='อีก '+fmtDur(st.remain); sub='จาก '+esc(L.f.n); }
+    if(rank==='here'){ head='มีจดหมายถึงคุณ'; sub='จาก '+esc(safeName(L.f.n)); el.classList.add('here'); }
+    else if(rank==='coming'){ head='อีก '+fmtDur(st.remain); sub='จาก '+esc(safeName(L.f.n)); }
     else { head='ของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
     el.hidden=false;
     el.innerHTML='<b>'+head+'</b><i>'+sub+'</i>';
@@ -4329,7 +4518,7 @@ function fillInbox(list,now){
       n++;
       const b=document.createElement('button');
       b.className='mrow'+(L.dir==='in'&&st.arrived&&!L.read?' on':'')+(st.gone?' gone':'');
-      b.innerHTML='<b>'+esc(L.dir==='in'?'จาก '+L.f.n:'ถึง '+L.t.n)+'</b><em>'+etaWord(L,st)+'</em>';
+      b.innerHTML='<b>'+esc(L.dir==='in'?'จาก '+safeName(L.f.n):'ถึง '+L.t.n)+'</b><em>'+etaWord(L,st)+'</em>';
       b.onclick=()=>{ closeSheet(); if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
       box.appendChild(b);
     });
@@ -4389,6 +4578,7 @@ let meDraft=null;
 function showMe(){
   const me=store.me();
   $('#vName').value = me?me.name||'':'';
+  $('#vWF').checked = wfOn();
   $('#vPlace').value = me?me.place||'':'';
   $('#vOrigin').textContent = me&&me.lat!=null ? 'ต้นทาง: '+me.place : 'ยังไม่ได้ตั้งต้นทาง — จำเป็นก่อนส่งจดหมาย';
   const list=store.letters();
@@ -4396,7 +4586,14 @@ function showMe(){
 }
 function saveMe(){
   const me=store.me()||{};
-  me.name=$('#vName').value.trim();
+  const nm=$('#vName').value.trim();
+  /* ชื่อเข้มกว่าเนื้อจดหมาย เพราะชื่อถูกยัดให้คนอื่นเห็นโดยไม่ได้ขอ
+     จดหมายเป็นสิ่งที่ผู้รับเลือกเปิด แต่ชื่อโผล่ในกล่องเลย เลี่ยงไม่ได้ */
+  if(nm && wfOn() && wfName(nm)){
+    $('#vName').value=me.name||'';
+    return toast('ชื่อนี้ใช้ไม่ได้ — มันจะไปโผล่ในกล่องจดหมายของคนอื่น');
+  }
+  me.name=nm;
   if(meDraft){ me.lat=meDraft.lat; me.lng=meDraft.lng; me.place=meDraft.place; }
   store.setMe(me); showMe(); syncOriginNote();
 }
@@ -4419,10 +4616,13 @@ function syncDist(){
 
 /* ---------- เขียน / ส่ง ---------- */
 let pendTo=null;
+/* ผ่านลูกระนาดข้อมูลส่วนตัวไปแล้วหรือยัง — รีเซ็ตทุกครั้งที่เปิดหน้าเขียนใหม่ */
+let sendOK=false;
+function askOff(){ sendOK=false; $('#cAsk').classList.remove('on'); $('#btnSend').textContent='ปล่อยให้ลมพา'; }
 function openCompose(){
   const me=store.me();
   if(me) $('#cFrom').value=me.name||'';
-  syncOriginNote(); syncDist(); openSheet('compose');
+  syncOriginNote(); syncDist(); askOff(); openSheet('compose');
   document.documentElement.style.setProperty('--kb','0px');
   paintWritePaper(); syncKB(); windHere();
   if(!wRaf) writeLoop();
@@ -4532,6 +4732,16 @@ async function doSend(){
   if(body.length>CFG.MAX_BODY) return toast('ข้อความยาวเกิน '+CFG.MAX_BODY+' ตัวอักษร');
   if(!from) return toast('ยังไม่ได้ลงชื่อ');
 
+  /* ---------- ข้อมูลส่วนตัวหลุด (ข้อ 103) ----------
+     หมวดเดียวที่แตะฝั่งผู้ส่ง เพราะมันปกป้อง *คนเขียน* ไม่ใช่คนอ่าน
+     ⚠️ เป็นลูกระนาด ไม่ใช่กำแพง — กดอีกทีก็ส่งได้ จดหมายส่วนตัวไม่ใช่ของที่เราห้าม */
+  const pii=piiScan(body);
+  if(pii.length && !sendOK){
+    $('#cAskWhat').textContent=pii.join(' และ ');
+    $('#cAsk').classList.add('on');
+    $('#btnSend').textContent='ส่งอยู่ดี'; sendOK=true;
+    return;
+  }
   /* จำชื่อไว้ ไม่งั้นต้องพิมพ์ใหม่ทุกฉบับ ซึ่งข้อ 94.3 จัดว่าเป็นหนึ่งในสามจุดที่คนสะดุด */
   if(from && from!==me.name){ me.name=from; store.setMe(me); showMe(); }
   const btn=$('#btnSend'); btn.disabled=true; btn.textContent='กำลังถามสายลม…';
@@ -4691,7 +4901,7 @@ function openRead(L){
   const st=letterState(L,Date.now());
   const stage=$('#rStage'), log=$('#rLog');
   log.classList.remove('on');
-  $('#rMeta').textContent = (L.dir==='in' ? 'จาก '+L.f.n+' · '+L.f.p : 'สำเนาของคุณ · ถึง '+L.t.n+' · '+L.t.p);
+  $('#rMeta').textContent = (L.dir==='in' ? 'จาก '+safeName(L.f.n)+' · '+L.f.p : 'สำเนาของคุณ · ถึง '+L.t.n+' · '+L.t.p);
 
   if(st.gone){
     stage.innerHTML='<div class="waiting"><b>สายลมพัดหลงทาง</b>จดหมายฉบับนี้ไม่ถึงปลายทาง<br>'
@@ -4709,16 +4919,34 @@ function openRead(L){
     $('#btnCal').onclick=()=>calendarFor(L);
     $('#btnNoti').onclick=askNotify;
   }else{
-    const tr=tracesOf(L);
     stage.innerHTML='<div class="paperwrap" id="rPaper"><canvas id="rCanvas"></canvas>'
-      +'<div class="ptext"><div>'+esc(L.bd)+'</div><div class="sig">— '+esc(L.f.n)+'</div></div></div>';
+      +'<div class="ptext"><div>'+esc(L.bd)+'</div><div class="sig">— '+esc(safeName(L.f.n))+'</div></div></div>';
     requestAnimationFrame(paintPaper);
-    if(L.dir==='in'&&!L.read){ L.read=true; store.put(L); }
+    /* ---------- ม่าน (ข้อ 103) ----------
+       เฉพาะจดหมายขาเข้า · ขาออกเป็นของที่เราเขียนเอง จะเตือนตัวเองทำไม
+       และเฉพาะ sev 2 ซึ่งคือคำเหยียด ข่มขู่ คุกคามทางเพศ — ไม่ใช่แค่คำหยาบ
+       เพราะเพื่อนด่ากันเล่นแล้วโดนเบลอ คือตัวกรองที่คนจะปิดทิ้งภายในวันเดียว */
+    const wr = (L.dir==='in' && wfOn()) ? CF.scan(L.bd) : {sev:0,cats:[]};
+    if(wr.sev>=2){
+      $('#rPaper').classList.add('hush');
+      const sh=document.createElement('div');
+      sh.className='shade';
+      sh.innerHTML='<div class="cat">'+esc(CF.words(wr.cats))+'</div>'
+        +'<b>จดหมายฉบับนี้อาจทำร้ายคุณ</b>'
+        +'<p>เราไม่ได้อ่านจดหมายของคุณ — ตรวจในเครื่องนี้เท่านั้น<br>'
+        +'คุณเป็นเจ้าของมัน จะเปิดหรือไม่เปิดก็ได้</p>'
+        +'<div class="row"><button class="btn" id="btnHush">เปิดอ่าน</button></div>';
+      stage.insertBefore(sh,stage.firstChild);
+      $('#btnHush').onclick=()=>{ sh.remove(); $('#rPaper').classList.remove('hush'); markRead(L); };
+    }else markRead(L);
   }
   buildLog(L,st);
   openSheet('read');
   refreshDock();
 }
+/* นับว่าอ่านแล้วเฉพาะตอนได้เห็นจริง — ฉบับที่ยังถูกม่านคลุมอยู่ ยังไม่ถือว่าอ่าน */
+function markRead(L){ if(L.dir==='in'&&!L.read){ L.read=true; store.put(L); refreshDock(); } }
+function wfOn(){ try{ return LS.get('drift.wf')!=='0'; }catch(e){ return true; } }
 function paintPaper(){
   const cv=$('#rCanvas'); if(!cv||!current) return;
   const box=$('#rPaper'); if(!box) return;
@@ -4903,7 +5131,12 @@ $('#btnHere').onclick=()=>{
 $('#btnWrite').onclick=openCompose;
 $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
+$('#btnAskNo').onclick=()=>{ askOff(); $('#cBody').focus(); };
 $('#vName').addEventListener('change',saveMe);
+$('#vWF').addEventListener('change',e=>{
+  LS.set('drift.wf', e.target.checked?'1':'0');
+  toast(e.target.checked?'เปิดตัวกรองแล้ว':'ปิดตัวกรองแล้ว');
+});
 wireSearch('#cPlace','#cHits',r=>{ pendTo=r; syncDist(); });
 wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต้นทางแล้ว'); });
 
