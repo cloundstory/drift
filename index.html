@@ -179,6 +179,76 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 .grp{font-size:10px;letter-spacing:.34em;color:var(--faint);margin:16px 0 2px}
 .grp:first-child{margin-top:0}
 
+
+/* ---------- องก์ Write — กระดาษจริง (ข้อ 63) ----------
+   ฟอร์มหายไป กลายเป็นส่วนต่าง ๆ ของจดหมายเอง — ชื่อผู้รับอยู่ตรงที่มันควรอยู่บนจดหมาย
+   ไม่ใช่ใน label ที่เขียนว่า "ถึงใคร" · คุณไม่ได้กรอกฟอร์ม คุณกำลังเขียนจดหมาย
+
+   ⚠️ ใช้ input/textarea จริงวางบนกระดาษ ไม่วาดตัวอักษรลง canvas
+   เพราะ caret การเลือกคำ และการพิมพ์ไทยต้องทำงานปกติ */
+#compose{padding:0;height:calc(100% - var(--kb,0px));overflow:hidden}
+#compose.on{display:flex;flex-direction:column}
+#cTop{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(env(safe-area-inset-top) + 13px) 15px 9px}
+#cTop .act{margin:0}
+#cStage{flex:1 1 auto;position:relative;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;padding:6px 14px 18px}
+/* ความกว้างกระดาษมาจาก *ความยาวบรรทัดที่ยังอ่านสบาย* ไม่ใช่พื้นที่ที่มี
+   บรรทัดยาวเกินราว 70 ตัวอักษร สายตาจะหาจุดเริ่มบรรทัดถัดไปไม่เจอ */
+#cSheet{position:relative;margin:0 auto;width:100%;max-width:min(760px,100%);
+  border-radius:2px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(51,51,58,.10),0 10px 26px rgba(51,51,58,.10);
+  transform-origin:50% 15%;will-change:transform}
+#cPaper{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cSheet .ink{position:relative;padding:30px 26px 34px;display:flex;flex-direction:column;min-height:64vh}
+#cSheet .meta{text-align:right;font-size:11px;color:var(--dim);margin-bottom:14px;line-height:1.6}
+.wline{display:flex;align-items:baseline;gap:7px;margin-bottom:4px}
+.wline .lb{font-size:15px;color:rgba(43,43,47,.9);white-space:nowrap}
+#cSheet input,#cSheet textarea{
+  font:inherit;font-size:15px;color:rgba(43,43,47,.92);background:transparent;border:0;outline:0;
+  padding:2px 0;width:100%;resize:none;-webkit-user-select:text;user-select:text;
+  border-bottom:1px solid rgba(84,90,104,.16);border-radius:0}
+#cSheet input::placeholder,#cSheet textarea::placeholder{color:rgba(84,90,104,.34)}
+#cSheet input:focus,#cSheet textarea:focus{border-bottom-color:rgba(198,154,84,.75);background:transparent}
+/* ต้องมี #cSheet นำหน้า ไม่งั้นแพ้ #cSheet textarea{font:inherit} ที่ specificity สูงกว่า */
+#cSheet #cBody{font-size:15px;line-height:1.95;min-height:44vh;margin-top:16px;border-bottom:0}
+#cFrom{text-align:right}
+.wfoot{margin-top:auto;display:flex;align-items:baseline;justify-content:flex-end;gap:7px;padding-top:18px}
+#cHits{position:absolute;left:26px;right:26px;z-index:3;background:#fbf9f4;
+  border:1px solid rgba(84,90,104,.18);border-radius:8px;overflow:hidden;margin:0;display:block}
+#cHits:empty{display:none}
+#cHits .hit{border-radius:0;background:none;border-bottom:1px solid rgba(84,90,104,.10)}
+#cDist{font-size:11px;color:var(--faint);letter-spacing:.03em;margin:2px 0 0 26px}
+#cCount{position:absolute;right:26px;bottom:10px;font-size:10.5px;color:var(--faint);opacity:0;transition:opacity .3s}
+#cCount.near{opacity:1}
+#cBar{flex:0 0 auto;padding:8px 15px calc(env(safe-area-inset-bottom) + 13px)}
+
+/* จอคอม — กระดาษใหญ่ขึ้นทั้งกว้างและสูง ตัวอักษรโตตามระยะการมองที่ไกลกว่ามือถือ */
+@media (min-width:760px) and (min-height:620px){
+  #cStage{padding:14px 22px 24px}
+  #cSheet .ink{padding:46px 56px 52px;min-height:min(78vh,860px)}
+  #cSheet .meta{font-size:12px;margin-bottom:20px}
+  .wline .lb,#cSheet input,#cSheet .ink{font-size:17px}
+  #cSheet #cBody{font-size:17px;line-height:2.05;min-height:46vh;margin-top:22px}
+  #cBar{padding:11px 22px calc(env(safe-area-inset-bottom) + 16px)}
+}
+/* ---------- แนวนอน (ข้อ 63.3) ----------
+   จอแนวนอนสูงไม่พอสำหรับกระดาษแนวตั้งเมื่อคีย์บอร์ดขึ้น — เถียงไม่ได้
+   แต่ *ที่ว่างที่เสียไปคือแนวนอน* ไม่ใช่แนวตั้ง ปล่อยให้กระดาษกว้างตามจอ
+   คำต่อบรรทัดมากขึ้น บรรทัดน้อยลง เห็นเนื้อจดหมายมากขึ้นทั้งที่ความสูงเท่าเดิม */
+@media (orientation:landscape) and (max-height:560px){
+  #cTop{position:absolute;top:0;right:0;z-index:6;padding:8px 10px 0;background:none}
+  #cTop .act{display:none}
+  #cStage{padding:8px 12px 10px}
+  #cSheet{max-width:min(680px,92vw)}
+  #cSheet .ink{padding:16px 22px 18px;min-height:0}
+  #cSheet .meta{margin-bottom:8px}
+  #cSheet #cBody{min-height:28vh;margin-top:10px;line-height:1.75}
+  .wfoot{padding-top:10px}
+  #cBar{padding:6px 12px calc(env(safe-area-inset-bottom) + 7px)}
+}
+@media (prefers-reduced-motion:reduce){#cSheet{transform:none !important}}
+
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -224,21 +294,29 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   </div>
 </section>
 
+<!-- องก์ Write (ข้อ 63) — ฟอร์มหายไป กลายเป็นส่วนต่าง ๆ ของจดหมายเอง
+     ชื่อผู้รับอยู่ตรงที่มันควรอยู่บนจดหมายจริง ไม่ใช่ใน label ที่เขียนว่า "ถึงใคร" -->
 <section class="sheet" id="compose">
-  <button class="close" data-close>ปิด</button>
-  <div class="wrap">
+  <div id="cTop">
     <div class="act">Write</div>
-    <h2>ฝากสายลม</h2>
-    <p class="sub">ลมจะพาไปเอง — เร็วช้าแล้วแต่ฟ้าวันนี้</p>
-    <label class="f"><span>ถึงใคร</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></label>
-    <label class="f"><span>เขาอยู่ที่ไหน</span><input id="cPlace" placeholder="พิมพ์ชื่อเมือง เช่น Tokyo / เชียงใหม่" autocomplete="off"></label>
-    <div class="hits" id="cHits"></div>
-    <label class="f"><span>ข้อความ</span><textarea id="cBody" placeholder="เขียนสิ่งที่อยากบอก…"></textarea><div class="count" id="cCount">0</div></label>
-    <label class="f"><span>ลงชื่อ</span><input id="cFrom" placeholder="ชื่อคุณ" autocomplete="off"></label>
-    <div class="note" id="cOrigin"></div>
-    <div class="rule"></div>
-    <button class="btn wide gold" id="btnSend">ปล่อยให้ลมพา</button>
+    <button class="btn ghost" data-close style="padding:7px 13px;font-size:12px">ปิด</button>
   </div>
+  <div id="cStage">
+    <div id="cSheet">
+      <canvas id="cPaper"></canvas>
+      <div class="ink">
+        <div class="meta" id="cOrigin"></div>
+        <div class="wline"><span class="lb">ถึง</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></div>
+        <div class="wline"><span class="lb">ที่</span><input id="cPlace" placeholder="เมืองปลายทาง" autocomplete="off"></div>
+        <div class="hits" id="cHits"></div>
+        <div id="cDist"></div>
+        <textarea id="cBody" placeholder="เขียนสิ่งที่อยากบอก…" rows="6"></textarea>
+        <div class="wfoot"><span class="lb">จาก</span><input id="cFrom" placeholder="ชื่อคุณ" style="max-width:52%" autocomplete="off"></div>
+        <div id="cCount"></div>
+      </div>
+    </div>
+  </div>
+  <div id="cBar"><button class="btn wide gold" id="btnSend">ปล่อยให้ลมพา</button></div>
 </section>
 
 <section class="sheet" id="forecast">
@@ -3904,7 +3982,11 @@ function toast(msg){
   clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200);
 }
 function openSheet(id){ closeSheet(); sheetOpen=id; $('#'+id).classList.add('on'); }
-function closeSheet(){ if(sheetOpen){ $('#'+sheetOpen).classList.remove('on'); sheetOpen=null; } }
+function closeSheet(){
+  if(sheetOpen){ $('#'+sheetOpen).classList.remove('on'); sheetOpen=null; }
+  /* คืนความสูงที่คีย์บอร์ดกินไป ไม่งั้นหน้าแรกเตี้ยค้างหลังปิดหน้าเขียน */
+  document.documentElement.style.setProperty('--kb','0px');
+}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheet);
 
 /* ---------- ปัดหมุนโลก ---------- */
@@ -4318,11 +4400,21 @@ function saveMe(){
   if(meDraft){ me.lat=meDraft.lat; me.lng=meDraft.lng; me.place=meDraft.place; }
   store.setMe(me); showMe(); syncOriginNote();
 }
+/* หัวกระดาษเขียนแบบจดหมายจริง — ที่ กับ วัน ไม่ใช่ "ต้นทาง: X" ซึ่งเป็นภาษาของฟอร์ม */
 function syncOriginNote(){
   const me=store.me();
+  const d=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
   $('#cOrigin').innerHTML = me&&me.lat!=null
-    ? 'ต้นทาง: '+esc(me.place)
-    : '<span style="color:#a8574a">ยังไม่ได้ตั้งต้นทาง</span> — ไปที่ “คลัง” เพื่อตั้งก่อน';
+    ? esc(me.place)+'<br>'+d
+    : '<span style="color:#a8574a">ยังไม่ได้ตั้งต้นทาง</span><br>ตั้งในเมนู → บัญชี ก่อน';
+}
+/* ระยะทางโผล่ทันทีที่เลือกปลายทาง — ข้อ 94.3 บอกว่าคนเขียนครั้งแรกไม่รู้ว่า
+   ปลายทางเปลี่ยนเวลาถึงได้หลายเท่า · เวลาจริงต้องรอถามลม แต่ระยะทางรู้ได้เดี๋ยวนั้น
+   ⚠️ ไม่เดาเวลาให้ — บอกเวลาผิดแล้วผู้ใช้จำตัวเลขผิดไปตลอด */
+function syncDist(){
+  const me=store.me(), el=$('#cDist');
+  if(!el) return;
+  el.textContent = (me&&me.lat!=null&&pendTo) ? Math.round(gcDist({lat:me.lat,lng:me.lng},pendTo)).toLocaleString()+' กม.' : '';
 }
 
 /* ---------- เขียน / ส่ง ---------- */
@@ -4330,24 +4422,118 @@ let pendTo=null;
 function openCompose(){
   const me=store.me();
   if(me) $('#cFrom').value=me.name||'';
-  syncOriginNote(); openSheet('compose');
+  syncOriginNote(); syncDist(); openSheet('compose');
+  document.documentElement.style.setProperty('--kb','0px');
+  paintWritePaper(); syncKB(); windHere();
+  if(!wRaf) writeLoop();
 }
+/* ตัวนับโผล่เฉพาะตอนใกล้เพดาน — นั่งนับให้ดูตลอดเวลาทำให้คนเขียนสั้นลงโดยไม่จำเป็น */
 $('#cBody').addEventListener('input',()=>{
-  const n=$('#cBody').value.length;
-  const c=$('#cCount'); c.textContent=n+' / '+CFG.MAX_BODY;
+  const n=$('#cBody').value.length, c=$('#cCount');
+  const near=n>CFG.MAX_BODY*0.8;
+  c.classList.toggle('near',near);
   c.classList.toggle('over',n>CFG.MAX_BODY);
+  c.textContent = near ? (CFG.MAX_BODY-n)+' ตัวอักษร' : '';
 });
+
+/* ---------- องก์ Write — กระดาษหายใจ และคีย์บอร์ดมือถือ (ข้อ 63) ---------- */
+let penDown=false, wTick=0, wRaf=null, WIND_HERE=null;
+
+function paintWritePaper(tries){
+  const cv=$('#cPaper'), box=$('#cSheet');
+  if(!cv||!box) return;
+  const w=box.clientWidth, h=box.clientHeight;
+  /* เลย์เอาต์ยังไม่เสร็จ (ฟอนต์ยังไม่ลง / เพิ่งโชว์) — drawPaper คืนทันทีถ้าขนาดเป็น 0
+     ต้องรอเฟรมถัดไปแล้วลองใหม่ ไม่ใช่ปล่อยให้กระดาษว่างเปล่า */
+  if(!w||!h){ if((tries||0)<20) requestAnimationFrame(()=>paintWritePaper((tries||0)+1)); return; }
+  cv.style.width=w+'px'; cv.style.height=h+'px';
+  drawPaper(cv,{id:'',wet:0,storm:0,gust:0,ice:0,days:0});
+}
+
+/* ⚠️ คีย์บอร์ดมือถือ — จุดที่หน้าเขียนพังบ่อยที่สุด (ข้อ 63.4)
+   บน iOS คีย์บอร์ดวางทับโดยไม่ย่อ layout viewport แถบล่างจึงหายไปใต้คีย์บอร์ด
+   ต้องอ่านความสูงจริงจาก visualViewport มาหักออกจากความสูงของแผงเอง ห้ามเดา */
+function syncKB(){
+  const vv=window.visualViewport;
+  const kb=vv ? Math.max(0, innerHeight-vv.height-vv.offsetTop) : 0;
+  document.documentElement.style.setProperty('--kb',kb+'px');
+  if(kb>0 && document.activeElement && $('#cSheet').contains(document.activeElement)){
+    document.activeElement.scrollIntoView({block:'center',behavior:'smooth'});
+  }
+}
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',()=>{ if(sheetOpen==='compose') syncKB(); });
+  visualViewport.addEventListener('scroll',()=>{ if(sheetOpen==='compose') syncKB(); });
+}
+
+/* ลมทำให้กระดาษ *เอียง* ไม่ใช่เลื่อน — แผ่นที่วางอยู่ตรงหน้าจะกระดกขอบ
+   ใช้ perspective จริงเพื่อให้เป็นการหมุนในอวกาศ ไม่ใช่ภาพแบนที่ขยับไปมา (ข้อ 61.2)
+
+   ⚠️ กอล์ฟเลือกแบบ B — นิ่งสนิทขณะพิมพ์ หายใจเมื่อวางปากกา (ข้อ 63.1)
+   "ตัวอักษรที่ขยับอาจทำให้เวียนหัว จึงเลือก B เพื่อให้สมาธิอยู่กับกระดาษมากที่สุด"
+   เป็นข้อยกเว้นเดียวของกฎ "ลมคือพระเอก" เพราะนี่คือหน้าที่ต้องจ้องนานที่สุดในแอป
+
+   ⚠️ และหายใจเฉพาะตอนรู้ลมจริง — ถ้าดึงลมไม่ได้ กระดาษนิ่งไปเลย
+   ดีกว่าแกว่งด้วยตัวเลขที่แต่งขึ้น ซึ่งจะเป็นการโกหกเล็ก ๆ ที่ไม่มีใครจับได้ */
+function breatheWrite(){
+  const box=$('#cSheet'); if(!box) return;
+  if(WIND_HERE===null || penDown){ box.style.transform='none'; return; }
+  const w=clamp(WIND_HERE/45,0,1);
+  wTick+=1/60;
+  const a=0.7+w*2.3;
+  const rx=Math.sin(wTick*0.62)*a*0.9, ry=Math.sin(wTick*0.47+1.3)*a;
+  const rz=Math.sin(wTick*0.31+2.6)*a*0.25, ty=Math.sin(wTick*0.53+0.7)*a*0.9;
+  box.style.transform='perspective(1400px) translateY('+ty.toFixed(2)+'px) '
+    +'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg)';
+}
+function writeLoop(){
+  if(sheetOpen!=='compose'){ wRaf=null; return; }
+  wRaf=requestAnimationFrame(writeLoop); breatheWrite();
+}
+
+/* ลม ณ ต้นทาง — อ่านจากแคชลมก้อนเดิมที่แอปโหลดอยู่แล้ว ไม่ใช่คำขอใหม่
+   ต้นทางอยู่ในกล่องแคช = ราคา 0 · อยู่นอกกล่อง = ไม่รู้ แล้วกระดาษก็นิ่ง ซึ่งซื่อสัตย์กว่าเดา */
+async function windHere(){
+  if(WIND_HERE!==null) return;
+  const me=store.me(); if(!me||me.lat==null) return;
+  try{
+    const man=await wcManifest(); if(!man) return;
+    const t=wcPick(man,[{lat:me.lat,lng:me.lng}]); if(!t) return;
+    const d=await wcLoad(man,t);
+    const s=wcSeries(t,d,me.lat,me.lng);
+    if(s&&s.length&&s[0]&&typeof s[0].spd==='number') WIND_HERE=s[0].spd;
+  }catch(e){ /* ไม่รู้ลม = กระดาษนิ่ง ไม่ใช่เหตุให้เขียนจดหมายไม่ได้ */ }
+}
+
+/* วางปากกา = เลิกพิมพ์ ไม่ใช่กดปุ่ม — จับจาก focus/blur ของช่องบนกระดาษ */
+['cTo','cPlace','cBody','cFrom'].forEach(id=>{
+  const el=$('#'+id); if(!el) return;
+  el.addEventListener('focus',()=>{ penDown=true; syncKB(); });
+  el.addEventListener('blur',()=>{ penDown=false; setTimeout(syncKB,60); });
+});
+$('#cBody').addEventListener('input',e=>{
+  const t=e.target;
+  t.style.height='auto'; t.style.height=t.scrollHeight+'px';
+  paintWritePaper();   /* วาดทันที ไม่รอเฟรม — rAF ถูกหน่วงเมื่อหน้าต่างไม่แสดงผล */
+});
+addEventListener('resize',()=>{ if(sheetOpen==='compose'){ paintWritePaper(); syncKB(); } });
+/* หมุนเครื่องแล้วกล่องเปลี่ยนขนาด พื้นผิวกระดาษต้องวาดใหม่ ไม่งั้นยืดผิดสัดส่วน
+   orientationchange มาก่อนที่เลย์เอาต์จะเสร็จ จึงต้องวาดซ้ำหลังจากนั้น */
+addEventListener('orientationchange',()=>{ if(sheetOpen==='compose') setTimeout(()=>{ paintWritePaper(); syncKB(); },250); });
+
 
 async function doSend(){
   const me=store.me();
   const to=$('#cTo').value.trim(), body=$('#cBody').value.trim(), from=$('#cFrom').value.trim();
-  if(!me||me.lat==null) return toast('ตั้งต้นทางในคลังก่อน');
+  if(!me||me.lat==null) return toast('ตั้งต้นทางในบัญชีก่อน');
   if(!to) return toast('ยังไม่ได้ใส่ชื่อผู้รับ');
   if(!pendTo) return toast('เลือกสถานที่ปลายทางจากรายการ');
   if(!body) return toast('ยังไม่ได้เขียนอะไรเลย');
   if(body.length>CFG.MAX_BODY) return toast('ข้อความยาวเกิน '+CFG.MAX_BODY+' ตัวอักษร');
   if(!from) return toast('ยังไม่ได้ลงชื่อ');
 
+  /* จำชื่อไว้ ไม่งั้นต้องพิมพ์ใหม่ทุกฉบับ ซึ่งข้อ 94.3 จัดว่าเป็นหนึ่งในสามจุดที่คนสะดุด */
+  if(from && from!==me.name){ me.name=from; store.setMe(me); showMe(); }
   const btn=$('#btnSend'); btn.disabled=true; btn.textContent='กำลังถามสายลม…';
   try{
     const A={lat:me.lat,lng:me.lng}, B={lat:pendTo.lat,lng:pendTo.lng};
@@ -4472,11 +4658,12 @@ async function confirmSend(){
   if(location.protocol==='file:'){
     $('#sentWarn').innerHTML='<b style="font-weight:normal;color:#a8574a">ลิงก์นี้เปิดได้เฉพาะเครื่องคุณ</b> '
       +'เพราะแอปกำลังรันจากไฟล์ในเครื่อง (file://) — ส่งเป็น <b style="font-weight:normal">ไฟล์จดหมาย</b> แทน '
-      +'แล้วให้ผู้รับกด “คลัง → Import” หรือเอาแอปขึ้น host ก่อนแล้วค่อยส่งลิงก์';
+      +'แล้วให้ผู้รับกด “บัญชี → Import” หรือเอาแอปขึ้น host ก่อนแล้วค่อยส่งลิงก์';
   }
   if(url.length>CFG.URL_WARN) toast('ลิงก์ยาวผิดปกติ — บางแอปแชทอาจตัดสั้น');
   $('#cTo').value=''; $('#cBody').value=''; $('#cHits').innerHTML=''; $('#cPlace').value='';
-  $('#cCount').textContent='0'; pendTo=null;
+  $('#cBody').style.height=''; $('#cCount').textContent=''; $('#cCount').className='';
+  $('#cDist').textContent=''; pendTo=null;
   selected=rec.id; refreshDock();
   /* ---------- องก์ปล่อย (ข้อ 44) ----------
      จดหมายถูกบันทึกแล้วก่อนเริ่มแอนิเมชัน — ถ้าผู้ใช้ปิดแอปกลางทาง จดหมายก็ยังออกเดินทางแล้วจริง
@@ -4717,7 +4904,7 @@ $('#btnWrite').onclick=openCompose;
 $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
 $('#vName').addEventListener('change',saveMe);
-wireSearch('#cPlace','#cHits',r=>{ pendTo=r; });
+wireSearch('#cPlace','#cHits',r=>{ pendTo=r; syncDist(); });
 wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต้นทางแล้ว'); });
 
 /* PWA: manifest ฝังในไฟล์เดียว + service worker เมื่อถูก host (สะพานสู่แอปตาม §8.6)
