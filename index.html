@@ -271,6 +271,15 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   text-align:center;padding:14px 8px;border:1px solid rgba(198,154,84,.45);border-radius:12px;
   background:rgba(255,255,255,.5);color:#7d5f2e;line-height:1.7;word-break:break-all;
   -webkit-user-select:text;user-select:text}
+
+/* หน้าเปิดกับคำถามเดียว — เต็มจอ ไม่มีอะไรให้เลื่อนอ่าน (ข้อ 105) */
+#intro .wrap,#ask .wrap{min-height:calc(100vh - 130px);display:flex;flex-direction:column;
+  justify-content:center;text-align:center}
+.big1{font-size:19px;letter-spacing:.05em;line-height:1.62}
+.big2{font-size:15.5px;letter-spacing:.03em;line-height:1.9}
+.word{font-size:13px;letter-spacing:.34em;color:var(--dim);margin-bottom:8px}
+/* หัวกระดาษกดได้เมื่อยังไม่ได้ตั้งต้นทาง — ทางตันเดิมคือบอกให้ไปหาเมนูเอง */
+#cOrigin[data-set="0"]{color:#8b6a33;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -296,6 +305,61 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
      ยังมีสองบรรทัด เพราะ "คนที่เขียนถึงได้" กับ "drift port ของฉัน" ยังไม่มีจริง
      ⛔ ห้ามใส่บรรทัดที่กดแล้วไม่มีอะไร — เมนูจะโตเองตอน port มาถึง -->
 <!-- ที่อยู่ของฉัน · ให้ครั้งเดียว เขาเขียนถึงเราได้ตลอดไป (ข้อ 104) -->
+<!-- F1 หน้าเปิด — ไม่มีบทเรียน ไม่มีสไลด์แนะนำ flow เรียนรู้ด้วยการทำ (ข้อ 94.1) -->
+<section class="sheet" id="intro">
+  <div class="wrap">
+    <div class="word">drift</div>
+    <div class="big1">เขียนอะไรก็ได้<br>แล้วปล่อยให้ลมพาไป</div>
+    <div style="height:22px"></div>
+    <p class="note" style="color:var(--dim)">ที่นี่ไม่มีคำว่าส่งถึงทันที</p>
+    <div style="height:34px"></div>
+    <button class="btn wide gold" id="btnStart" style="max-width:220px;margin:0 auto">เริ่ม</button>
+  </div>
+</section>
+
+<!-- ต้นทาง — แยกจากบัญชี เพราะคนกำลังจะเขียนจดหมาย ไม่ใช่กำลังจะตั้งค่า -->
+<section class="sheet" id="origin">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>คุณอยู่ที่ไหน</h2>
+    <p class="sub">ลมต้องรู้ว่าจดหมายออกเดินทางจากไหน</p>
+    <label class="f"><input id="oPlace" placeholder="พิมพ์ชื่อเมือง" autocomplete="off"></label>
+    <div class="hits" id="oHits"></div>
+    <button class="btn wide" id="btnOHere">ใช้ตำแหน่งปัจจุบัน</button>
+    <div class="rule"></div>
+    <p class="note faint">เก็บหยาบระดับอำเภอ ราว 11 กม. · ย้ายทีหลังได้</p>
+  </div>
+</section>
+
+<!-- F5 คำถามเดียว — ขอบัญชีมาทีหลังความประทับใจ (ข้อ 94.2) -->
+<section class="sheet" id="ask">
+  <div class="wrap">
+    <p class="note faint">จดหมายของคุณออกเดินทางแล้ว</p>
+    <div style="height:14px"></div>
+    <div class="big2">แต่ยังไม่มีใครรออยู่ปลายทาง</div>
+    <div style="height:22px"></div>
+    <div class="big1">อยาก drift<br>ไปหาใครสักคนไหม</div>
+    <div style="height:34px"></div>
+    <button class="btn wide gold" id="btnAskYes" style="max-width:260px;margin:0 auto">เปิด drift port ของฉัน</button>
+    <button class="btn wide ghost" data-close style="max-width:260px;margin:6px auto 0">ยังก่อน</button>
+  </div>
+</section>
+
+<section class="sheet" id="newport">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>เปิด drift port</h2>
+    <p class="sub">ที่อยู่ประจำของคุณ — ให้ครั้งเดียว เขาเขียนถึงคุณได้ตลอดไป</p>
+    <label class="f"><span>ชื่อที่จะปรากฏบนจดหมาย</span>
+      <input id="npName" placeholder="ชื่อคุณ" autocomplete="off"></label>
+    <p class="note faint">ต้นทาง: <span id="npWhere"></span></p>
+    <div class="rule"></div>
+    <button class="btn wide gold" id="btnNpGo">เปิด drift port</button>
+    <p class="note faint" style="margin-top:12px">ขั้นนี้ยังไม่มีบัญชีและไม่มีรหัสผ่าน<br>
+    ที่อยู่เก็บอยู่ในเครื่องนี้เท่านั้น</p>
+  </div>
+</section>
+
 <section class="sheet" id="mine">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
@@ -426,6 +490,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <div class="poem" id="fcPoem"></div>
       <div class="meta" id="fcMeta"></div>
     </div>
+    <div class="warn" style="border-color:rgba(198,154,84,.55)">ปิดแอปไปได้ ลมไม่หยุดตามเรา<br>
+      <span style="color:var(--dim);font-size:12px">จดหมายจะเปิดอ่านไม่ได้จนกว่าจะถึงจริง</span></div>
     <div id="fcChoice"></div>
     <button class="btn wide gold" id="btnConfirm">ส่ง</button>
     <button class="btn wide ghost" data-close style="margin-top:6px">ขอกลับไปนั่งคิดอีกครั้ง</button>
@@ -576,7 +642,7 @@ const CFG = {
 };
 
 const RAD = Math.PI/180, DEG = 180/Math.PI, ER = 6371;
-const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me', PORTS:'lw.v1.ports' };
+const K = { LETTERS:'lw.v1.letters', ME:'lw.v1.me', PORTS:'lw.v1.ports', INTRO:'lw.v1.intro' };
 /* ---------- คำเรียกอากาศ (ข้อ 65) ----------
    เดิมมีแค่ 5 ระดับ และอะไรก็ตามที่กระโชกเกินเกณฑ์ถูกเรียกว่า "พายุ" หมด
    กอล์ฟจับได้ว่าเส้นฉะเชิงเทรา→เลย แอปบอกว่ามีพายุ แต่แอปอากาศบอกว่าไม่มี
@@ -4617,6 +4683,11 @@ function frame(now){
 
    ⚠️ แต่ของเดิม *ไม่มี* การแตะเลือกฉบับบนลูกโลกเลย เลือกได้ทางแถบล่างทางเดียว
    ถอดแถบออกเฉย ๆ = ทางเข้าหายไป จึงต้องเพิ่ม hit-test บนลูกโลกพร้อมกัน (ดู HITS) */
+/* ฉบับแรกไม่มีชื่อผู้รับ — "ถึง " เฉย ๆ อ่านเหมือนของเสีย ต้องมีคำของมันเอง */
+function letterWho(L){
+  if(L.dir==='in') return 'จาก '+safeName(L.f.n||'ไม่ระบุชื่อ');
+  return L.t.n ? 'ถึง '+L.t.n : 'ฉบับแรกของคุณ';
+}
 function etaWord(L,st){
   if(st.gone) return 'สายลมพัดหลง';
   if(st.arrived) return L.dir==='in' ? (L.read?'อ่านแล้ว':'ยังไม่ได้เปิด') : 'ถึงแล้ว';
@@ -4651,7 +4722,8 @@ function refreshDock(){
     let head,sub;
     if(rank==='here'){ head='มีจดหมายถึงคุณ'; sub='จาก '+esc(safeName(L.f.n)); el.classList.add('here'); }
     else if(rank==='coming'){ head='อีก '+fmtDur(st.remain); sub='จาก '+esc(safeName(L.f.n)); }
-    else { head='ของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
+    else if(L.t.n){ head='ของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
+    else { head='ฉบับแรกของคุณกำลังไป'+esc(L.t.p?'ทาง '+L.t.p:''); sub='อีก '+fmtDur(st.remain); }
     el.hidden=false;
     el.innerHTML='<b>'+head+'</b><i>'+sub+'</i>';
     el.onclick=()=>{ if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
@@ -4683,7 +4755,7 @@ function fillInbox(list,now){
       n++;
       const b=document.createElement('button');
       b.className='mrow'+(L.dir==='in'&&st.arrived&&!L.read?' on':'')+(st.gone?' gone':'');
-      b.innerHTML='<b>'+esc(L.dir==='in'?'จาก '+safeName(L.f.n):'ถึง '+L.t.n)+'</b><em>'+etaWord(L,st)+'</em>';
+      b.innerHTML='<b>'+esc(letterWho(L))+'</b><em>'+etaWord(L,st)+'</em>';
       b.onclick=()=>{ closeSheet(); if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
       box.appendChild(b);
     });
@@ -4698,6 +4770,79 @@ function fillInbox(list,now){
     return p.length?p.join(' · '):list.length+' ฉบับ';
   })() : 'ยังไม่มี';
 }
+/* ============================================================
+   first-run — ขั้นที่ 3 (ข้อ 105)
+   ============================================================
+   ข้อ 94: เขียนอะไรก็ได้ → ปัดขึ้น → magic moment → ค่อยถามว่าอยากมีที่อยู่ไหม
+   **ขอบัญชีมาทีหลังความประทับใจ** ซึ่งกลับกันกับแอปส่วนใหญ่ที่ขอตั้งแต่หน้าแรก
+
+   ⚠️ ทำได้ก็ต่อเมื่อ port มีอยู่จริงแล้ว (ข้อ 104) — ไม่งั้นปลายทางของ flow นี้
+   จะเป็นทางออกปลอมที่ต้องรื้อทิ้งทีหลัง ซึ่งเป็นเหตุผลที่ข้อ 94.2 ให้รอ
+   ============================================================ */
+let firstRun=false, resumeSwap=false;
+
+function introDone(){ try{ return LS.get(K.INTRO)==='1'; }catch(e){ return true; } }
+/* คนใหม่จริง = ยังไม่เคยดูหน้าเปิด และยังไม่มีอะไรในเครื่องเลย
+   ⚠️ เช็คจดหมายด้วย ไม่ใช่เช็คแค่ me — คนที่เคยรับจดหมายจากลิงก์แต่ยังไม่ตั้งชื่อ
+   ไม่ใช่คนใหม่ เขาเห็นแอปมาแล้ว การพาเขากลับไปหน้าเปิดคือการถอยหลัง */
+function isNewcomer(){
+  const m=store.me();
+  return !introDone() && !store.letters().length && !(m&&m.name) && !(m&&m.lat!=null);
+}
+
+/* ---------- ต้นทาง ----------
+   แยกออกมาเป็นแผ่นของตัวเอง เพราะของเดิมถ้ายังไม่ตั้งต้นทาง หน้าเขียนจะบอกให้
+   "ไปที่เมนู → บัญชี" ซึ่งเป็นทางตันกลางความตั้งใจ — คนกำลังจะเขียนจดหมาย
+   ไม่ใช่กำลังจะตั้งค่า */
+function openOrigin(after){
+  originAfter=after||null;
+  $('#oPlace').value=''; $('#oHits').innerHTML='';
+  openSheet('origin');
+}
+let originAfter=null;
+function setOrigin(r){
+  const me=store.me()||{};
+  me.lat=r.lat; me.lng=r.lng; me.place=r.place;
+  store.setMe(me); showMe(); syncOriginNote(); syncDist();
+  closeSheet();
+  const f=originAfter; originAfter=null;
+  toast('ต้นทางคือ '+r.place);
+  if(f) f(); else if(firstRun) openSheet('compose');
+}
+
+/* ---------- หน้าเปิด ---------- */
+function openIntro(){ openSheet('intro'); }
+function startFirst(){
+  try{ LS.set(K.INTRO,'1'); }catch(e){}
+  firstRun=true;
+  openCompose();
+  /* ต้นทางต้องมีก่อนถึงจะคำนวณลมได้ — ถามตรงนี้เพราะเขาเพิ่งกด "เริ่ม"
+     ยังไม่ได้ลงแรงเขียนอะไร การถามตอนนี้จึงถูกกว่าถามตอนกำลังจะปล่อย */
+  const me=store.me();
+  if(!me||me.lat==null) openOrigin(()=>openSheet('compose'));
+}
+
+/* ---------- เปิด drift port ครั้งแรก ----------
+   ขั้นนี้ไม่มีบัญชี ไม่มีรหัสผ่าน — ที่อยู่คือรหัสในเครื่อง + ชื่อที่จะปรากฏบนจดหมาย
+   จึงเหลือช่องเดียวจริง ๆ · ต้นทางตั้งไปแล้วตั้งแต่ก่อนเขียน */
+function openNewPort(){
+  const me=store.me()||{};
+  $('#npName').value=me.name||'';
+  $('#npWhere').textContent=me.place||'ยังไม่ได้ตั้งต้นทาง';
+  openSheet('newport');
+}
+async function makePort(){
+  const nm=$('#npName').value.trim();
+  if(!nm) return toast('ยังไม่ได้ตั้งชื่อ');
+  if(wfOn() && wfName(nm)) return toast('ชื่อนี้ใช้ไม่ได้ — มันจะไปโผล่ในกล่องจดหมายของคนอื่น');
+  const me=store.me()||{};
+  me.name=nm; store.setMe(me); showMe();
+  myPid();                       /* รหัสเกิดตรงนี้ และอยู่ยาว (ข้อ 104.2) */
+  closeSheet();
+  if(resumeSwap){ resumeSwap=false; return takePort(true); }
+  await openMine();
+}
+
 /* ---------- หน้าจอของ port ---------- */
 let pendPort=null;          /* port ที่เพิ่งเปิดจากลิงก์ รอผู้ใช้ตัดสิน */
 let pickMode=false;         /* เปิดรายชื่อมาเพื่อ *เลือกผู้รับ* ไม่ใช่มาดู */
@@ -4748,6 +4893,14 @@ async function ingestPort(payload){
 }
 async function takePort(giveBack){
   if(!pendPort) return;
+  /* ⚠️ ข้อ 99.10ซ — คนที่ได้ลิงก์มาก่อนมี port ของตัวเอง ต้องถูกพากลับมาที่เดิม
+     ไม่ใช่โยนเข้าหน้าแรกแล้วให้ไปหาลิงก์นั้นเอง ซึ่งส่วนใหญ่หาไม่เจอแล้ว */
+  const me=store.me();
+  if(giveBack && !(me&&me.name)){
+    resumeSwap=true;
+    if(!me||me.lat==null) return openOrigin(openNewPort);
+    return openNewPort();
+  }
   store.putPort(pendPort);
   const pt=pendPort; pendPort=null;
   closeSheet();
@@ -4907,9 +5060,9 @@ function saveMe(){
 function syncOriginNote(){
   const me=store.me();
   const d=new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-  $('#cOrigin').innerHTML = me&&me.lat!=null
-    ? esc(me.place)+'<br>'+d
-    : '<span style="color:#a8574a">ยังไม่ได้ตั้งต้นทาง</span><br>ตั้งในเมนู → บัญชี ก่อน';
+  const set = !!(me&&me.lat!=null);
+  $('#cOrigin').dataset.set = set?'1':'0';
+  $('#cOrigin').innerHTML = set ? esc(me.place)+'<br>'+d : 'คุณอยู่ที่ไหน';
 }
 /* ระยะทางโผล่ทันทีที่เลือกปลายทาง — ข้อ 94.3 บอกว่าคนเขียนครั้งแรกไม่รู้ว่า
    ปลายทางเปลี่ยนเวลาถึงได้หลายเท่า · เวลาจริงต้องรอถามลม แต่ระยะทางรู้ได้เดี๋ยวนั้น
@@ -5034,12 +5187,14 @@ addEventListener('orientationchange',()=>{ if(sheetOpen==='compose') setTimeout(
 async function doSend(){
   const me=store.me();
   const to=$('#cTo').value.trim(), body=$('#cBody').value.trim(), from=$('#cFrom').value.trim();
-  if(!me||me.lat==null) return toast('ตั้งต้นทางในบัญชีก่อน');
-  if(!to) return toast('ยังไม่ได้ใส่ชื่อผู้รับ');
+  /* ⚠️ ฉบับแรกไม่ต้องมีผู้รับและไม่ต้องลงชื่อ (ข้อ 94.1)
+     "เขียนอะไรก็ได้" จะไม่จริงเลยถ้ายังบังคับกรอกสองช่องก่อนถึงจะปล่อยได้ */
+  if(!me||me.lat==null) return openOrigin(()=>openSheet('compose'));
+  if(!firstRun && !to) return toast('ยังไม่ได้ใส่ชื่อผู้รับ');
   if(!pendTo) return toast('เลือกสถานที่ปลายทางจากรายการ');
   if(!body) return toast('ยังไม่ได้เขียนอะไรเลย');
   if(body.length>CFG.MAX_BODY) return toast('ข้อความยาวเกิน '+CFG.MAX_BODY+' ตัวอักษร');
-  if(!from) return toast('ยังไม่ได้ลงชื่อ');
+  if(!firstRun && !from) return toast('ยังไม่ได้ลงชื่อ');
 
   /* ---------- ข้อมูลส่วนตัวหลุด (ข้อ 103) ----------
      หมวดเดียวที่แตะฝั่งผู้ส่ง เพราะมันปกป้อง *คนเขียน* ไม่ใช่คนอ่าน
@@ -5190,7 +5345,11 @@ async function confirmSend(){
      จดหมายถูกบันทึกแล้วก่อนเริ่มแอนิเมชัน — ถ้าผู้ใช้ปิดแอปกลางทาง จดหมายก็ยังออกเดินทางแล้วจริง
      ลูกโลกต้องมีจดหมายที่ "เพิ่งส่ง" อยู่จริง ไม่งั้นไม่มีหมอก ไม่มีริ้วลม ไม่มีจุดทอง */
   closeSheet();
-  openDrift(store.letters().find(x=>x.id===rec.id)||rec, ()=>openSheet('sent'));
+  /* ⚠️ ฉบับแรกไม่มีใครให้ส่งลิงก์ไปหา หน้า "ออกเดินทางแล้ว" ที่มีลิงก์ให้คัดลอก
+     จึงเป็นคำตอบผิดคำถาม — พาไปที่คำถามเดียวที่สำคัญตอนนั้นแทน (ข้อ 94.1) */
+  const wasFirst=firstRun; firstRun=false;
+  openDrift(store.letters().find(x=>x.id===rec.id)||rec,
+            ()=>openSheet(wasFirst?'ask':'sent'));
 }
 
 /* ---------- อ่านจดหมาย ---------- */
@@ -5212,7 +5371,8 @@ function openRead(L){
   const st=letterState(L,Date.now());
   const stage=$('#rStage'), log=$('#rLog');
   log.classList.remove('on');
-  $('#rMeta').textContent = (L.dir==='in' ? 'จาก '+safeName(L.f.n)+' · '+L.f.p : 'สำเนาของคุณ · ถึง '+L.t.n+' · '+L.t.p);
+  $('#rMeta').textContent = (L.dir==='in' ? 'จาก '+safeName(L.f.n)+' · '+L.f.p
+    : (L.t.n ? 'สำเนาของคุณ · ถึง '+L.t.n+' · '+L.t.p : 'ฉบับแรกของคุณ · '+L.t.p));
 
   if(st.gone){
     stage.innerHTML='<div class="waiting"><b>สายลมพัดหลงทาง</b>จดหมายฉบับนี้ไม่ถึงปลายทาง<br>'
@@ -5457,6 +5617,22 @@ $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
 $('#btnAskNo').onclick=()=>{ askOff(); $('#cBody').focus(); };
 $('#btnPick').onclick=()=>openPorts(true);
+/* ทางตันเดิม: หัวกระดาษบอกให้ "ไปที่เมนู → บัญชี" กลางความตั้งใจจะเขียน
+   ตอนนี้กดตรงนั้นได้เลย แล้วกลับมาที่กระดาษใบเดิม */
+$('#cOrigin').onclick=()=>{ const me=store.me(); if(!me||me.lat==null) openOrigin(()=>openSheet('compose')); };
+$('#btnStart').onclick=startFirst;
+$('#btnAskYes').onclick=openNewPort;
+$('#btnNpGo').onclick=makePort;
+wireSearch('#oPlace','#oHits',r=>setOrigin(r));
+$('#btnOHere').onclick=()=>{
+  if(!navigator.geolocation) return toast('เครื่องนี้ไม่รองรับ');
+  toast('กำลังหาตำแหน่ง…');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    /* ปัดทันทีที่รับค่า — ค่าเต็มความละเอียดต้องไม่ถูกเก็บ ไม่ถูกส่งออก แม้แต่ครั้งเดียว (ข้อ 76) */
+    const lat=coarseLat(pos.coords.latitude), lng=coarseLat(pos.coords.longitude);
+    setOrigin({lat,lng,place:await reverseName(lat,lng)});
+  },()=>toast('ขอตำแหน่งไม่สำเร็จ'),{timeout:8000});
+};
 $('#vName').addEventListener('change',saveMe);
 $('#vWF').addEventListener('change',e=>{
   LS.set('drift.wf', e.target.checked?'1':'0');
@@ -6001,7 +6177,11 @@ syncOriginNote();
 LS.set('lw.probe','1');
 if(!LS_OK) setTimeout(()=>toast('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ — ปิดแล้วประวัติจะหาย'),800);
 requestAnimationFrame(frame);
-receiveFromHash();
+/* ---------- ตารางเปิดแอป (ข้อ 99.10ซ) ----------
+   ลิงก์มาก่อนเสมอ — คนที่กดลิงก์มาต้องได้เห็นสิ่งที่เขากดมาดู ไม่ใช่หน้าเปิดของแอป
+   หน้าเปิดเป็นของคนที่มาเองแบบมือเปล่าเท่านั้น */
+if(location.hash.length>10) receiveFromHash();
+else if(isNewcomer()) openIntro();
 addEventListener('hashchange',receiveFromHash);   /* วางลิงก์ในแท็บที่เปิดอยู่แล้วก็ต้องรับได้ */
 notifyArrivals();
 setInterval(()=>{ if(document.hidden) return; notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
