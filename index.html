@@ -4995,6 +4995,34 @@ function portLetters(pt){
   return store.letters().filter(L=> L.dir==='out' ? (L.tp===pt.i) : (L.f&&L.f.n===pt.n)).length;
 }
 
+/* ---------- ส่งลิงก์ออกไป (ข้อ 109) ----------
+   ⚠️ iOS Safari ให้ navigator.share ทำงานเฉพาะที่ยัง "อยู่ในจังหวะกด" เท่านั้น
+   มี await คั่นก่อนเรียกเมื่อไหร่ user activation หมดอายุ share ถูกปฏิเสธ
+   แล้ว catch เปล่า ๆ ก็กลืนมันไป — ผู้ใช้กดปุ่มแล้วไม่มีอะไรเกิดขึ้นเลย
+   ทุกที่จึงต้องเตรียม url ไว้ *ก่อน* ผู้ใช้กด แล้วเรียกฟังก์ชันนี้ตรง ๆ
+   คืนค่า true เมื่อลิงก์ออกไปจริง — ปุ่มที่ต้องจำว่า "ให้ไปแล้ว" ต้องรอค่านี้ */
+let readyLink='';        /* ที่อยู่ของเรา เตรียมไว้ตอนเปิดหน้า ไม่ใช่ตอนกดปุ่ม */
+async function sendLink(url, text){
+  if(!url){ toast('ยังเตรียมลิงก์ไม่เสร็จ — ลองอีกครั้ง'); return false; }
+  if(navigator.share){
+    try{ await navigator.share({title:'drift', text, url}); return true; }
+    catch(err){
+      /* กดยกเลิกเองไม่ใช่ความผิดพลาด — เงียบไว้ อย่าทับด้วยการคัดลอกที่เขาไม่ได้ขอ */
+      if(err && err.name==='AbortError') return false;
+      /* ล้มเหลวจริง → ตกลงมาที่การคัดลอก ไม่ปล่อยให้กดแล้วเงียบ */
+    }
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('คัดลอกแล้ว — วางในแชทได้เลย');
+    return true;
+  }catch(e){
+    /* http:// ธรรมดาไม่มี clipboard ให้ใช้ เหลือทางเดียวคือกดค้างเลือกเอง */
+    toast('คัดลอกอัตโนมัติไม่ได้ — กดค้างที่ลิงก์เพื่อคัดลอกเอง');
+    return false;
+  }
+}
+
 /* ---------- drift port ของฉัน ---------- */
 async function openMine(){
   const me=store.me()||{};
@@ -5009,10 +5037,8 @@ async function openMine(){
     try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่แล้ว'); }
     catch(e){ toast('คัดลอกไม่ได้ — กดค้างที่รหัสเพื่อคัดลอกเอง'); }
   };
-  $('#btnMyShare').onclick=async()=>{
-    if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
-    else toast('เบราว์เซอร์นี้ไม่รองรับการส่งต่อ — ใช้คัดลอกแทน');
-  };
+  readyLink=url;
+  $('#btnMyShare').onclick=()=>sendLink(url,'ที่อยู่ drift ของฉัน');
 }
 
 /* ---------- รับที่อยู่ของคนอื่น (ข้อ 99.10ค) ----------
@@ -5029,6 +5055,8 @@ async function ingestPort(payload){
   $('#gpName').textContent = safeName(pt.n);
   $('#gpWhere').textContent = (pt.p||'ไม่ระบุที่') + (d!=null ? ' · ห่างจากคุณ '+Math.round(d).toLocaleString()+' กม.' : '');
   openSheet('gotport');
+  /* ปุ่ม "ให้ที่อยู่กลับ" ต้องแชร์ได้ทันทีที่กด — เตรียมลิงก์ไว้ตั้งแต่ตอนนี้ (ข้อ 109) */
+  readyLink=await myPortLink();
 }
 async function takePort(giveBack){
   if(!pendPort) return;
@@ -5044,10 +5072,8 @@ async function takePort(giveBack){
   const pt=pendPort; pendPort=null;
   closeSheet();
   if(giveBack){
-    const url=await myPortLink();
-    if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
-    else { try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่ของคุณแล้ว — ส่งให้เขาได้เลย'); }catch(e){} }
-    store.putPort({i:pt.i, gave:1});
+    /* ⚠️ มาร์คว่า "ให้ไปแล้ว" ต่อเมื่อลิงก์ออกไปจริง — กดยกเลิกแล้วยังขึ้นว่าให้แล้ว คือป้ายโกหก */
+    if(await sendLink(readyLink,'ที่อยู่ drift ของฉัน')) store.putPort({i:pt.i, gave:1});
   }else toast('เก็บที่อยู่แล้ว');
   refreshDock();
 }
@@ -5105,6 +5131,7 @@ async function openPort(pt){
   $('#p1Give').hidden = !!pt.gave;
   $('#p1Sky').textContent='กำลังดูฟ้าที่นั่น…';
   openSheet('port1');
+  readyLink=await myPortLink();   /* เตรียมก่อน ผู้ใช้กด p1Give เมื่อไหร่ก็ส่งได้ทันที (ข้อ 109) */
   const w=await wxAt(pt.a,pt.o);
   /* ยังเปิดหน้าเดิมอยู่ไหม — ถ้าผู้ใช้กดปิดไปแล้วระหว่างรอ อย่าเขียนทับของใหม่ */
   if(viewPort!==pt) return;
@@ -5124,10 +5151,10 @@ $('#btnGpKeep').onclick=()=>takePort(false);
 $('#btnP1Write').onclick=()=>{ if(viewPort) pickPort(viewPort); };
 $('#p1Give').onclick=async()=>{
   if(!viewPort) return;
-  const url=await myPortLink();
-  if(navigator.share){ try{ await navigator.share({title:'drift',text:'ที่อยู่ drift ของฉัน',url}); }catch(e){} }
-  else { try{ await navigator.clipboard.writeText(url); toast('คัดลอกที่อยู่ของคุณแล้ว'); }catch(e){} }
-  store.putPort({i:viewPort.i, gave:1}); viewPort.gave=1; $('#p1Give').hidden=true;
+  const pt=viewPort;
+  if(!await sendLink(readyLink,'ที่อยู่ drift ของฉัน')) return;
+  store.putPort({i:pt.i, gave:1}); pt.gave=1;
+  if(viewPort===pt) $('#p1Give').hidden=true;
 };
 $('#btnP1Del').onclick=()=>{
   if(!viewPort) return;
@@ -5466,10 +5493,7 @@ async function confirmSend(){
     catch(e){ toast('คัดลอกไม่ได้ — กดค้างที่ลิงก์เพื่อคัดลอกเอง'); }
   };
   $('#btnFile').onclick=()=>exportOne(rec);
-  $('#btnShare').onclick=async()=>{
-    if(navigator.share){ try{ await navigator.share({title:'drift',text:'มีจดหมายกำลังไปหาคุณ',url}); }catch(e){} }
-    else toast('เบราว์เซอร์นี้ไม่รองรับการส่งต่อ — ใช้คัดลอกลิงก์แทน');
-  };
+  $('#btnShare').onclick=()=>sendLink(url,'มีจดหมายกำลังไปหาคุณ');
   /* เปิดจากไฟล์ในเครื่อง = ลิงก์นี้คนอื่นเปิดไม่ได้ ต้องบอกก่อนที่เขาจะส่งไปแล้วงง */
   if(location.protocol==='file:'){
     $('#sentWarn').innerHTML='<b style="font-weight:normal;color:#a8574a">ลิงก์นี้เปิดได้เฉพาะเครื่องคุณ</b> '
@@ -5739,6 +5763,18 @@ $('#btnWipe').onclick=()=>{
   LS.del(K.LETTERS); LS.del(K.ME);
   selected=null; current=null; showMe(); refreshDock(); toast('ล้างแล้ว (มีไฟล์สำรอง)');
 };
+/* ---------- ทำไมหาตำแหน่งไม่ได้ (ข้อ 109) ----------
+   ⚠️ บน http:// เบราว์เซอร์ปฏิเสธทันทีโดยไม่ถามผู้ใช้เลย
+   ข้อความเดิม "ขอตำแหน่งไม่สำเร็จ" ทำให้คนนั่งรอป๊อปอัพที่ไม่มีวันมา
+   และนี่คือด่านแรกของ first-run — ตันตรงนี้คือตันทั้งแอป */
+function geoFail(err){
+  if(!window.isSecureContext)
+    return toast('ต้องเปิดผ่าน https ถึงจะขอตำแหน่งได้ — พิมพ์ชื่อเมืองในช่องค้นหาแทน');
+  const c=err&&err.code;
+  if(c===1) return toast('ยังไม่ได้ให้สิทธิ์ตำแหน่ง — เปิดในตั้งค่าเบราว์เซอร์ หรือพิมพ์ชื่อเมืองแทน');
+  if(c===3) return toast('หาตำแหน่งนานเกินไป — ลองอีกครั้ง หรือพิมพ์ชื่อเมืองแทน');
+  toast('หาตำแหน่งไม่ได้ตอนนี้ — พิมพ์ชื่อเมืองในช่องค้นหาแทน');
+}
 $('#btnHere').onclick=()=>{
   if(!navigator.geolocation) return toast('เครื่องนี้ไม่รองรับ');
   toast('กำลังหาตำแหน่ง…');
@@ -5748,7 +5784,7 @@ $('#btnHere').onclick=()=>{
     const name=await reverseName(lat,lng);
     meDraft={lat,lng,place:name};
     $('#vPlace').value=name; saveMe(); toast('ตั้งต้นทางเป็น '+name);
-  },()=>toast('ขอตำแหน่งไม่สำเร็จ'),{timeout:8000});
+  }, geoFail, {timeout:15000, maximumAge:60000});
 };
 
 /* ---------- wiring ---------- */
@@ -5771,7 +5807,7 @@ $('#btnOHere').onclick=()=>{
     /* ปัดทันทีที่รับค่า — ค่าเต็มความละเอียดต้องไม่ถูกเก็บ ไม่ถูกส่งออก แม้แต่ครั้งเดียว (ข้อ 76) */
     const lat=coarseLat(pos.coords.latitude), lng=coarseLat(pos.coords.longitude);
     setOrigin({lat,lng,place:await reverseName(lat,lng)});
-  },()=>toast('ขอตำแหน่งไม่สำเร็จ'),{timeout:8000});
+  }, geoFail, {timeout:15000, maximumAge:60000});
 };
 $('#vName').addEventListener('change',saveMe);
 $('#vWF').addEventListener('change',e=>{
@@ -5795,6 +5831,11 @@ wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต�
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
+  /* ⚠️ http:// ธรรมดา (เช่นเปิดผ่านเลข IP ในวงแลน) ตัดของที่แอปนี้ต้องใช้ออกเกือบหมด
+     ตำแหน่ง · คัดลอก · ส่งต่อ · service worker · เพิ่มลงหน้าจอโฮม
+     ต้องบอกตั้งแต่แรก ไม่ใช่ให้ไปเจอทีละอย่างแล้วนึกว่าแอปพัง (ข้อ 109) */
+  if(location.protocol==='http:' && !window.isSecureContext)
+    setTimeout(()=>toast('เปิดผ่าน http — ตำแหน่ง คัดลอก และส่งต่อจะไม่ทำงาน ต้องใช้ https'),1400);
 })();
 
 
