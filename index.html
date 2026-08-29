@@ -632,8 +632,9 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       · <b style="font-weight:normal">พิกัดโดยประมาณ</b> ของต้นทางและปลายทาง ถูกส่งไปยัง Open-Meteo
         เพื่อขอลมและอากาศ — ปัดให้หยาบราว 11 กม. ก่อนส่งเสมอ ระดับอำเภอ ไม่ใช่ระดับบ้าน<br>
       · <b style="font-weight:normal">ชื่อสถานที่ที่คุณพิมพ์ค้นหา</b> ถูกส่งไปยัง Open-Meteo เพื่อหาพิกัด<br>
-      · <b style="font-weight:normal">พิกัดหยาบของคุณ</b> ถูกส่งไปยัง BigDataCloud หรือ OpenStreetMap
-        เมื่อกด “ใช้ตำแหน่งปัจจุบัน” เพื่อแปลงกลับเป็นชื่ออำเภอ — พิมพ์ชื่อเมืองเองก็ได้ ไม่ต้องส่งอะไรเลย<br>
+      · <b style="font-weight:normal">พิกัดหยาบของคุณ</b> ถูกส่งไปยัง OpenStreetMap เมื่อกด
+        “ใช้ตำแหน่งปัจจุบัน” เพื่อแปลงกลับเป็นชื่ออำเภอ — ถามครั้งเดียวต่อพื้นที่แล้วจำไว้ในเครื่อง
+        · พิมพ์ชื่อเมืองเองก็ได้ ไม่ต้องส่งอะไรเลย<br>
       · <b style="font-weight:normal">ชื่อที่แสดงกับต้นทางหยาบของคุณ</b> ออกไปกับ
         <b style="font-weight:normal">ลิงก์ที่อยู่</b> ที่คุณแจกเอง — ใครถือลิงก์นั้นก็เห็น
         ไม่ได้ผ่านเซิร์ฟเวอร์ของเรา เพราะยังไม่มีเซิร์ฟเวอร์<br>
@@ -919,23 +920,50 @@ async function geocode(q){
       กอล์ฟจับได้จากจดหมายจริงที่หัวกระดาษเขียนว่า "13.90, 101.07"
    ⚠️ Open-Meteo ไม่มี reverse geocoding เลย ต้องใช้แหล่งอื่น
    พิกัดที่ส่งออกถูกปัดหยาบระดับอำเภอมาก่อนแล้วเสมอ (ข้อ 76) */
-async function reverseName(lat,lng){
-  /* BigDataCloud ออกแบบมาให้เรียกจากเบราว์เซอร์ตรง ๆ ไม่ต้องมีคีย์ จึงมาก่อน
-     ⚠️ Nominatim จำกัดโควตา *ต่อ IP* ซึ่งมือถือไทยใช้ CGNAT — หลายคนใช้ IP เดียวกัน
-        แล้วชนโควตากันเองโดยไม่รู้ตัว (ปัญหาเดียวกับที่ทำให้ต้องมีแคชลมในข้อ 58) */
+/* ⛔ **ห้ามใช้ BigDataCloud ที่นี่** (ข้อ 114)
+   นโยบายเขาเขียนว่า "only live GPS/WiFi coordinates obtained at the moment of the call
+   are permitted. Pre-stored, cached, or externally-sourced coordinates are strictly not allowed"
+   และการละเมิด "result in a 402 error and your IP address being banned"
+
+   ⚠️ drift ปัดพิกัดหยาบ 11 กม. ก่อนส่งออก *เสมอ* ตามข้อ 76 — เราจึงส่งพิกัดสดไม่ได้
+   **นี่เป็นความขัดแย้งเชิงหลักการ ไม่ใช่เรื่องโควตา** จะแก้ด้วยการส่งพิกัดละเอียดขึ้นไม่ได้
+   เพราะข้อ 76 มีไว้ปกป้องผู้ใช้ ไม่ใช่เพื่อประหยัดอะไร
+
+   ✅ Nominatim อนุญาตสิ่งที่เราทำ — "use directly triggered by the end-user is ok,
+   provided that your number of users is moderate" · เพดาน 1 ครั้ง/วินาที
+   ⚠️ **แต่นโยบายเขาบังคับให้แอปต้องแคชผลลัพธ์** จึงต้องมี rgeoGet/rgeoPut ด้านล่าง
+   ⚠️ และถ้าวันไหนผู้ใช้เยอะเกิน "moderate" ต้องย้าย — วางแผนไว้ก่อนถึงวันนั้น */
+const K_RGEO='drift.rgeo';
+function rgeoGet(k){ try{ return (JSON.parse(LS.get(K_RGEO)||'{}'))[k]||null; }catch(e){ return null; } }
+function rgeoPut(k,v){
   try{
-    const r=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client'
-      +'?latitude='+lat+'&longitude='+lng+'&localityLanguage=th');
+    const m=JSON.parse(LS.get(K_RGEO)||'{}');
+    m[k]=v;
+    /* พิกัดถูกปัดเป็นช่อง 0.1° อยู่แล้ว จำนวนช่องที่คนคนหนึ่งไปถึงจึงน้อยมาก
+       เพดานนี้กันไว้เผื่อกรณีที่คิดไม่ถึง ไม่ใช่เพราะคาดว่าจะโต */
+    const ks=Object.keys(m);
+    if(ks.length>300) delete m[ks[0]];
+    LS.set(K_RGEO, JSON.stringify(m));
+  }catch(e){}
+}
+async function reverseName(lat,lng){
+  const key=lat.toFixed(1)+','+lng.toFixed(1);
+  const hit=rgeoGet(key);
+  if(hit) return hit;
+  try{
+    /* Referer ถูกส่งอัตโนมัติจากโดเมนที่โฮสต์อยู่ ซึ่งเป็นสิ่งที่นโยบายขอ
+       (เบราว์เซอร์ตั้ง User-Agent เองไม่ได้ Referer จึงเป็นทางที่ทำได้จริง) */
+    /* ⚠️ zoom=8 ไม่ใช่ 10 — **ความละเอียดของชื่อต้องไม่เกินความละเอียดของพิกัดที่เรายอมส่ง**
+       zoom 10 คืน "ตำบลช้างม่อย" / "แขวงบางอ้อ" ซึ่งเล็กกว่า 11 กม. ที่ปัดไว้ในข้อ 76
+       เท่ากับได้ตำแหน่งที่ละเอียดกว่าที่ตั้งใจเปิดเผยกลับมาฟรี ๆ แล้วเอาไปแปะบนจดหมาย
+       zoom 8 คืนระดับอำเภอ/เขต ซึ่งพอดีกับความหยาบที่ตั้งใจไว้ */
+    const r=await fetch('https://nominatim.openstreetmap.org/reverse'
+      +'?format=json&zoom=8&accept-language=th&lat='+lat+'&lon='+lng);
     if(r.ok){
       const j=await r.json();
-      const n=j.locality||j.city||j.principalSubdivision;
-      if(n) return n;
+      const n=j.name || (j.address && (j.address.city||j.address.county||j.address.state));
+      if(n){ rgeoPut(key,n); return n; }
     }
-  }catch(e){}
-  try{
-    const r=await fetch('https://nominatim.openstreetmap.org/reverse'
-      +'?format=json&zoom=10&accept-language=th&lat='+lat+'&lon='+lng);
-    if(r.ok){ const j=await r.json(); if(j.name) return j.name; }
   }catch(e){}
   return lat.toFixed(2)+'°, '+lng.toFixed(2)+'°';
 }
