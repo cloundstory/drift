@@ -4761,7 +4761,7 @@ function refreshDock(){
     let head,sub;
     if(rank==='here'){ head='มีจดหมายถึงคุณ'; sub='จาก '+esc(safeName(L.f.n)); el.classList.add('here'); }
     else if(rank==='coming'){ head='อีก '+fmtDur(st.remain); sub='จาก '+esc(safeName(L.f.n)); }
-    else if(L.t.n){ head='ของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
+    else if(L.t.n){ head='จดหมายของคุณกำลังไปหา '+esc(L.t.n); sub='อีก '+fmtDur(st.remain); }
     else { head='ฉบับแรกของคุณกำลังไป'+esc(L.t.p?'ทาง '+L.t.p:''); sub='อีก '+fmtDur(st.remain); }
     el.hidden=false;
     el.innerHTML='<b>'+head+'</b><i>'+sub+'</i>';
