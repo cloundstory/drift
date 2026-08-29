@@ -604,7 +604,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <!-- องก์ปล่อย "let's drift" (ข้อ 44, 61.3) — เต็มจอ ไม่มีอะไรให้เลื่อนอ่าน ท่าทางจึงกินทั้งจอได้ -->
 <section id="drift" aria-hidden="true">
   <canvas id="flycv"></canvas>
-  <div id="driftHint"><span id="driftWord">let's drift</span><i>ปัดขึ้นเพื่อปล่อย</i></div>
+  <!-- ⚠️ บรรทัดล่างเป็นคำสั่งของ *องก์ปล่อย* เท่านั้น — ต้องล้างเมื่อองก์อื่นใช้จอนี้
+       ของเดิมตรึงไว้เป็นข้อความคงที่ จึงโผล่ทั้งตอนจดหมายร่อนลงมาและตอนถูกลมพัดหาย
+       ซึ่งบอกให้ผู้ใช้ทำสิ่งที่ตอนนั้นทำไม่ได้ (ข้อ 120.3) -->
+  <div id="driftHint"><span id="driftWord">let's drift</span><i id="driftSub">ปัดขึ้นเพื่อปล่อย</i></div>
 </section>
 <section class="sheet" id="sent">
   <button class="close" data-close>ปิด</button>
@@ -6140,6 +6143,19 @@ function openRead(L){
       return;
     }
   }
+  /* ---------- องก์หาย (ข้อ 120) ----------
+     ธง `L.gs` ทำงานแบบเดียวกับ `L.pk` — ในเครื่องอย่างเดียว ไม่อยู่ในลิงก์
+     ⚠️ ทำกับ *ทั้งขาเข้าและขาออก* ต่างจากองก์รับที่เป็นของขาเข้าเท่านั้น
+        เพราะคนที่เสียจดหมายไปคือทั้งคนเขียนและคนที่รออ่าน */
+  if(!L.gs){
+    const st0=letterState(L,Date.now());
+    if(st0.gone){
+      L.gs=1; store.put(L);
+      closeSheet();
+      openLost(L,()=>openRead(L));
+      return;
+    }
+  }
   current=L; logOpen=false;
   const st=letterState(L,Date.now());
   const stage=$('#rStage'), log=$('#rLog');
@@ -6860,6 +6876,7 @@ function openDrift(L,onDone){
   sizeStage();
   stage.style.opacity='0';
   $('#driftWord').textContent="let's drift";
+  $('#driftSub').textContent='ปัดขึ้นเพื่อปล่อย';
   $('#drift').classList.add('on');
   document.body.classList.add('drifting');
   if(!dRAF) dTick();
@@ -6986,6 +7003,113 @@ function aPaint(){
   dGrain(g,0.085,W,H);
 }
 
+/* ============================================================
+   องก์หาย "สายลมพัดหลงทาง" — จดหมายถูกลมกระชากออกจากเส้นทาง (ข้อ 120)
+
+   ⚠️ **สั้นกว่าองก์รับเกือบครึ่ง และไม่มีอะไรให้แตะ**
+   องก์ปล่อยกับองก์รับยาวได้เพราะเป็นความหวังกับความสุข และผู้ใช้เป็นคนลงมือ
+   แต่นี่คือความสูญเสีย — การให้คนกดปุ่มเพื่อดูจดหมายตัวเองหายไปคือความโหดร้าย
+   ดูอย่างเดียว แล้วพาไปหน้าอ่านเอง
+
+   ⚠️ ทิศที่กระชากมาจากลมจริง ณ ช่วงที่หาย ไม่ใช่ทิศที่ดูสวย
+   ⛔ กระดาษไม่ฉีก ไม่ไหม้ ไม่จม — มันถูก *พา* ไป นั่นคือสิ่งที่เกิดขึ้นจริง
+      และเป็นเหตุผลที่ข้อความยังอยู่กับผู้เขียน
+   ============================================================ */
+const X_GLOBE=1200, X_SNATCH=800, X_TUMBLE=1700, X_GONE=700;
+let xPHASE='off', xT0=0, xLET=null, xSPD=25, xDIR=200, xDone=null, xRAF=null;
+
+function openLost(L,onDone){
+  xLET=L; xDone=onDone||null;
+  const st=letterState(L,Date.now());
+  /* ลม ณ ช่วงที่หาย — ไม่ใช่ต้นทางหรือปลายทาง เพราะมันหายตรงกลาง */
+  const lg=(L.lg&&L.lg[Math.min(st.legIdx,L.lg.length-1)])||null;
+  xSPD=lg?lg[2]:25; xDIR=lg?lg[3]:200;
+  dT=0; dTEX=null;
+  dBuildTex(L);
+  selected=L.id;
+  G.focus(posAt(L,st.prog), G.fitZoom(CFG.REVEAL_MIN*2));
+  sizeStage();
+  xPHASE='globe'; xT0=performance.now();
+  $('#driftWord').textContent='';
+  $('#driftSub').textContent='';
+  $('#drift').classList.add('on');
+  document.body.classList.add('drifting');
+  if(!xRAF) xTick();
+}
+function xFinish(){
+  xPHASE='off';
+  $('#drift').classList.remove('on');
+  document.body.classList.remove('drifting');
+  stage.style.opacity='1';
+  $('#driftWord').textContent='';
+  if(xDone){ const f=xDone; xDone=null; f(); }
+}
+function xTick(){
+  xRAF=requestAnimationFrame(xTick);
+  if(xPHASE==='off') return;
+  dT+=1/60;
+  const now=performance.now(), el=now-xT0;
+  if(xPHASE==='globe'){
+    /* เห็นก่อนว่ามันหายตรงไหน — จุดนั้นคือที่ที่รอยบนลูกโลกจะค้างอยู่ตลอดไป */
+    const k=Math.min(1,el/X_GLOBE);
+    stage.style.opacity=(1-Math.max(0,(k-0.5)/0.5)).toFixed(3);
+    renderGlobe();
+    if(k>=1){ xPHASE='snatch'; xT0=now; stage.style.opacity='0'; }
+    return;
+  }
+  xPaint();
+}
+function xPaint(){
+  const cv=$('#flycv'), W=innerWidth, H=innerHeight, dp=Math.min(devicePixelRatio||1,2);
+  if(cv.width!==W*dp||cv.height!==H*dp){ cv.width=W*dp; cv.height=H*dp; }
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+  if(!dTEX) return;
+  const w=dWindOf(xSPD), now=performance.now(), el=now-xT0;
+  const blow=(xDIR+180)*RAD;                 /* ทิศที่ลมพัดไป (เดียวกับองก์ปล่อย) */
+  let S=null, strk=0, op=1;
+
+  if(xPHASE==='snatch'){
+    /* ครู่หนึ่งที่กระดาษยังทานอยู่ แล้วเสียหลัก — ไม่ได้หลุดทันที */
+    const k=Math.min(1,el/X_SNATCH), e=Math.pow(k,2.2);
+    S={ tx:Math.sin(blow)*e*W*0.10, ty:-e*H*0.03, depth:e*140,
+        rotX:-e*10, rotY:Math.sin(blow)*e*26, rotZ:e*18,
+        curl:0.16+e*0.30, mwind:0.22+w*0.30 };
+    strk=0.7+e*0.8;
+    if(k>=1){ xPHASE='tumble'; xT0=now; }
+  }else if(xPHASE==='tumble'){
+    const k=Math.min(1,el/X_TUMBLE);
+    /* หมุนคว้าง — เร็วตอนแรกแล้วช้าลงเมื่อไกลออกไป เพราะมองจากที่ไกลทุกอย่างช้าลง */
+    const spin=1-Math.pow(1-k,2.4);
+    S={ tx:Math.sin(blow)*(0.10+spin*0.62)*W, ty:-(0.03+spin*0.16)*H,
+        depth:140+Math.pow(spin,1.3)*3400,
+        rotX:-10-spin*40, rotY:Math.sin(blow)*26+spin*470, rotZ:18+spin*300,
+        curl:0.46+spin*0.7, mwind:0.30+w*0.30 };
+    strk=1.5*(1-k*0.4);
+    op=k<0.55?1:Math.max(0,1-(k-0.55)/0.45);
+    if(k>=1){ xPHASE='gone'; xT0=now; $('#driftWord').textContent='สายลมพัดหลงทาง'; }
+  }else if(xPHASE==='gone'){
+    /* กระดาษไปแล้ว เหลือแต่ลมที่ยังพัดอยู่ — ลมไม่ได้หยุดเพราะจดหมายหาย */
+    const k=Math.min(1,el/X_GONE);
+    strk=1.1*(1-k); op=0;
+    dStreaks(g,strk,{w},blow,true,0,W,H);
+    dStreaks(g,strk,{w},blow,false,0,W,H);
+    dGrain(g,0.085,W,H);
+    if(k>=1){ xFinish(); }
+    return;
+  }
+  if(!S) return;
+  const bw=Math.min(W*0.86,380), bh=bw*(dTH/dTW);
+  const persp=DRIFT_FOC/(DRIFT_FOC+S.depth);
+  const lod = persp>0.55?[13,16] : persp>0.28?[9,11] : [6,7];
+  const f={w};
+  dStreaks(g,strk,f,blow,true,S.depth,W,H);
+  g.globalAlpha=op;
+  dWarp(g,W/2,H/2,bw,bh,dT,S.mwind,S.rotY*RAD,S.rotX*RAD,S.rotZ*RAD,S.depth,S.curl,lod[0],lod[1],S.tx,S.ty);
+  g.globalAlpha=1;
+  dStreaks(g,strk,f,blow,false,S.depth,W,H);
+  dGrain(g,0.085,W,H);
+}
+
 function aTick(){
   aRAF=requestAnimationFrame(aTick);
   if(aPHASE==='off') return;
@@ -7015,6 +7139,7 @@ function openArrive(L,onDone){
   sizeStage();
   aPHASE='globe'; aT0=performance.now();
   $('#driftWord').textContent='drifted in';
+  $('#driftSub').textContent='';
   $('#drift').classList.add('on');
   document.body.classList.add('drifting');
   if(!aRAF) aTick();
