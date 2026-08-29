@@ -31,7 +31,7 @@
 #driftHint{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 42px);
   text-align:center;pointer-events:none;display:flex;flex-direction:column;gap:7px}
 #driftWord{font-size:13px;letter-spacing:.34em;color:var(--dim)}
-#driftHint i{font-style:normal;font-size:11.5px;letter-spacing:.12em;color:var(--faint)}
+#driftHint i{font-style:normal;font-size:11.5px;letter-spacing:.03em;color:var(--faint)}
 body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;transition:opacity .3s}
 @media (prefers-reduced-motion:reduce){#driftHint{transition:none}}
 
@@ -63,7 +63,7 @@ header.bar{display:flex;align-items:center;justify-content:space-between;gap:8px
 .spacer{flex:1;pointer-events:none}
 
 button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
-.btn{border:1px solid var(--line-soft);border-radius:999px;padding:10px 16px;background:rgba(255,255,255,.42);backdrop-filter:blur(7px);font-size:13px;letter-spacing:.05em;transition:background .2s,border-color .2s}
+.btn{border:1px solid var(--line-soft);border-radius:999px;padding:10px 16px;background:rgba(255,255,255,.42);backdrop-filter:blur(7px);font-size:13px;letter-spacing:.015em;transition:background .2s,border-color .2s}
 .btn:active{background:rgba(255,255,255,.85)}
 .btn.gold{border-color:rgba(198,154,84,.5);color:#8b6a33}
 .btn.ghost{border-color:transparent;background:none;color:var(--dim)}
@@ -76,7 +76,7 @@ button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
 .play[hidden]{display:none}
 .play input{flex:1;accent-color:#c69a54;height:32px;background:none}
 .pbtn{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:999px;
-  background:rgba(255,255,255,.62);backdrop-filter:blur(7px);padding:8px 16px;font-size:12px;letter-spacing:.06em}
+  background:rgba(255,255,255,.62);backdrop-filter:blur(7px);padding:8px 16px;font-size:12px;letter-spacing:.015em}
 .ptime{flex:0 0 auto;min-width:78px;text-align:right;font-size:11px;color:var(--dim);
   font-family:ui-monospace,Menlo,monospace}
 .chip{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:13px;background:rgba(255,255,255,.5);backdrop-filter:blur(7px);padding:8px 13px;min-width:130px;max-width:210px;text-align:left}
@@ -87,20 +87,21 @@ button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
 .chip.here .eta{color:#8b6a33}
 .chip.gone{opacity:.55}
 
-.hint{position:fixed;left:0;right:0;top:68%;transform:translateY(-50%);text-align:center;font-size:12.5px;letter-spacing:.1em;color:var(--faint);line-height:2.2;pointer-events:none;transition:opacity .6s}
+.hint{position:fixed;left:0;right:0;top:68%;transform:translateY(-50%);text-align:center;font-size:12.5px;letter-spacing:.03em;color:var(--faint);line-height:2.2;pointer-events:none;transition:opacity .6s}
 
 /* ---------- sheets ---------- */
 .sheet{position:fixed;inset:0;z-index:20;display:none;background:linear-gradient(165deg,rgba(223,226,230,.975),rgba(238,233,222,.975));backdrop-filter:blur(12px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 46px) 18px calc(env(safe-area-inset-bottom) + 34px)}
 .sheet.on{display:block;animation:rise .32s cubic-bezier(.2,.7,.3,1)}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .wrap{max-width:540px;margin:0 auto}
-.close{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:10px;z-index:2;font-size:12px;letter-spacing:.12em;color:var(--dim);padding:12px 14px}
+.close{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:10px;z-index:2;font-size:12px;letter-spacing:.02em;color:var(--dim);padding:12px 14px}
 .act{font-size:11px;letter-spacing:.34em;color:var(--faint);margin-bottom:9px}
-h2{font-size:15px;font-weight:normal;letter-spacing:.2em;margin-bottom:5px}
+/* ⚠️ หัวข้อเป็นภาษาไทยเกือบทั้งหมด — .2em ทำให้สระลอยหลุดจากพยัญชนะ (ข้อ 110.1) */
+h2{font-size:15px;font-weight:normal;letter-spacing:.03em;margin-bottom:5px}
 .sub{font-size:12.5px;color:var(--dim);margin-bottom:22px;letter-spacing:.02em}
 
 label.f{display:block;margin-bottom:15px}
-label.f>span{display:block;font-size:11.5px;color:var(--dim);letter-spacing:.14em;margin-bottom:6px}
+label.f>span{display:block;font-size:11.5px;color:var(--dim);letter-spacing:.02em;margin-bottom:6px}
 /* 16px = กัน iOS Safari ซูมอัตโนมัติตอนโฟกัส (mobile-first) */
 input,textarea{width:100%;font:inherit;font-size:16px;color:var(--txt);background:rgba(255,255,255,.42);border:1px solid var(--line-soft);border-radius:9px;padding:11px 13px;outline:none;-webkit-user-select:text;user-select:text;transition:border-color .2s,background .2s}
 input:focus,textarea:focus{border-color:rgba(198,154,84,.5);background:rgba(255,255,255,.7)}
@@ -120,7 +121,7 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 
 .fc{border:1px solid var(--line-soft);border-radius:14px;background:rgba(255,255,255,.32);padding:16px;margin-bottom:16px}
 .fc canvas{width:100%;height:120px;display:block;margin:-6px 0 6px}
-.fc .big{font-size:21px;letter-spacing:.05em}
+.fc .big{font-size:21px;letter-spacing:.02em}
 .fc .poem{font-size:14px;line-height:2;margin-top:9px}
 .fc .meta{font-size:11.5px;color:var(--faint);margin-top:9px;letter-spacing:.04em}
 
@@ -136,14 +137,14 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 .paperwrap{position:relative;margin:0 auto 16px;max-width:500px}
 #rCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .ptext{position:relative;padding:36px 32px 30px;min-height:330px;font-size:15px;line-height:2.15;white-space:pre-wrap;word-break:break-word;color:rgba(43,43,47,.9);-webkit-user-select:text;user-select:text}
-.sig{margin-top:26px;text-align:right;font-size:13.5px;color:rgba(43,43,47,.6);letter-spacing:.08em}
-.rmeta{font-size:11.5px;color:var(--dim);letter-spacing:.1em;margin-bottom:12px}
+.sig{margin-top:26px;text-align:right;font-size:13.5px;color:rgba(43,43,47,.6);letter-spacing:.02em}
+.rmeta{font-size:11.5px;color:var(--dim);letter-spacing:.02em;margin-bottom:12px}
 .log{display:none;border-top:1px solid var(--line-soft);margin-top:16px;padding-top:12px}
 .log.on{display:block}
 .li{display:flex;gap:12px;font-size:12px;color:var(--dim);padding:4px 0;line-height:1.8}
 .li i{font-style:normal;flex:0 0 62px;color:var(--faint);letter-spacing:.02em}
 .waiting{text-align:center;padding:40px 20px;font-size:14px;line-height:2.2;color:var(--dim)}
-.waiting b{display:block;font-weight:normal;font-size:19px;color:var(--txt);letter-spacing:.05em;margin-bottom:10px}
+.waiting b{display:block;font-weight:normal;font-size:19px;color:var(--txt);letter-spacing:.015em;margin-bottom:10px}
 
 
 /* ---------- หน้าแรกใหม่ (ข้อ 100.2) ----------
@@ -165,15 +166,16 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 #status:active{background:rgba(255,255,255,.4)}
 #status[hidden]{display:none}
 #status b{font-weight:normal;font-size:15.5px;letter-spacing:.04em;line-height:1.6}
-#status i{font-style:normal;font-size:11px;letter-spacing:.09em;color:var(--faint);line-height:1.7}
-#status.quiet b{font-size:13px;color:var(--dim);letter-spacing:.08em}
+#status i{font-style:normal;font-size:11px;letter-spacing:.02em;color:var(--faint);line-height:1.7}
+#status.quiet b{font-size:13px;color:var(--dim);letter-spacing:.02em}
 #status.here b{color:#8b6a33}
 
 #bottom{padding:6px 16px calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:center}
-#btnWrite{min-width:148px;padding:12px 26px;border-radius:14px;font-size:13.5px;letter-spacing:.08em}
+#btnWrite{min-width:148px;padding:12px 26px;border-radius:14px;font-size:13.5px;letter-spacing:.02em}
 body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transition:opacity .3s}
 
 /* แถวในเมนูกับในกล่อง — สูง 46px ทั้งแถวแตะได้ ไม่ใช่แค่ตัวหนังสือ */
+.mrow[hidden]{display:none}
 .mrow{display:flex;width:100%;justify-content:space-between;align-items:baseline;gap:10px;
   padding:15px 4px;min-height:46px;border-bottom:1px solid var(--line-soft);text-align:left}
 .mrow:last-child{border-bottom:0}
@@ -182,7 +184,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 .mrow:active{background:rgba(255,255,255,.4)}
 .mrow.on b,.mrow.on em{color:#8b6a33}
 .mrow.gone{opacity:.5}
-.grp{font-size:10px;letter-spacing:.34em;color:var(--faint);margin:16px 0 2px}
+.grp{font-size:10px;letter-spacing:.03em;color:var(--faint);margin:16px 0 2px}
 .grp:first-child{margin-top:0}
 
 
@@ -209,15 +211,22 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #cSheet .ink{position:relative;padding:30px 26px 34px;display:flex;flex-direction:column;min-height:64vh}
 #cSheet .meta{text-align:right;font-size:11px;color:var(--dim);margin-bottom:14px;line-height:1.6}
 .wline{display:flex;align-items:baseline;gap:7px;margin-bottom:4px}
+/* ⚠️ display:flex ของคลาสชนะ display:none ที่มากับ [hidden] ของเบราว์เซอร์
+   ไม่เขียนบรรทัดนี้ = ซ่อนไม่ลง และได้บรรทัด "ถึง" สองอันพร้อมกัน (ข้อ 110.4) */
+.wline[hidden]{display:none}
 .wline .lb{font-size:15px;color:rgba(43,43,47,.9);white-space:nowrap}
 #cSheet input,#cSheet textarea{
   font:inherit;font-size:15px;color:rgba(43,43,47,.92);background:transparent;border:0;outline:0;
   padding:2px 0;width:100%;resize:none;-webkit-user-select:text;user-select:text;
   border-bottom:1px solid rgba(84,90,104,.16);border-radius:0}
 #cSheet input::placeholder,#cSheet textarea::placeholder{color:rgba(84,90,104,.34)}
+/* ⚠️ ช่องที่ตั้งใจให้ *เนื้อหา* เป็น monospace (รหัส · ลิงก์) แต่ *คำใบ้* เป็นภาษาไทย
+   ไทยใน monospace ได้ความกว้างเท่ากันทุกตัว ช่องว่างเลยถ่างเท่าตัวอักษรเต็ม
+   คำใบ้จึงต้องกลับไปใช้ฟอนต์ของแอป ส่วนสิ่งที่ผู้ใช้พิมพ์ยังเป็น monospace เหมือนเดิม (ข้อ 110.1ก) */
+#vCode::placeholder{font-family:"Noto Serif Thai",Georgia,serif;letter-spacing:0}
 #cSheet input:focus,#cSheet textarea:focus{border-bottom-color:rgba(198,154,84,.75);background:transparent}
 /* ต้องมี #cSheet นำหน้า ไม่งั้นแพ้ #cSheet textarea{font:inherit} ที่ specificity สูงกว่า */
-#cSheet #cBody{font-size:15px;line-height:1.95;min-height:44vh;margin-top:16px;border-bottom:0}
+#cSheet #cBody{font-size:15px;line-height:1.95;min-height:44vh;flex:1 1 auto;margin-top:16px;border-bottom:0}
 #cFrom{text-align:right}
 .wfoot{margin-top:auto;display:flex;align-items:baseline;justify-content:flex-end;gap:7px;padding-top:18px}
 #cHits{position:absolute;left:26px;right:26px;z-index:3;background:#fbf9f4;
@@ -225,6 +234,15 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #cHits:empty{display:none}
 #cHits .hit{border-radius:0;background:none;border-bottom:1px solid rgba(84,90,104,.10)}
 #cDist{font-size:11px;color:var(--faint);letter-spacing:.03em;margin:2px 0 0 26px}
+/* ---------- แถวคนที่เขียนถึงได้ (ข้อ 110.4) ----------
+   ⚠️ อยู่บนกระดาษ จึงต้องเป็นหมึกบนกระดาษ ไม่ใช่ปุ่มที่ลอยทับ
+   ใช้เส้นใต้บาง ๆ ชุดเดียวกับช่องกรอก เพื่อให้อ่านเป็น "ที่ว่างให้เติม" เหมือนกัน */
+#cWho{display:flex;flex-wrap:wrap;gap:5px 14px;align-items:baseline;flex:1;min-width:0}
+#cWho .who{font:inherit;font-size:15px;color:rgba(43,43,47,.92);background:transparent;
+  border:0;border-bottom:1px solid rgba(84,90,104,.22);padding:2px 1px 3px;line-height:1.5;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cWho .who:active{border-bottom-color:rgba(198,154,84,.75)}
+#cWho .other{font:inherit;font-size:12.5px;color:var(--dim);background:transparent;border:0;padding:2px 0 3px}
 #cCount{position:absolute;right:26px;bottom:10px;font-size:10.5px;color:var(--faint);opacity:0;transition:opacity .3s}
 #cCount.near{opacity:1}
 #cBar{flex:0 0 auto;padding:8px 15px calc(env(safe-area-inset-bottom) + 13px)}
@@ -260,8 +278,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    เบลอ ไม่ใช่ลบ — ผู้รับยังเป็นเจ้าของจดหมายของตัวเอง เราแค่ไม่ยัดให้อ่านทันที */
 .shade{position:relative;border:1px solid rgba(168,87,74,.35);border-radius:14px;
   background:rgba(255,255,255,.3);padding:20px 18px;text-align:center}
-.shade .cat{font-size:11px;letter-spacing:.2em;color:#a8574a;margin-bottom:9px}
-.shade b{display:block;font-weight:normal;font-size:15px;letter-spacing:.04em;margin-bottom:6px}
+.shade .cat{font-size:11px;letter-spacing:.03em;color:#a8574a;margin-bottom:9px}
+.shade b{display:block;font-weight:normal;font-size:15px;letter-spacing:.015em;margin-bottom:6px}
 .shade p{font-size:12px;color:var(--dim);line-height:1.9;margin-bottom:16px}
 .shade .row{max-width:320px;margin:0 auto}
 .hush{filter:blur(9px);opacity:.5;pointer-events:none;user-select:none}
@@ -281,7 +299,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 /* หน้าเปิดกับคำถามเดียว — เต็มจอ ไม่มีอะไรให้เลื่อนอ่าน (ข้อ 105) */
 #intro .wrap,#ask .wrap{min-height:calc(100vh - 130px);display:flex;flex-direction:column;
   justify-content:center;text-align:center}
-.big1{font-size:19px;letter-spacing:.05em;line-height:1.62}
+.big1{font-size:19px;letter-spacing:.02em;line-height:1.62}
 .big2{font-size:15.5px;letter-spacing:.03em;line-height:1.9}
 .word{font-size:13px;letter-spacing:.34em;color:var(--dim);margin-bottom:8px}
 /* หัวกระดาษกดได้เมื่อยังไม่ได้ตั้งต้นทาง — ทางตันเดิมคือบอกให้ไปหาเมนูเอง */
@@ -289,7 +307,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 
 .iconbox{width:76px;height:76px;border-radius:18px;margin:0 auto 16px;display:block;
   box-shadow:0 2px 10px rgba(51,51,58,.16)}
-#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.05em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.015em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
 </head>
@@ -423,7 +441,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   <button class="close" data-close>ปิด</button>
   <div class="wrap" style="text-align:center;padding-top:40px">
     <div class="act" id="gpStamp"></div>
-    <div style="font-size:19px;letter-spacing:.05em;margin:6px 0 6px" id="gpName"></div>
+    <div style="font-size:19px;letter-spacing:.02em;margin:6px 0 6px" id="gpName"></div>
     <p class="sub" id="gpWhere"></p>
     <div style="height:14px"></div>
     <button class="btn wide gold" id="btnGpSwap">แลกที่อยู่กัน
@@ -496,9 +514,11 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <canvas id="cPaper"></canvas>
       <div class="ink">
         <div class="meta" id="cOrigin"></div>
-        <div class="wline"><span class="lb">ถึง</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></div>
-        <div id="cPick"><button class="btn ghost" id="btnPick" style="font-size:11.5px;padding:4px 0">เลือกจากรายชื่อ</button></div>
-        <div class="wline"><span class="lb">ที่</span><input id="cPlace" placeholder="เมืองปลายทาง" autocomplete="off"></div>
+        <!-- คนในรายชื่อมาก่อน · แตะครั้งเดียวได้ทั้งชื่อและปลายทาง (ข้อ 110.4)
+             ⛔ ห้ามบังคับให้มี port ถึงจะเขียนได้ — ข้อ 99.7 กับ 94.1 ยืนอยู่ตรงข้ามกับสิ่งนั้น -->
+        <div class="wline" id="cWhoLine" hidden><span class="lb">ถึง</span><div id="cWho"></div></div>
+        <div class="wline" id="cToLine"><span class="lb">ถึง</span><input id="cTo" placeholder="ชื่อผู้รับ" autocomplete="off"></div>
+        <div class="wline" id="cPlaceLine"><span class="lb">ที่</span><input id="cPlace" placeholder="เมืองปลายทาง" autocomplete="off"></div>
         <div class="hits" id="cHits"></div>
         <div id="cDist"></div>
         <textarea id="cBody" placeholder="เขียนสิ่งที่อยากบอก…" rows="6"></textarea>
@@ -561,7 +581,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   <div class="wrap">
     <p class="rmeta" id="rMeta"></p>
     <div id="rStage"></div>
-    <button class="btn ghost" id="btnLog" style="font-size:12px;letter-spacing:.1em;margin-top:4px">บันทึกการเดินทาง</button>
+    <button class="btn ghost" id="btnLog" style="font-size:12px;letter-spacing:.02em;margin-top:4px">บันทึกการเดินทาง</button>
     <div class="log" id="rLog"></div>
   </div>
 </section>
@@ -4156,8 +4176,17 @@ function syncPlay(){
   const bar=$('#play');
   const L=selected?store.letters().find(x=>x.id===selected):null;
   const st=L?letterState(L,Date.now()):null;
-  const on = !!L && !!st && !!(L.lg&&L.lg.length&&L.th>0);
-  if(!on && PREVIEW) previewOff();
+  /* ---------- ตัวเร่งเวลาไม่ควรมีตอนกำลังรอ (ข้อ 110.3) ----------
+     ⚠️ แอปนี้ขายการรอ — ข้อ 60 เอาคำว่า "ส่งถึงทันที" ออกจากโปรเจกต์ไปแล้ว
+     แถบที่เล่นการเดินทางจบใน 40 วินาที จึงเป็นทางลัดข้ามสิ่งที่แอปมีไว้ขาย
+     แต่ฉบับที่ถึงแล้วเป็นคนละเรื่อง — การรอจบไปแล้ว เหลือแต่การย้อนดูว่าลมพาไปทางไหน */
+  const has = !!L && !!st && !!(L.lg&&L.lg.length&&L.th>0);
+  const landed = !!(st && (st.arrived||st.gone));
+  /* ⚠️ ปิด PREVIEW ตามเงื่อนไข "มีข้อมูลไหม" เท่านั้น ห้ามผูกกับการซ่อนแถบ
+     เพราะองก์ปล่อยกับองก์รับใช้ PREVIEW เป็นกลไกหยุดเวลาไว้ที่ชั่วโมงศูนย์
+     ผูกรวมกันเมื่อไหร่ openDrift จะพัง — จดหมายส่งไม่ได้ทั้งแอป (ข้อ 110.3ก) */
+  if(!has && PREVIEW) previewOff();
+  const on = has && landed;
   /* ข้อ 100.2 — เดิมโชว์ปุ่มค้างไว้ตอนยังไม่เลือกฉบับ เพราะแถบจดหมายเป็นทางเข้าเดียว
      "ทางเข้าที่มองไม่เห็นเท่ากับไม่มี" ยังจริงอยู่ แต่ตอนนี้มีสามทางเข้าแล้ว —
      บรรทัดสถานะ · แตะจดหมายบนลูกโลก · กล่องจดหมายในเมนู ปุ่มค้างจึงเหลือแค่ของรก */
@@ -4166,9 +4195,7 @@ function syncPlay(){
   $('#pPlay').textContent = PREVIEW ? (PREVIEW.play?'หยุด':'เล่นต่อ') : 'ดูการเดินทาง';
   const h = PREVIEW ? PREVIEW.h : st.elapsed;
   $('#pScrub').value = Math.round(clamp(h/L.th,0,1)*1000);
-  const done=letterState(L,Date.now());
-  $('#pTime').textContent = PREVIEW ? fmtDur(Math.max(0,L.th-h))+' เหลือ'
-    : (done.arrived||done.gone ? 'ย้อนดูได้' : 'ตามเวลาจริง');
+  $('#pTime').textContent = PREVIEW ? fmtDur(Math.max(0,L.th-h))+' เหลือ' : 'ย้อนดูได้';
 }
 
 function sizeStage(){
@@ -5113,13 +5140,56 @@ function fillPorts(){
     }
   });
 }
-function pickPort(pt){
+/* ตั้งผู้รับอย่างเดียว ไม่แตะหน้าจอ — เรียกได้จากในหน้าเขียนเองโดยไม่กระพริบ */
+function applyPort(pt){
   pendTo={lat:pt.a,lng:pt.o,place:pt.p};
   pendPortTo=pt;
   $('#cTo').value=safeName(pt.n);
   $('#cPlace').value=pt.p||'';
   $('#cHits').innerHTML='';
-  closeSheet(); openSheet('compose'); syncDist();
+  fillWho();
+  syncDist();
+  repaintPaper();
+}
+function pickPort(pt){
+  applyPort(pt);
+  closeSheet(); openSheet('compose');
+}
+
+/* ---------- ใครอยู่บนกระดาษ (ข้อ 110.4) ----------
+   สามสถานะ และทั้งสามอยู่บนบรรทัดเดียวกัน ไม่มีหน้าจอใหม่
+     มีรายชื่อ + ยังไม่เลือก → แถวชื่อให้แตะ
+     เลือกแล้ว / กด "คนอื่น"  → ช่องพิมพ์ตามเดิม
+     ไม่มีรายชื่อเลย          → ช่องพิมพ์ตามเดิม (คนใหม่ต้องเขียนได้ทันที) */
+let typeMode=false;
+function fillWho(){
+  const box=$('#cWho'), list=store.ports().sort((x,y)=>(y.at||0)-(x.at||0));
+  const chosen = !!($('#cTo').value.trim() || $('#cPlace').value.trim());
+  const useList = list.length>0 && !typeMode && !chosen;
+  $('#cWhoLine').hidden = !useList;
+  $('#cToLine').hidden = useList;
+  $('#cPlaceLine').hidden = useList;
+  if(!useList) return;
+  box.innerHTML='';
+  list.forEach(pt=>{
+    const b=document.createElement('button');
+    b.className='who'; b.type='button';
+    b.textContent=safeName(pt.n);
+    b.onclick=()=>applyPort(pt);
+    box.appendChild(b);
+  });
+  const o=document.createElement('button');
+  o.className='other'; o.type='button'; o.textContent='คนอื่น';
+  /* ⚠️ ต้องล้าง pendTo ด้วย ไม่ใช่แค่ล้างช่องที่ตาเห็น
+     ปลายทางที่ค้างอยู่จะทำให้จดหมายบินไปเมืองของคนก่อนหน้า
+     ทั้งที่หน้ากระดาษจ่าหน้าถึงคนใหม่ — และ doSend ผ่านฉลุยเพราะ pendTo มีค่า */
+  o.onclick=()=>{
+    typeMode=true;
+    $('#cTo').value=''; $('#cPlace').value=''; $('#cHits').innerHTML='';
+    pendTo=null; pendPortTo=null; syncDist();
+    fillWho(); repaintPaper(); $('#cTo').focus();
+  };
+  box.appendChild(o);
 }
 
 /* ---------- หน้า port ของอีกฝ่าย ---------- */
@@ -5254,7 +5324,7 @@ function openCompose(){
   const me=store.me();
   if(me) $('#cFrom').value=me.name||'';
   syncOriginNote(); syncDist(); askOff();
-  $('#cPick').hidden = !store.ports().length;
+  typeMode=false; fillWho();
   openSheet('compose');
   document.documentElement.style.setProperty('--kb','0px');
   paintWritePaper(); syncKB(); windHere();
@@ -5281,6 +5351,20 @@ function paintWritePaper(tries){
   if(!w||!h){ if((tries||0)<20) requestAnimationFrame(()=>paintWritePaper((tries||0)+1)); return; }
   cv.style.width=w+'px'; cv.style.height=h+'px';
   drawPaper(cv,{id:'',wet:0,storm:0,gust:0,ice:0,days:0});
+}
+
+/* ---------- กระดาษวาดใหม่เมื่อขนาดเปลี่ยน (ข้อ 110.4ก) ----------
+   ซ่อน/เผยบรรทัดผู้รับทำให้กระดาษสูงเปลี่ยน แต่ลายเป็น canvas ที่ตรึงความละเอียดไว้แล้ว
+   ไม่วาดใหม่ = ลายถูกยืด เห็นเป็นแถบสีต่างตรงส่วนที่งอกออกมา
+
+   ⚠️ rAF เฟรมเดียวเร็วไป — วัดได้ค่า *ก่อน* flex ยืดเสร็จ ต้องสองเฟรม
+      เฟรมแรก style ลง เฟรมสอง layout จบแล้วค่อยวัด
+   ⚠️ และ rAF **ไม่ยิงเลย** เมื่อแท็บถูกซ่อน (document.visibilityState === 'hidden')
+      สลับแท็บระหว่างเขียนแล้วกลับมา จะเจอลายกระดาษยืดค้างถ้าไม่มีตัวสำรอง
+      setTimeout ยังเดินตอนซ่อน จึงต้องมีคู่กัน — drawPaper วาดจาก id คงที่ ซ้ำได้ผลเดิม */
+function repaintPaper(){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>paintWritePaper()));
+  setTimeout(()=>paintWritePaper(), 90);
 }
 
 /* ⚠️ คีย์บอร์ดมือถือ — จุดที่หน้าเขียนพังบ่อยที่สุด (ข้อ 63.4)
@@ -5794,7 +5878,6 @@ $('#btnWrite').onclick=openCompose;
 $('#btnSend').onclick=doSend;
 $('#btnConfirm').onclick=confirmSend;
 $('#btnAskNo').onclick=()=>{ askOff(); $('#cBody').focus(); };
-$('#btnPick').onclick=()=>openPorts(true);
 /* ทางตันเดิม: หัวกระดาษบอกให้ "ไปที่เมนู → บัญชี" กลางความตั้งใจจะเขียน
    ตอนนี้กดตรงนั้นได้เลย แล้วกลับมาที่กระดาษใบเดิม */
 $('#cOrigin').onclick=()=>{ const me=store.me(); if(!me||me.lat==null) openOrigin(()=>openSheet('compose')); };
@@ -5817,6 +5900,8 @@ $('#vWF').addEventListener('change',e=>{
   toast(e.target.checked?'เปิดตัวกรองแล้ว':'ปิดตัวกรองแล้ว');
 });
 wireSearch('#cPlace','#cHits',r=>{ pendTo=r; syncDist(); });
+/* พิมพ์เองเมื่อไหร่ ผู้รับคือสิ่งที่พิมพ์ ไม่ใช่คนที่เคยแตะไว้ (ข้อ 110.4) */
+$('#cTo').addEventListener('input',()=>{ pendPortTo=null; });
 wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต้นทางแล้ว'); });
 
 /* PWA: manifest ฝังในไฟล์เดียว + service worker เมื่อถูก host (สะพานสู่แอปตาม §8.6)
@@ -6130,11 +6215,28 @@ function dTick(){
   const blow=(dDIR+180)*RAD;
   let ty,tx=0,tz,op=1,rz,rx,ry=0,curl,mwind;
   if(dPHASE==='wait'||dDrag){
-    ty=-dProg*H*0.10; tz=-dProg*90;
-    rz=dProg*2.5; rx=-dProg*6;
-    curl=dProg*0.18;              /* เริ่มโค้งตั้งแต่ตอนดัน — มือออกแรง กระดาษตอบ */
+    /* ---------- ลมก่อนปล่อย (ข้อ 110.2) ----------
+       เดิมทุกค่าที่นี่ขึ้นกับ dProg อย่างเดียว — ยังไม่ดัน = ทุกค่าเป็นศูนย์ = กระดาษนิ่งสนิท
+       ⚠️ ทั้งที่แอปรู้ลมต้นทางอยู่แล้ว (dSPD → f.w) นี่คือหน้าจอเดียวที่ถือกระดาษไว้กับมือ
+       แล้วปล่อยให้มันนิ่งเหมือนกระดาษในห้องปิด — ขัดกับ "ลมคือพระเอก" ตรง ๆ
+       ใช้คาบสามชั้นชุดเดียวกับตอนบิน เพื่อให้เป็นลมสายเดียวกันต่อเนื่อง ไม่ใช่คนละเรื่อง */
+    const idle=(Math.sin(dT*1.37)*0.55+Math.sin(dT*0.83+1.7)*0.30+Math.sin(dT*2.11+4.1)*0.15)*f.w;
+    /* ยังอยู่ในมือ จึงไหวอยู่กับที่ ไม่ลอยหนี — แอมพลิจูดเล็กกว่าตอนบินสิบเท่า
+       และจางลงเมื่อดันขึ้นไปแล้ว เพราะตอนนั้นแรงจากมือเข้ามาแทน */
+    const hold=(1-dProg*0.55);
+    /* ⚠️ น้ำหนักอยู่ที่ *การบิด* ไม่ใช่การเลื่อน — กระดาษยังอยู่ในมือ
+       สิ่งที่ลมทำได้คือสะบัดมุมกับพลิกระนาบ ไม่ใช่ลากทั้งแผ่นไปมา
+       ค่าที่ตั้งไว้ต่ำกว่านี้วัดได้แต่ตามองไม่เห็น ซึ่งเท่ากับไม่ได้แก้ */
+    ty=-dProg*H*0.10 + idle*H*0.016*hold;
+    tx=Math.sin((dDIR+180)*RAD)*idle*W*0.026*hold;
+    tz=-dProg*90;
+    rz=dProg*2.5 + idle*8.5*hold;
+    rx=-dProg*6 + idle*4.5*hold;
+    ry=idle*11*hold;
+    curl=dProg*0.18 + Math.abs(idle)*0.16*hold;   /* เริ่มโค้งตั้งแต่ตอนดัน — มือออกแรง กระดาษตอบ */
     dStreak=dProg*0.55;
-    mwind=0.13+dProg*0.09;
+    /* ผิวกระดาษกระเพื่อมตามลมจริง — ตัวนี้คือสิ่งที่ตาอ่านว่า "มีลม" มากกว่าการขยับทั้งแผ่น */
+    mwind=0.13+dProg*0.09+f.w*0.12;
   }else{
     const e=Math.min(1,dFly/DRIFT_CUT);
     const rise=1-Math.pow(1-e,1.5);
