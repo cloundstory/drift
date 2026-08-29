@@ -547,6 +547,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <div class="poem" id="fcPoem"></div>
       <div class="meta" id="fcMeta"></div>
     </div>
+    <!-- ⚠️ ยิงสดไม่ได้ อากาศจึงมาจากแคชล้วนซึ่งเก็บแค่ลม ทิศ ฝน กระโชก (ข้อ 111.3)
+         ต้องบอกตรง ๆ ว่าเที่ยวนี้จะไม่มีหิมะ หมอก หรือพายุหมุน ไม่ใช่ปล่อยให้เข้าใจว่าฟ้าดี -->
+    <div class="warn" id="fcOffline" hidden>ตอนนี้ถามสายลมสดไม่ได้ ใช้ลมที่เก็บไว้แทน<br>
+      <span style="color:var(--dim);font-size:12px">เที่ยวนี้จะไม่มีหิมะ หมอก หรือพายุหมุน — รอต่อเน็ตแล้วส่งใหม่จะได้อากาศจริง</span></div>
     <div class="warn" style="border-color:rgba(198,154,84,.55)">ปิดแอปไปได้ ลมไม่หยุดตามเรา<br>
       <span style="color:var(--dim);font-size:12px">จดหมายจะเปิดอ่านไม่ได้จนกว่าจะถึงจริง</span></div>
     <div id="fcChoice"></div>
@@ -5497,6 +5501,16 @@ function showForecast(){
   const holds=sim.legs.filter(l=>l[1]>0.01).length;
   $('#fcMeta').textContent  = 'ถึงประมาณ '+new Date(Date.now()+sim.total*3600000).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})
     + (holds?' · ติดลม '+holds+' ครั้ง':'');
+  /* ---------- อากาศมาจากแคชล้วน (ข้อ 111.3) ----------
+     ⚠️ แคชภูมิภาคเก็บ 4 ชั้น (ลม · ทิศ · ฝน · กระโชก) ไม่มี weather_code กับ pressure_msl
+     ปกติไม่เป็นไร เพราะทุกช่วงที่จดหมายเดินผ่านอ่านจากคำขอสดซึ่งมีครบหกชั้น
+     แต่ตอนยิงสดไม่ได้ ทุกจุดตกมาใช้แคช → **จดหมายฉบับนั้นจะไม่มีวันเจอหิมะ หมอก
+     ฝนแข็งตัว หรือพายุหมุน** เพราะข้อมูลที่บอกสิ่งเหล่านั้นไม่ได้ถูกเก็บไว้ตั้งแต่แรก
+
+     `WX_SRC` ถูกตั้งค่ามาตั้งแต่ข้อ 58 พร้อมคอมเมนต์ว่า "ต้องบอกให้รู้ ไม่ใช่เงียบ ๆ"
+     แต่ไม่เคยมีที่ไหนอ่านมันเลย — คำสัญญาที่เขียนไว้แล้วไม่ได้ทำ */
+  const off=$('#fcOffline');
+  if(off) off.hidden = WX_SRC!=='cache-only';
 
   const box=$('#fcChoice'); box.innerHTML='';
   /* ---------- เลือกการเคลือบ (ข้อ 13-16, 60) ----------
@@ -5976,33 +5990,51 @@ function dBuildTex(L){
   g.fillText(L.f.p+' · '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}), dTW-24, 38);
   g.textAlign='left'; g.fillStyle='rgba(43,43,47,.9)'; g.font=F(15.5);
   g.fillText('ถึง '+L.t.n+' · '+L.t.p, 24, 72);
-  g.font=F(14.5);
   /* ตัดบรรทัดตามความกว้างจริงของกระดาษ และตัดที่ *ขอบคำ* ไม่ใช่กลางคำ
      ไทยไม่มีช่องว่างระหว่างคำ ตัดทีละตัวอักษรจะได้ "นึกถึงต / อนที่" ซึ่งอ่านสะดุด
      Intl.Segmenter แบ่งคำไทยได้จริง ถ้าเบราว์เซอร์ไม่มีค่อยถอยไปตัดทีละตัว */
-  const maxw=dTW-48, lines=[];
+  const maxw=dTW-48, MAXL=40;
   const chunks=(txt)=>{
     try{ return [...new Intl.Segmenter('th',{granularity:'word'}).segment(txt)].map(x=>x.segment); }
     catch(e){ return [...txt]; }
   };
-  for(const para of String(L.bd||'').split('\n')){
-    let line='';
-    for(const w of chunks(para)){
-      if(lines.length>=12) break;
-      const test=line+w;
-      if(line && g.measureText(test).width>maxw){ lines.push(line); line=w; }
-      else line=test;
-      /* คำเดียวยาวเกินบรรทัด (เช่น URL) ต้องยอมตัดกลาง ไม่งั้นล้นขอบกระดาษ */
-      while(g.measureText(line).width>maxw && line.length>1 && lines.length<12){
-        let cut=line.length-1;
-        while(cut>1 && g.measureText(line.slice(0,cut)).width>maxw) cut--;
-        lines.push(line.slice(0,cut)); line=line.slice(cut);
+  const wrapAt=(size)=>{
+    g.font=F(size);
+    const lines=[];
+    for(const para of String(L.bd||'').split('\n')){
+      let line='';
+      for(const w of chunks(para)){
+        if(lines.length>=MAXL) break;
+        const test=line+w;
+        if(line && g.measureText(test).width>maxw){ lines.push(line); line=w; }
+        else line=test;
+        /* คำเดียวยาวเกินบรรทัด (เช่น URL) ต้องยอมตัดกลาง ไม่งั้นล้นขอบกระดาษ */
+        while(g.measureText(line).width>maxw && line.length>1 && lines.length<MAXL){
+          let cut=line.length-1;
+          while(cut>1 && g.measureText(line.slice(0,cut)).width>maxw) cut--;
+          lines.push(line.slice(0,cut)); line=line.slice(cut);
+        }
       }
+      if(line&&lines.length<MAXL) lines.push(line);
+      if(lines.length>=MAXL) break;
     }
-    if(line&&lines.length<12) lines.push(line);
-    if(lines.length>=12) break;
+    return lines;
+  };
+  /* ---------- ตัวอักษรย่อให้พอดีกระดาษ (ข้อ 111) ----------
+     ⚠️ ของเดิมตรึงไว้ 12 บรรทัดที่ 14.5px = รับได้ ~557 ตัวอักษร
+        แต่แอปให้พิมพ์ 1,100 — ส่วนเกิน **หายเงียบ ๆ ครึ่งฉบับ** และตัดกลางประโยค
+        คนเขียนพิมพ์ครบ ผู้รับอ่านครบในหน้าอ่าน มีแต่กระดาษใบนี้ที่โกหก
+     ⛔ ห้ามแก้ด้วยการยืดกระดาษ — สัดส่วน 1:1.42 คือรูปทรงของกระดาษจริง
+        จดหมายจริงก็เขียนตัวเล็กลงเมื่อมีเรื่องจะเล่าเยอะ ทำแบบเดียวกัน */
+  const TOP=110, BOT=dTH-58;
+  let fs=14.5, lines=wrapAt(fs);
+  while(lines.length*(fs*1.79) > BOT-TOP && fs>9){
+    fs=Math.round((fs-0.5)*2)/2;
+    lines=wrapAt(fs);
   }
-  lines.slice(0,12).forEach((L2,i)=>g.fillText(L2,24,110+i*26));
+  const lh=fs*1.79;
+  g.font=F(fs);
+  lines.forEach((L2,i)=>g.fillText(L2, 24, TOP+i*lh));
   g.textAlign='right'; g.font=F(14.5); g.fillText('จาก '+L.f.n, dTW-24, dTH-34);
 }
 
