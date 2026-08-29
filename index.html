@@ -488,8 +488,28 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <button class="mrow" id="mMine"><b>drift port ของฉัน</b><em>แบ่งปันที่อยู่</em></button>
     <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
     <button class="mrow" id="mInstall"><b>เพิ่มลงหน้าจอโฮม</b><em id="mInstallNote"></em></button>
+    <button class="mrow" id="mBug"><b>แจ้งปัญหา</b><em id="mBugNote"></em></button>
     <div class="rule"></div>
     <p class="note faint">ลมและอากาศจาก Open-Meteo</p>
+  </div>
+</section>
+
+<!-- แจ้งปัญหา (ข้อ 115.2)
+     ⚠️ แอปนี้ไม่มีเซิร์ฟเวอร์ จึงไม่มีทางรู้เลยว่ามันพังบนเครื่องใคร
+        บั๊ก textAlign ของข้อ 113 ใช้เวลาสองรอบเพราะต้องรอภาพหน้าจอจากเครื่องจริง
+        ถ้ามีคนใช้ห้าสิบคน จะไม่มีใครส่งภาพมา เขาจะแค่ปิดแล้วไม่กลับมา
+     ⛔ สิ่งที่คัดลอกต้องไม่มีชื่อ พิกัด เนื้อจดหมาย หรือรหัส port แม้แต่ตัวเดียว -->
+<section class="sheet" id="bug">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <div class="act">drift</div>
+    <h2>แจ้งปัญหา</h2>
+    <p class="sub">คัดลอกข้อมูลด้านล่างแล้วส่งมาบอกได้</p>
+    <div class="link" id="bugInfo" style="max-height:260px"></div>
+    <button class="btn wide" id="btnBugCopy">คัดลอก</button>
+    <p class="note faint" style="margin-top:12px">ในนี้ไม่มีชื่อ ไม่มีตำแหน่ง ไม่มีเนื้อจดหมาย —
+      มีแต่รุ่นเครื่องกับข้อความผิดพลาด · ไม่มีอะไรถูกส่งออกไปเองทั้งสิ้น</p>
+    <button class="btn wide ghost" id="btnBugClear" style="margin-top:10px">ล้างบันทึกข้อผิดพลาด</button>
   </div>
 </section>
 
@@ -660,6 +680,38 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ============================================================ */
 'use strict';
 
+/* ---------- เวอร์ชัน + ตัวดักข้อผิดพลาด (ข้อ 115) ----------
+   ⚠️ ต้องอยู่บนสุดของสคริปต์ ไม่งั้นดักข้อผิดพลาดที่เกิด *ระหว่างบูต* ไม่ได้เลย
+      ซึ่งเป็นชนิดที่ร้ายที่สุด เพราะจอจะว่างเปล่าโดยไม่มีอะไรบอก (บทเรียนข้อ 103.5 · 106.6)
+
+   ⛔ ไม่ส่งไปไหนทั้งสิ้น — ไม่มีเซิร์ฟเวอร์ และถึงมีก็จะไม่ส่ง
+      เก็บไว้ในเครื่องให้ผู้ใช้ *เลือกเอง* ว่าจะคัดลอกไปบอกเราไหม
+      เพราะข้อความผิดพลาดพ่วงชื่อฟังก์ชันและบางครั้งพ่วงข้อมูลผู้ใช้มาด้วย */
+const APP_VER='2026-08-29';
+const K_ERR='drift.err';
+let ERR_SHOWN=false;
+function logErr(kind,msg,where){
+  try{
+    const a=JSON.parse(localStorage.getItem(K_ERR)||'[]');
+    a.push({t:new Date().toISOString().slice(0,16), k:kind, m:String(msg).slice(0,300), w:String(where||'').slice(0,160)});
+    while(a.length>12) a.shift();           /* เก็บแค่ล่าสุด — ไม่ใช่ที่เก็บประวัติ */
+    localStorage.setItem(K_ERR, JSON.stringify(a));
+  }catch(e){}
+  /* บอกครั้งเดียวต่อการเปิดหนึ่งครั้ง — เตือนซ้ำ ๆ ระหว่างที่คนกำลังเขียนจดหมายคือการรบกวน */
+  if(!ERR_SHOWN){
+    ERR_SHOWN=true;
+    setTimeout(()=>{ try{ toast('มีบางอย่างสะดุด — ดูได้ที่ เมนู → แจ้งปัญหา'); }catch(e){} },600);
+  }
+}
+addEventListener('error', e=>{
+  logErr('error', (e && e.message) || 'unknown',
+         e && e.filename ? (e.filename.split('/').pop()+':'+e.lineno) : '');
+});
+addEventListener('unhandledrejection', e=>{
+  const r=e && e.reason;
+  logErr('promise', (r && (r.message||r)) || 'unknown', r && r.stack ? String(r.stack).split('\n')[1] : '');
+});
+
 const CFG = {
   SPEED:      20000/48,  // km/h — ระยะไกลสุดบนโลก ~20,000 กม. = ~2 วัน
   FLOOR_H:    6,         // เวลาฐานที่ระยะหมุด (ก่อนลมคูณ)
@@ -806,16 +858,26 @@ const memo = {};
 let LS_OK = true;
 const LS = {
   get(k){ try{ return localStorage.getItem(k); }catch(e){ LS_OK=false; return memo[k]||null; } },
-  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ LS_OK=false; memo[k]=v; } },
+  /* ⚠️ ต้องคืนค่าว่าสำเร็จไหม — ของเดิมกลืน QuotaExceededError เงียบ ๆ
+     แล้วผู้ใช้เห็นจดหมายออกเดินทางทั้งที่มันไม่เคยถูกบันทึก (ข้อ 115.1)
+     ⛔ ห้ามทำให้ set เงียบอีก ไม่ว่าจะเพื่อความสะอาดของโค้ดแค่ไหน */
+  set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ LS_OK=false; memo[k]=v; return false; } },
   del(k){ try{ localStorage.removeItem(k); }catch(e){ delete memo[k]; } }
 };
 const store = {
   letters(){ try{ return JSON.parse(LS.get(K.LETTERS)||'[]'); }catch(e){ return []; } },
-  saveAll(a){ LS.set(K.LETTERS, JSON.stringify(a)); _driftCache.clear(); _streamCache.clear(); _wfCache.clear(); },
+  saveAll(a){
+    const ok=LS.set(K.LETTERS, JSON.stringify(a));
+    _driftCache.clear(); _streamCache.clear(); _wfCache.clear();
+    return ok;
+  },
   put(rec){
     const a=this.letters(); const i=a.findIndex(x=>x.id===rec.id);
     if(i>=0) a[i]=rec; else a.push(rec);
-    this.saveAll(a); return rec;
+    /* ⚠️ ผลของการบันทึกต้องเดินทางกลับไปถึงคนเรียก — จุดที่สำคัญที่สุดคือตอนส่งจดหมาย
+       ที่นั่นถ้าบันทึกไม่ลง ผู้ใช้ต้องรู้ *ก่อน* ที่จะปิดหน้าไป (ข้อ 115.1) */
+    this.saved = this.saveAll(a);
+    return rec;
   },
   me(){
     try{
@@ -5265,12 +5327,49 @@ async function openPort(pt){
     : 'ไม่รู้ฟ้าที่นั่น — อยู่นอกเขตที่แอปเก็บลมไว้';
 }
 
-$('#btnMenu').onclick=()=>{ refreshDock(); openSheet('menu'); };
+$('#btnMenu').onclick=()=>{ refreshDock(); syncBugNote(); openSheet('menu'); };
 $('#mInbox').onclick=()=>{ openSheet('inbox'); };
 $('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
 $('#mPorts').onclick=()=>openPorts(false);
 $('#mMine').onclick=openMine;
 $('#mInstall').onclick=openInstall;
+
+/* ---------- แจ้งปัญหา (ข้อ 115.2) ---------- */
+function errList(){ try{ return JSON.parse(localStorage.getItem(K_ERR)||'[]'); }catch(e){ return []; } }
+function bugText(){
+  const errs=errList();
+  const L=[
+    'drift '+APP_VER,
+    'จอ '+innerWidth+'×'+innerHeight+' @'+(devicePixelRatio||1)+'x',
+    'ที่อยู่เว็บ '+location.origin,
+    'ติดตั้งลงหน้าจอโฮม: '+(standalone()?'ใช่':'ไม่'),
+    'เก็บข้อมูลได้: '+(LS_OK?'ได้':'ไม่ได้'),
+    'จดหมายในเครื่อง '+store.letters().length+' ฉบับ · รายชื่อ '+store.ports().length+' คน',
+    'แหล่งอากาศล่าสุด: '+(WX_SRC||'ยังไม่ได้ใช้'),
+    navigator.userAgent
+  ];
+  L.push('', errs.length ? 'ข้อผิดพลาดล่าสุด' : 'ไม่มีข้อผิดพลาดที่บันทึกไว้');
+  errs.slice().reverse().forEach(e=>L.push('· '+e.t+' ['+e.k+'] '+e.m+(e.w?' @'+e.w:'')));
+  return L.join('\n');
+}
+function openBug(){
+  $('#bugInfo').textContent=bugText();
+  openSheet('bug');
+  const txt=bugText();
+  $('#btnBugCopy').onclick=async()=>{
+    try{ await navigator.clipboard.writeText(txt); toast('คัดลอกแล้ว'); }
+    catch(e){ toast('คัดลอกอัตโนมัติไม่ได้ — กดค้างที่ข้อความเพื่อคัดลอกเอง'); }
+  };
+  $('#btnBugClear').onclick=()=>{
+    try{ localStorage.removeItem(K_ERR); }catch(e){}
+    $('#bugInfo').textContent=bugText(); syncBugNote(); toast('ล้างแล้ว');
+  };
+}
+function syncBugNote(){
+  const n=errList().length;
+  $('#mBugNote').textContent = n ? n+' รายการ' : 'ถ้ามีอะไรสะดุด';
+}
+$('#mBug').onclick=openBug;
 $('#btnGpSwap').onclick=()=>takePort(true);
 $('#btnGpKeep').onclick=()=>takePort(false);
 $('#btnP1Write').onclick=()=>{ if(viewPort) pickPort(viewPort); };
@@ -5632,6 +5731,11 @@ async function confirmSend(){
   };
   if(p.tp) rec.tp=p.tp;   /* รหัส port ผู้รับ — อยู่ในเครื่องเท่านั้น ไม่ได้เข้าลิงก์ */
   store.put(Object.assign({dir:'out'},rec));
+  /* ---------- บันทึกไม่ลง ต้องบอกตรงนี้ (ข้อ 115.1) ----------
+     ⚠️ ลิงก์ยังใช้ได้เสมอ เพราะมันพกจดหมายไปเอง — สิ่งที่หายคือ *สำเนาของผู้ส่ง*
+     ต้องพูดให้ตรงตามนั้น ไม่ใช่บอกว่า "ส่งไม่สำเร็จ" ซึ่งไม่จริงและทำให้เขาส่งซ้ำ */
+  if(store.saved===false)
+    toast('พื้นที่ในเครื่องเต็ม — จดหมายยังส่งได้ แต่จะไม่มีสำเนาเก็บไว้ ลองลบฉบับเก่าในกล่องจดหมาย');
   const payload=await packPayload(rec);
   const base=location.href.split('#')[0];
   const url=base+'#'+payload;
@@ -6376,7 +6480,11 @@ function openDrift(L,onDone){
   dBuildTex(L);
   selected=L.id;
   previewOn(L);
-  PREVIEW.h=0; PREVIEW.play=false;
+  /* ⚠️ previewOn เรียก syncPlay ต่อ ซึ่งปิด PREVIEW ทิ้งได้ถ้าจดหมายไม่อยู่ใน store
+     — เกิดจริงเมื่อพื้นที่ในเครื่องเต็ม แล้วจดหมายที่เพิ่งส่งบันทึกไม่ลง
+     ของเดิมเขียนทับค่า null ตรงนี้ → **องก์ปล่อยพังทั้งจอ** ทั้งที่ลิงก์ใช้ได้ปกติ
+     ไม่มี PREVIEW ก็เดินต่อได้ เพราะจดหมายที่เพิ่งส่งมีเวลาที่ผ่านไปเป็นศูนย์อยู่แล้ว (ข้อ 115.1) */
+  if(PREVIEW){ PREVIEW.h=0; PREVIEW.play=false; }
   const at=posAt(L,0);
   G.focus({lat:at.lat,lng:at.lng}, CFG.ZOOM_MAX);
   G.zoom=G.zTarget; G.R=G.R0*G.zoom;
