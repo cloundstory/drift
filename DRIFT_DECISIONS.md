@@ -5799,3 +5799,27 @@ service worker · เพิ่มลงหน้าจอโฮม **บอก�
 
 ⚠️ **แต่ `git log` มี `cloundstory@gmail.com` อยู่ทั้ง 71 commit** — public repo = เปิดเผยถาวร
 ถ้าไม่ต้องการ ต้องตั้ง noreply ของ GitHub **ก่อน** push ครั้งแรก
+
+#### 109.8 ⚠️ แถบสถานะบนมือถือเป็นคนละเฉดกับแอป — เห็นตอนขึ้น https จริง
+
+| ที่ | ค่าเดิม | ควรเป็น |
+|---|---|---|
+| `<meta name="theme-color">` | `#e4e3e0` (ค้างมาตั้งแต่ก่อนข้อ 107) | `#dfe2e6` |
+| `manifest.theme_color` | `#dde1e6` (ข้อ 107.5 ตั้งตามสีไอคอน) | `#dfe2e6` |
+| **พื้นจริงบนสุดของแอป** | `linear-gradient(165deg,#dfe2e6,…)` | — |
+
+**สามค่า สามสี** · และ **iOS อ่านจาก `meta` ไม่ใช่จาก manifest** —
+ข้อ 107.5 แก้แค่ manifest จึงไม่มีผลกับสิ่งที่คนไอโฟนเห็นจริงเลย
+
+ตอนนี้ทั้งสามเท่ากับสีบนสุดของ gradient เป๊ะ ๆ แถบสถานะจึงกลืนไปกับแอป
+
+#### 109.9 ขึ้น GitHub Pages แล้ว — https://cloundstory.github.io/drift/
+
+- repo `cloundstory/drift` · public (Pages บน repo private ต้องมี GitHub Pro)
+- `build_type: legacy` = **Deploy from a branch** ✅ ไม่ใช่ GitHub Actions
+  ⚠️ กับดักที่บันทึกไว้ใน NEXT.md — ถ้าตั้งผิด แคชลมจะถูก commit ทุก 6 ชม. แต่ไม่เคย deploy
+- อีเมลใน 73 commit เขียนใหม่เป็น noreply ก่อน push
+  ⚠️ **แต่ username คือ `cloundstory` ซึ่งตรงกับหน้าอีเมลพอดี** — ปิดได้แค่โดเมน
+  bot ที่กวาด commit ไม่ได้อีเมลตรง ๆ แต่คนที่ตั้งใจเดาก็เดาออก
+- ตรวจแล้วบน production: `isSecureContext` ✅ · clipboard ✅ · geolocation ✅ ·
+  `wind/th.bin` 78 KB เสิร์ฟได้ (`.nojekyll` ทำงาน) · service worker active · ไม่มี error
