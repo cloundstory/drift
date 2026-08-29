@@ -437,6 +437,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <h2>drift port ของฉัน</h2>
     <p class="sub">ให้ครั้งเดียว เขาเขียนถึงคุณได้ตลอดไป</p>
     <div class="addr" id="myAddr"></div>
+    <!-- คิวอาร์ (ข้อ 117) — ทางแลกที่อยู่ตอนอยู่ด้วยกัน ไม่ต้องผ่านแอปแชท
+         ⚠️ ต้องมีขอบขาวรอบอย่างน้อยสี่ช่อง ไม่งั้นกล้องหาขอบไม่เจอ -->
+    <canvas id="myQR" style="display:block;margin:16px auto 4px;border-radius:6px"></canvas>
+    <p class="note faint" style="text-align:center;margin-bottom:12px">ให้เขาส่องด้วยกล้องมือถือ</p>
     <div class="row" style="margin-top:11px">
       <button class="btn" id="btnMyCopy">คัดลอก</button>
       <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
@@ -5218,7 +5222,30 @@ async function openMine(){
     catch(e){ toast('คัดลอกไม่ได้ — กดค้างที่รหัสเพื่อคัดลอกเอง'); }
   };
   readyLink=url;
+  paintQR(url);
   $('#btnMyShare').onclick=()=>sendLink(url,'ที่อยู่ drift ของฉัน');
+}
+
+/* วาดคิวอาร์ให้คมบนจอความละเอียดสูง — ขนาดหนึ่งช่องต้องเป็นจำนวนเต็มพิกเซล
+   ไม่งั้นขอบช่องเบลอ แล้วกล้องอ่านพลาดในแสงน้อย (ข้อ 117.3) */
+function paintQR(url){
+  const cv=$('#myQR'); if(!cv||typeof QR==='undefined') return;
+  const m=QR.make(url);
+  if(!m){ cv.style.display='none'; return; }
+  cv.style.display='block';
+  const QUIET=4, n=m.length, total=n+QUIET*2;
+  const want=Math.min(260, innerWidth-96);
+  const px=Math.max(2, Math.floor(want/total));      /* ปัดลงเป็นจำนวนเต็มเสมอ */
+  const size=total*px;
+  const dpr=Math.min(devicePixelRatio||1,3);
+  cv.width=size*dpr; cv.height=size*dpr;
+  cv.style.width=size+'px'; cv.style.height=size+'px';
+  const g=cv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle='#fdfcf9'; g.fillRect(0,0,size,size);
+  g.fillStyle='#33333a';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++)
+    if(m[r][c]) g.fillRect((c+QUIET)*px,(r+QUIET)*px,px,px);
 }
 
 /* ---------- รับที่อยู่ของคนอื่น (ข้อ 99.10ค) ----------
@@ -5369,6 +5396,215 @@ $('#mAccount').onclick=()=>{ showMe(); syncLockToggle(); openSheet('vault'); };
 $('#mPorts').onclick=()=>openPorts(false);
 $('#mMine').onclick=openMine;
 $('#mInstall').onclick=openInstall;
+
+/* ---------- คิวอาร์ของที่อยู่ (ข้อ 117) ----------
+   รุ่น 10 และ 15 · แก้ความผิดพลาดระดับ L · byte mode อย่างเดียว
+   เพราะที่อยู่ drift เป็น URL เสมอ ยาว 190-210 ตัวอักษร (รุ่น 10 รับได้ 271)
+
+   ⚠️ **ตรวจแล้วว่าตรงกับตัวสร้างมาตรฐานทุกช่อง** — ข้อมูล · format · version ·
+      คะแนนเลือกลาย · และลายที่เลือก
+   ⛔ ห้ามแก้ตัวเลขในนี้โดยไม่รันการเทียบใหม่ — QR ที่ผิดนิดเดียวคือ QR ที่สแกนไม่ออก
+      และมันจะดูเหมือน QR ปกติทุกประการ (ข้อ 117) */
+const QR=(()=>{
+  const EXP=new Uint8Array(512), LOG=new Uint8Array(256);
+  { let x=1; for(let i=0;i<255;i++){ EXP[i]=x; LOG[x]=i; x<<=1; if(x&256) x^=0x11d; }
+    for(let i=255;i<512;i++) EXP[i]=EXP[i-255]; }
+  const mul=(a,b)=> (a&&b) ? EXP[LOG[a]+LOG[b]] : 0;
+
+  /* พหุนามกำเนิด — เก็บสัมประสิทธิ์จากดีกรีสูงไปต่ำ */
+  function gen(n){
+    let g=[1];
+    for(let i=0;i<n;i++){
+      const t=new Array(g.length+1).fill(0);
+      for(let j=0;j<g.length;j++){
+        t[j]   ^= g[j];                 /* × x */
+        t[j+1] ^= mul(g[j], EXP[i]);    /* × α^i */
+      }
+      g=t;
+    }
+    return g;
+  }
+  function ecc(data,n){
+    const g=gen(n), r=new Array(n).fill(0);
+    for(const b of data){
+      const f=b ^ r[0];
+      r.shift(); r.push(0);
+      if(f) for(let i=0;i<n;i++) r[i]^=mul(g[i+1],f);
+    }
+    return r;
+  }
+
+  const SPEC={
+    10:{size:57, align:[6,28,50], blocks:[[86,68],[86,68],[87,69],[87,69]], ec:18},
+    15:{size:77, align:[6,26,48,70], blocks:[[109,87],[109,87],[109,87],[109,87],[109,87],[110,88]], ec:22}
+  };
+
+  function bytesOf(str){ return [...new TextEncoder().encode(str)]; }
+
+  function dataCodewords(bytes,ver){
+    const sp=SPEC[ver], cap=sp.blocks.reduce((a,b)=>a+b[1],0);
+    const bits=[];
+    const push=(v,n)=>{ for(let i=n-1;i>=0;i--) bits.push((v>>i)&1); };
+    push(0b0100,4);            /* โหมด byte */
+    push(bytes.length,16);     /* ความยาว — 16 บิตสำหรับรุ่น 10 ขึ้นไป */
+    for(const b of bytes) push(b,8);
+    const room=cap*8;
+    if(bits.length>room) return null;
+    for(let i=0;i<4 && bits.length<room;i++) bits.push(0);   /* ปิดท้าย */
+    while(bits.length%8) bits.push(0);
+    const cw=[];
+    for(let i=0;i<bits.length;i+=8){ let v=0; for(let j=0;j<8;j++) v=(v<<1)|bits[i+j]; cw.push(v); }
+    const PAD=[0xEC,0x11];
+    for(let i=0; cw.length<cap; i++) cw.push(PAD[i%2]);
+    return cw;
+  }
+
+  function interleave(cw,ver){
+    const sp=SPEC[ver];
+    const dat=[], ecs=[]; let p=0;
+    for(const [tot,d] of sp.blocks){
+      const blk=cw.slice(p,p+d); p+=d;
+      dat.push(blk); ecs.push(ecc(blk,tot-d));
+    }
+    const out=[];
+    const maxD=Math.max(...dat.map(b=>b.length));
+    for(let i=0;i<maxD;i++) for(const b of dat) if(i<b.length) out.push(b[i]);
+    const maxE=Math.max(...ecs.map(b=>b.length));
+    for(let i=0;i<maxE;i++) for(const b of ecs) if(i<b.length) out.push(b[i]);
+    return out;
+  }
+
+  function frame(ver){
+    const sp=SPEC[ver], n=sp.size;
+    const m=Array.from({length:n},()=>new Array(n).fill(null));
+    const set=(r,c,v)=>{ if(r>=0&&r<n&&c>=0&&c<n) m[r][c]=v; };
+    /* หมุดค้นหาสามมุม + เส้นคั่น */
+    const finder=(R,C)=>{
+      for(let r=-1;r<=7;r++) for(let c=-1;c<=7;c++){
+        const rr=R+r, cc=C+c;
+        if(rr<0||rr>=n||cc<0||cc>=n) continue;
+        const on=(r>=0&&r<=6&&(c===0||c===6)) || (c>=0&&c<=6&&(r===0||r===6)) || (r>=2&&r<=4&&c>=2&&c<=4);
+        set(rr,cc,on?1:0);
+      }
+    };
+    finder(0,0); finder(0,n-7); finder(n-7,0);
+    /* เส้นจังหวะ */
+    for(let i=8;i<n-8;i++){ set(6,i,i%2===0?1:0); set(i,6,i%2===0?1:0); }
+    /* หมุดจัดแนว — ข้ามจุดที่ทับหมุดค้นหา */
+    for(const a of sp.align) for(const b of sp.align){
+      if((a===6&&b===6)||(a===6&&b===n-7)||(a===n-7&&b===6)) continue;
+      for(let r=-2;r<=2;r++) for(let c=-2;c<=2;c++)
+        set(a+r,b+c,(Math.abs(r)===2||Math.abs(c)===2||(r===0&&c===0))?1:0);
+    }
+    set(n-8,8,1);                                   /* จุดดำถาวร */
+    /* จองที่ให้ข้อมูลรูปแบบ */
+    for(let i=0;i<9;i++){ if(m[8][i]===null) set(8,i,2); if(m[i][8]===null) set(i,8,2); }
+    for(let i=0;i<8;i++){ if(m[8][n-1-i]===null) set(8,n-1-i,2); if(m[n-1-i][8]===null) set(n-1-i,8,2); }
+    /* จองที่ให้ข้อมูลรุ่น (จำเป็นตั้งแต่รุ่น 7 ขึ้นไป) */
+    for(let i=0;i<6;i++) for(let j=0;j<3;j++){ set(i,n-11+j,2); set(n-11+j,i,2); }
+    return m;
+  }
+
+  function place(m,bytes){
+    const n=m.length;
+    let bit=0;
+    const next=()=>{ const b=(bytes[bit>>3]>>(7-(bit&7)))&1; bit++; return b; };
+    let up=true;
+    for(let col=n-1;col>0;col-=2){
+      if(col===6) col--;                             /* ข้ามคอลัมน์จังหวะ */
+      for(let i=0;i<n;i++){
+        const row=up? n-1-i : i;
+        for(const c of [col,col-1]){
+          if(m[row][c]!==null) continue;
+          m[row][c]= (bit>>3)<bytes.length ? next() : 0;
+        }
+      }
+      up=!up;
+    }
+  }
+
+  const MASK=[
+    (r,c)=>(r+c)%2===0, (r,c)=>r%2===0, (r,c)=>c%3===0, (r,c)=>(r+c)%3===0,
+    (r,c)=>(((r>>1)+Math.floor(c/3))%2)===0, (r,c)=>((r*c)%2+(r*c)%3)===0,
+    (r,c)=>(((r*c)%2+(r*c)%3)%2)===0, (r,c)=>(((r+c)%2+(r*c)%3)%2)===0
+  ];
+
+  function penalty(g){
+    const n=g.length; let p=0;
+    const run=(get)=>{ for(let a=0;a<n;a++){ let last=-1,len=0;
+      for(let b=0;b<n;b++){ const v=get(a,b);
+        if(v===last) len++; else { if(len>=5) p+=len-2; last=v; len=1; } }
+      if(len>=5) p+=len-2; } };
+    run((a,b)=>g[a][b]); run((a,b)=>g[b][a]);
+    for(let r=0;r<n-1;r++) for(let c=0;c<n-1;c++){
+      const v=g[r][c]; if(v===g[r][c+1]&&v===g[r+1][c]&&v===g[r+1][c+1]) p+=3; }
+    const pat=[1,0,1,1,1,0,1,0,0,0,0], pat2=[0,0,0,0,1,0,1,1,1,0,1];
+    const hit=(arr,i,p2)=>{ for(let k=0;k<11;k++) if(arr[i+k]!==p2[k]) return false; return true; };
+    for(let r=0;r<n;r++){ const row=g[r], col=g.map(x=>x[r]);
+      for(let c=0;c+11<=n;c++){ if(hit(row,c,pat)||hit(row,c,pat2)) p+=40;
+                                if(hit(col,c,pat)||hit(col,c,pat2)) p+=40; } }
+    let dark=0; for(const row of g) for(const v of row) dark+=v;
+    p += Math.floor(Math.abs(dark*100/(n*n)-50)/5)*10;
+    return p;
+  }
+
+  const FMT_G=0b10100110111, FMT_XOR=0b101010000010010;
+  function fmtBits(mask){
+    const d=(0b01<<3)|mask;          /* ระดับ L = 01 */
+    let v=d<<10;
+    for(let i=14;i>=10;i--) if((v>>i)&1) v^=FMT_G<<(i-10);
+    return (((d<<10)|(v&0x3FF))^FMT_XOR)&0x7FFF;
+  }
+  const VER_G=0b1111100100101;
+  function verBits(ver){
+    let v=ver<<12;
+    for(let i=17;i>=12;i--) if((v>>i)&1) v^=VER_G<<(i-12);
+    return ((ver<<12)|(v&0xFFF))&0x3FFFF;
+  }
+
+  function make(text){
+    const bytes=bytesOf(text);
+    const ver = dataCodewords(bytes,10) ? 10 : 15;
+    const cw=dataCodewords(bytes,ver);
+    if(!cw) return null;
+    const seq=interleave(cw,ver);
+    const base=frame(ver), n=base.length;
+    const work=base.map(r=>r.slice());
+    place(work,seq);
+    let best=null,bestP=1e9,bestM=0;
+    for(let mk=0;mk<8;mk++){
+      const g=work.map((row,r)=>row.map((v,c)=> base[r][c]===null && MASK[mk](r,c) ? v^1 : v ));
+      /* ช่องที่จองไว้ยังเป็น 2 — ต้องใส่ค่าจริงก่อนคิดคะแนน */
+      const f=fmtBits(mk);
+      putFmt(g,f); if(ver>=7) putVer(g,verBits(ver));
+      const p=penalty(g);
+      if(p<bestP){ bestP=p; best=g; bestM=mk; }
+    }
+    return best;
+  }
+  function putFmt(g,f){
+    const n=g.length;
+    for(let i=0;i<15;i++){
+      /* ⚠️ วางบิตสูงก่อน (bit14 → bit0) — พิสูจน์จากการอ่าน QR อ้างอิงตรง ๆ
+         สลับด้านเมื่อไหร่ ข้อมูลถูกทั้งใบแต่เครื่องอ่านไม่ยอมรับ */
+      const b=(f>>(14-i))&1;
+      if(i<6) g[8][i]=b; else if(i===6) g[8][7]=b; else if(i===7) g[8][8]=b;
+      else if(i===8) g[7][8]=b; else g[14-i][8]=b;
+      /* ⚠️ สำเนาที่สองคือ 7 แนวตั้ง + 8 แนวนอน ไม่ใช่ 8+7
+         การแบ่งแบบ 8+7 ให้ผลถูกในบางกรณีโดยบังเอิญ แล้วผิดในกรณีอื่น */
+      if(i<7) g[n-1-i][8]=b; else g[8][n-8+(i-7)]=b;
+    }
+    g[n-8][8]=1;
+  }
+  function putVer(g,v){
+    const n=g.length;
+    for(let i=0;i<18;i++){
+      const b=(v>>i)&1, a=Math.floor(i/3), c=i%3;
+      g[a][n-11+c]=b; g[n-11+c][a]=b;
+    }
+  }
+  return {make};
+})();
 
 /* ---------- ล็อกหน้าจอ (ข้อ 116) ----------
    ⛔ **นี่ไม่ใช่การเข้ารหัส** จดหมายยังนอนอยู่ใน localStorage แบบอ่านได้
