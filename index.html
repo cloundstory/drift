@@ -1088,8 +1088,10 @@ function wcManifest(){
       const r=await fetch(WCACHE.DIR+'index.json',{cache:'no-cache'});
       if(!r.ok) return null;
       const m=await r.json();
-      /* v2 = มีชั้นลมกระโชกแล้ว (ข้อ 62) · แคชรุ่นเก่าไม่มีชั้นนี้ ใช้ต่อไม่ได้ ปล่อยให้ถอยไปยิงตรง */
-      return (m&&m.v===2&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
+      /* v2 = มีชั้นลมกระโชก (ข้อ 62) · v3 = มีรหัสอากาศกับความกดอากาศด้วย (ข้อ 119)
+         ⚠️ รับรุ่นที่ใหม่กว่าได้ เพราะจำนวนชั้นอ่านจาก tile.nv ไม่ได้ฝังไว้
+            ตรึงไว้ที่ ===2 เมื่อไหร่ แคชรุ่นถัดไปจะถูกปฏิเสธทั้งที่อ่านได้ */
+      return (m&&m.v>=2&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
     }catch(e){ return null; }     /* ไม่มีแคชก็ไม่ใช่ความผิดพลาด แค่ถอยไปทางเดิม */
   })();
   return _wcMan;
@@ -1119,7 +1121,9 @@ async function wcLoad(man,t){
   /* zlib.compress ของ python มีหัว zlib จึงเป็น 'deflate' ไม่ใช่ 'deflate-raw' */
   const ds=new DecompressionStream('deflate');
   const out=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer());
-  if(out.length!==4*t.slices*t.nx*t.ny) throw new Error('tile size');
+  /* จำนวนชั้นมาจาก manifest — แคชรุ่นก่อนไม่มีฟิลด์นี้ แปลว่าสี่ชั้น */
+  const nv=t.nv||4;
+  if(out.length!==nv*t.slices*t.nx*t.ny) throw new Error('tile size');
   t._d=out; return out;
 }
 /* อ่านลมของพิกัดหนึ่งออกมาในรูปเดียวกับที่ Open-Meteo คืนมา
@@ -1132,7 +1136,10 @@ function wcSeries(t,d,lat,lng){
   const w=[[x0,y0,(1-fx)*(1-fy)],[x1,y0,fx*(1-fy)],[x0,y1,(1-fx)*fy],[x1,y1,fx*fy]];
   const at=(v,sl,ix,iy)=>d[(v*t.slices+sl)*n + iy*t.nx + ix];
   const t0=Date.parse(t.t0+':00Z');
-  const time=[],spd=[],dir=[],pre=[],gst=[];
+  const nv=t.nv||4;
+  const time=[],spd=[],dir=[],pre=[],gst=[],wcd=[],prs=[];
+  /* ช่องที่ใกล้ที่สุด — ใช้กับข้อมูลที่เป็น *หมวดหมู่* เท่านั้น */
+  const near=w.reduce((a,b)=>b[2]>a[2]?b:a);
   for(let sl=0;sl<t.slices;sl++){
     time.push(new Date(t0+sl*t.stepH*3600000).toISOString().slice(0,16));
     let sp=0, pr=0, ex=0, nn=0, gu=0;
@@ -1147,9 +1154,22 @@ function wcSeries(t,d,lat,lng){
     }
     spd.push(sp); pre.push(pr); gst.push(gu);
     dir.push((Math.atan2(ex,nn)*DEG+360)%360);
+    if(nv>=6){
+      /* ⚠️ **รหัสอากาศเกลี่ยค่าไม่ได้** — มันเป็นหมวดหมู่ ไม่ใช่ปริมาณ
+         เกลี่ยระหว่าง "ฟ้าใส 0" กับ "พายุฝนฟ้าคะนอง 95" จะได้ 47 ซึ่งแปลว่าฝนแข็งตัว
+         คือสภาพที่ไม่มีอยู่ตรงไหนเลยทั้งสองจุด · เอาค่าจากช่องที่ใกล้ที่สุดเท่านั้น */
+      wcd.push(at(4,sl,near[0],near[1]));
+      /* ความกดเป็นค่าต่อเนื่อง เกลี่ยได้ — แต่ต้องข้ามช่องที่ไม่มีข้อมูล (เก็บเป็น 0)
+         ไม่งั้นทะเลที่ไม่มีค่าจะดึงความกดลงจนกลายเป็นพายุหมุนปลอม */
+      let ps=0, pw=0;
+      for(const [ix,iy,k] of w){ const b=at(5,sl,ix,iy); if(b>0){ ps+=(870+b)*k; pw+=k; } }
+      prs.push(pw>0 ? ps/pw : 1013);
+    }
   }
-  return {hourly:{time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre,
-                  wind_gusts_10m:gst}};
+  const H={time, wind_speed_10m:spd, wind_direction_10m:dir, precipitation:pre,
+           wind_gusts_10m:gst};
+  if(nv>=6){ H.weather_code=wcd; H.pressure_msl=prs; }
+  return {hourly:H};
 }
 /* ดึงพยากรณ์ให้ทุกจุด — แต่ *แยกแหล่ง* ตามชนิดของสิ่งที่จะเอาไปใช้ (ข้อ 64)
 
