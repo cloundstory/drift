@@ -6017,10 +6017,18 @@ function dBuildTex(L){
     while(s.length>1 && g.measureText(s+'…').width>maxw) s=s.slice(0,-1);
     return s+'…';
   };
+  /* ---------- ⛔ ห้ามใช้ textAlign='right' บนกระดาษใบนี้ (ข้อ 113) ----------
+     หลักฐานจากเครื่องจริงสองรอบ: **ทั้งสองบรรทัดที่ใช้ 'right' ถูกตัดทั้งคู่
+     ส่วนบรรทัด "ถึง" ที่ใช้ 'left' ไม่เคยมีปัญหาสักครั้ง**
+     และข้อความที่ถูกตัดเริ่มต้นตรงจุดที่มันควรจะ *จบ* พอดี แล้ววิ่งออกนอกกระดาษ
+     — อาการของ textAlign ที่ไม่มีผล ซึ่งเกิดบน iOS แต่ไม่เกิดบนเดสก์ท็อป
+     วัดตำแหน่งเอาเองด้วย measureText แล้ววาดชิดซ้ายเสมอ ตัด dependency นี้ทิ้ง */
   const IN=dTW-48;
-  g.textAlign='right'; g.fillStyle='rgba(84,90,104,.5)'; g.font=F(11);
-  g.fillText(fit(L.f.p+' · '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}), IN), dTW-24, 38);
-  g.textAlign='left'; g.fillStyle='rgba(43,43,47,.9)'; g.font=F(15.5);
+  const right=(txt,rx,y)=>{ const t=fit(txt,IN); g.fillText(t, rx-g.measureText(t).width, y); };
+  g.textAlign='left';
+  g.fillStyle='rgba(84,90,104,.5)'; g.font=F(11);
+  right(L.f.p+' · '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}), dTW-24, 38);
+  g.fillStyle='rgba(43,43,47,.9)'; g.font=F(15.5);
   g.fillText(fit('ถึง '+L.t.n+' · '+L.t.p, IN), 24, 72);
   /* ตัดบรรทัดตามความกว้างจริงของกระดาษ และตัดที่ *ขอบคำ* ไม่ใช่กลางคำ
      ไทยไม่มีช่องว่างระหว่างคำ ตัดทีละตัวอักษรจะได้ "นึกถึงต / อนที่" ซึ่งอ่านสะดุด
@@ -6067,7 +6075,7 @@ function dBuildTex(L){
   const lh=fs*1.79;
   g.font=F(fs);
   lines.forEach((L2,i)=>g.fillText(L2, 24, TOP+i*lh));
-  g.textAlign='right'; g.font=F(14.5); g.fillText(fit('จาก '+L.f.n, IN), dTW-24, dTH-34);
+  g.font=F(14.5); right('จาก '+L.f.n, dTW-24, dTH-34);
 }
 
 /* ox,oy = ระยะใน *โลก* (ไม่ใช่บนจอ) — ใช้ตอนกระดาษอยู่ไกล
