@@ -632,6 +632,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       · <b style="font-weight:normal">พิกัดโดยประมาณ</b> ของต้นทางและปลายทาง ถูกส่งไปยัง Open-Meteo
         เพื่อขอลมและอากาศ — ปัดให้หยาบราว 11 กม. ก่อนส่งเสมอ ระดับอำเภอ ไม่ใช่ระดับบ้าน<br>
       · <b style="font-weight:normal">ชื่อสถานที่ที่คุณพิมพ์ค้นหา</b> ถูกส่งไปยัง Open-Meteo เพื่อหาพิกัด<br>
+      · <b style="font-weight:normal">พิกัดหยาบของคุณ</b> ถูกส่งไปยัง BigDataCloud หรือ OpenStreetMap
+        เมื่อกด “ใช้ตำแหน่งปัจจุบัน” เพื่อแปลงกลับเป็นชื่ออำเภอ — พิมพ์ชื่อเมืองเองก็ได้ ไม่ต้องส่งอะไรเลย<br>
       · <b style="font-weight:normal">ชื่อที่แสดงกับต้นทางหยาบของคุณ</b> ออกไปกับ
         <b style="font-weight:normal">ลิงก์ที่อยู่</b> ที่คุณแจกเอง — ใครถือลิงก์นั้นก็เห็น
         ไม่ได้ผ่านเซิร์ฟเวอร์ของเรา เพราะยังไม่มีเซิร์ฟเวอร์<br>
@@ -910,11 +912,30 @@ async function geocode(q){
     place:[x.name,x.admin1,x.country].filter(Boolean).join(', ')
   }));
 }
+/* ---------- ชื่อสถานที่จากพิกัด (ข้อ 112) ----------
+   ⚠️ ของเดิมยิง geocoding-api ของ Open-Meteo ซึ่งเป็นการ *ค้นด้วยชื่อ* ไม่ใช่ค้นด้วยพิกัด
+      แล้วส่ง "13.90,101.07" ไปเป็นชื่อเมือง — ไม่มีวันเจอ **ล้มเหลว 100% มาตลอด**
+      และไม่มีใครฟ้อง เพราะ "หาไม่เจอ → แสดงพิกัด" อ่านเหมือนพฤติกรรมปกติ
+      กอล์ฟจับได้จากจดหมายจริงที่หัวกระดาษเขียนว่า "13.90, 101.07"
+   ⚠️ Open-Meteo ไม่มี reverse geocoding เลย ต้องใช้แหล่งอื่น
+   พิกัดที่ส่งออกถูกปัดหยาบระดับอำเภอมาก่อนแล้วเสมอ (ข้อ 76) */
 async function reverseName(lat,lng){
+  /* BigDataCloud ออกแบบมาให้เรียกจากเบราว์เซอร์ตรง ๆ ไม่ต้องมีคีย์ จึงมาก่อน
+     ⚠️ Nominatim จำกัดโควตา *ต่อ IP* ซึ่งมือถือไทยใช้ CGNAT — หลายคนใช้ IP เดียวกัน
+        แล้วชนโควตากันเองโดยไม่รู้ตัว (ปัญหาเดียวกับที่ทำให้ต้องมีแคชลมในข้อ 58) */
   try{
-    const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=th&format=json&name=${lat.toFixed(2)},${lng.toFixed(2)}`);
-    const j=await r.json();
-    if(j.results&&j.results[0]) return j.results[0].name;
+    const r=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client'
+      +'?latitude='+lat+'&longitude='+lng+'&localityLanguage=th');
+    if(r.ok){
+      const j=await r.json();
+      const n=j.locality||j.city||j.principalSubdivision;
+      if(n) return n;
+    }
+  }catch(e){}
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/reverse'
+      +'?format=json&zoom=10&accept-language=th&lat='+lat+'&lon='+lng);
+    if(r.ok){ const j=await r.json(); if(j.name) return j.name; }
   }catch(e){}
   return lat.toFixed(2)+'°, '+lng.toFixed(2)+'°';
 }
@@ -5986,10 +6007,21 @@ function dBuildTex(L){
   const g=dTEX.getContext('2d'); g.drawImage(src,0,0,dTW,dTH); holder.remove();
   const F=(sz)=>'300 '+sz+"px 'Noto Serif Thai',Georgia,serif";
   const d=new Date(L.s);
+  /* ---------- บรรทัดหัวและท้ายต้องอยู่ในกระดาษเสมอ (ข้อ 112.2) ----------
+     ⚠️ สามบรรทัดนี้วาดรวดเดียวไม่ผ่านตัวตัดบรรทัด — ชื่อเมืองยาว ๆ อย่าง
+        "นิวออร์ลีนส์, รัฐลุยเซียนา, สหรัฐฯ" จึงวิ่งออกนอกขอบกระดาษไปเลย
+        กระดาษไม่มี overflow ให้เลื่อนดู สิ่งที่เกินขอบคือสิ่งที่หายไปถาวร */
+  const fit=(txt,maxw)=>{
+    if(g.measureText(txt).width<=maxw) return txt;
+    let s=txt;
+    while(s.length>1 && g.measureText(s+'…').width>maxw) s=s.slice(0,-1);
+    return s+'…';
+  };
+  const IN=dTW-48;
   g.textAlign='right'; g.fillStyle='rgba(84,90,104,.5)'; g.font=F(11);
-  g.fillText(L.f.p+' · '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}), dTW-24, 38);
+  g.fillText(fit(L.f.p+' · '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}), IN), dTW-24, 38);
   g.textAlign='left'; g.fillStyle='rgba(43,43,47,.9)'; g.font=F(15.5);
-  g.fillText('ถึง '+L.t.n+' · '+L.t.p, 24, 72);
+  g.fillText(fit('ถึง '+L.t.n+' · '+L.t.p, IN), 24, 72);
   /* ตัดบรรทัดตามความกว้างจริงของกระดาษ และตัดที่ *ขอบคำ* ไม่ใช่กลางคำ
      ไทยไม่มีช่องว่างระหว่างคำ ตัดทีละตัวอักษรจะได้ "นึกถึงต / อนที่" ซึ่งอ่านสะดุด
      Intl.Segmenter แบ่งคำไทยได้จริง ถ้าเบราว์เซอร์ไม่มีค่อยถอยไปตัดทีละตัว */
@@ -6035,7 +6067,7 @@ function dBuildTex(L){
   const lh=fs*1.79;
   g.font=F(fs);
   lines.forEach((L2,i)=>g.fillText(L2, 24, TOP+i*lh));
-  g.textAlign='right'; g.font=F(14.5); g.fillText('จาก '+L.f.n, dTW-24, dTH-34);
+  g.textAlign='right'; g.font=F(14.5); g.fillText(fit('จาก '+L.f.n, IN), dTW-24, dTH-34);
 }
 
 /* ox,oy = ระยะใน *โลก* (ไม่ใช่บนจอ) — ใช้ตอนกระดาษอยู่ไกล
