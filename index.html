@@ -307,6 +307,23 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 
 .iconbox{width:76px;height:76px;border-radius:18px;margin:0 auto 16px;display:block;
   box-shadow:0 2px 10px rgba(51,51,58,.16)}
+/* ---------- ล็อกหน้าจอ (ข้อ 116) ---------- */
+#lock{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:0;
+  background:linear-gradient(165deg,#dfe2e6,#eee9de);padding:0 28px}
+#lock.on{display:flex}
+#lock .word{font-size:13px;letter-spacing:.34em;color:var(--dim);margin-bottom:8px}
+#lock .big2{font-size:15.5px;letter-spacing:.02em;color:var(--txt);margin-bottom:26px;text-align:center}
+.dots{display:flex;gap:13px;margin-bottom:34px}
+.dots i{width:11px;height:11px;border-radius:50%;border:1px solid var(--line);transition:background .15s}
+.dots i.on{background:rgba(84,90,104,.72);border-color:transparent}
+.dots.bad{animation:shake .34s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.keys{display:grid;grid-template-columns:repeat(3,72px);gap:13px}
+.keys button{width:72px;height:72px;border-radius:50%;border:1px solid var(--line-soft);
+  background:rgba(255,255,255,.42);font:inherit;font-size:21px;color:var(--txt)}
+.keys button.blank{border-color:transparent;background:none}
+.keys button.small{font-size:15px;color:var(--dim)}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(84,90,104,.93);color:#f1eee7;font-size:12.5px;letter-spacing:.015em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
 </style>
@@ -640,6 +657,16 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
         ตรวจในเครื่องนี้เท่านั้น ไม่มีอะไรถูกส่งออก</span></span>
     </label>
     <div class="rule"></div>
+    <!-- ล็อกหน้าจอ (ข้อ 116) — ปิดไว้เป็นค่าเริ่มต้นตามที่ออกแบบไว้ใน port-studies E5 -->
+    <label class="f" style="display:flex;align-items:flex-start;gap:10px;margin-bottom:0">
+      <input type="checkbox" id="vLock" style="width:auto;margin-top:4px;accent-color:#c69a54">
+      <span style="letter-spacing:0;font-size:12.5px;color:var(--txt);text-transform:none">ล็อกหน้าจอ
+        <span style="display:block;font-size:11px;color:var(--faint);line-height:1.7">
+        ถามตัวเลขสี่หลักทุกครั้งที่เปิดแอป<br>
+        <b style="font-weight:normal;color:#a8574a">กันคนที่หยิบมือถือไปดูเท่านั้น ไม่ใช่การเข้ารหัส</b> —
+        จดหมายยังอยู่ในเครื่องแบบอ่านได้ · ลืมตัวเลขแล้วต้องล้างข้อมูลทั้งหมด</span></span>
+    </label>
+    <div class="rule"></div>
     <div class="note" id="vStat"></div>
     <div class="rule"></div>
     <button class="btn wide ghost" id="btnWipe" style="color:#a8574a">ล้างข้อมูลทั้งหมด</button>
@@ -671,6 +698,15 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   </div>
 </section>
 
+<!-- ล็อกหน้าจอ (ข้อ 116) — ปิดไว้เป็นค่าเริ่มต้น
+     ⛔ เลี่ยงคำว่า "รหัส" ทั้งหน้า แอปมีรหัสผ่านของตัวเองอยู่แล้วหนึ่งตัวในแผนขั้น 4
+        เพิ่มตัวที่สองที่เรียกชื่อเหมือนกันเมื่อไหร่ คนสับสนทันที (ข้อ 100.8) -->
+<section id="lock" aria-hidden="true">
+  <div class="word">drift</div>
+  <div class="big2" id="lockMsg">แตะตัวเลขเพื่อเปิด</div>
+  <div class="dots" id="lockDots"><i></i><i></i><i></i><i></i></div>
+  <div class="keys" id="lockKeys"></div>
+</section>
 <div id="toast"></div>
 <script>
 /* ============================================================
@@ -5329,10 +5365,73 @@ async function openPort(pt){
 
 $('#btnMenu').onclick=()=>{ refreshDock(); syncBugNote(); openSheet('menu'); };
 $('#mInbox').onclick=()=>{ openSheet('inbox'); };
-$('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
+$('#mAccount').onclick=()=>{ showMe(); syncLockToggle(); openSheet('vault'); };
 $('#mPorts').onclick=()=>openPorts(false);
 $('#mMine').onclick=openMine;
 $('#mInstall').onclick=openInstall;
+
+/* ---------- ล็อกหน้าจอ (ข้อ 116) ----------
+   ⛔ **นี่ไม่ใช่การเข้ารหัส** จดหมายยังนอนอยู่ใน localStorage แบบอ่านได้
+      คนที่เปิดเครื่องมือนักพัฒนาเป็นก็อ่านได้หมด — มันกันแค่คนที่หยิบมือถือไปดูเฉย ๆ
+      ต้องเขียนแบบนี้บนหน้าจอด้วย ห้ามให้ผู้ใช้เข้าใจว่าปลอดภัยกว่าความจริง
+   ⚠️ เก็บเฉพาะลายนิ้วมือของตัวเลข ไม่เก็บตัวเลข — ถึงจะกันคนอ่าน localStorage ไม่ได้
+      แต่ก็ไม่มีเหตุผลให้เก็บของจริงไว้เฉย ๆ */
+const K_LOCK='drift.lock';
+let lockBuf='', lockOn=false;
+async function pinHash(pin){
+  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('drift.lock:'+pin));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,32);
+}
+function lockSet(){ return LS.get(K_LOCK)||''; }
+function buildKeys(){
+  const box=$('#lockKeys'); if(box.children.length) return;
+  const mk=(t,cls,fn)=>{ const b=document.createElement('button'); b.type='button';
+    b.textContent=t; if(cls) b.className=cls; b.onclick=fn; box.appendChild(b); return b; };
+  for(let i=1;i<=9;i++) mk(String(i),'',()=>lockTap(String(i)));
+  mk('','blank',null);
+  mk('0','',()=>lockTap('0'));
+  mk('⌫','small',()=>{ lockBuf=lockBuf.slice(0,-1); paintDots(); });
+}
+function paintDots(bad){
+  const d=$('#lockDots');
+  [...d.children].forEach((el,i)=>el.classList.toggle('on', i<lockBuf.length));
+  d.classList.toggle('bad', !!bad);
+  if(bad) setTimeout(()=>d.classList.remove('bad'),360);
+}
+async function lockTap(n){
+  if(lockBuf.length>=4) return;
+  lockBuf+=n; paintDots();
+  if(lockBuf.length<4) return;
+  const val=lockBuf; lockBuf=''; paintDots();
+  /* ---------- โหมดตั้งค่า — ถามสองรอบ ----------
+     ⚠️ พิมพ์ผิดตอนตั้งแล้วไม่มีใครทัก = ล็อกตัวเองออกจากจดหมายตัวเองถาวร
+        เพราะไม่มีเซิร์ฟเวอร์ให้กู้ และเราไม่เก็บตัวเลขไว้ให้ดูด้วย */
+  if(lockSetup){
+    if(!lockSetup.first){
+      lockSetup.first=val; $('#lockMsg').textContent='พิมพ์อีกครั้งให้ตรงกัน'; return;
+    }
+    if(lockSetup.first!==val){
+      lockSetup.first=null; paintDots(true);
+      $('#lockMsg').textContent='ไม่ตรงกัน — ตั้งใหม่อีกครั้ง'; return;
+    }
+    LS.set(K_LOCK, await pinHash(val));
+    lockSetup=null; $('#vLock').checked=true;
+    closeLock(); toast('เปิดล็อกหน้าจอแล้ว');
+    return;
+  }
+  if(await pinHash(val)===lockSet()) closeLock();
+  else{ paintDots(true); $('#lockMsg').textContent='ยังไม่ใช่ ลองอีกที'; }
+}
+function openLock(){
+  buildKeys(); lockBuf=''; paintDots();
+  lockOn=true; $('#lock').classList.add('on'); $('#lock').setAttribute('aria-hidden','false');
+}
+function closeLock(){
+  lockOn=false; lockSetup=null;
+  $('#lock').classList.remove('on'); $('#lock').setAttribute('aria-hidden','true');
+  if(pendingBoot){ const f=pendingBoot; pendingBoot=null; f(); }
+}
+let pendingBoot=null;
 
 /* ---------- แจ้งปัญหา (ข้อ 115.2) ---------- */
 function errList(){ try{ return JSON.parse(localStorage.getItem(K_ERR)||'[]'); }catch(e){ return []; } }
@@ -5365,6 +5464,7 @@ function openBug(){
     $('#bugInfo').textContent=bugText(); syncBugNote(); toast('ล้างแล้ว');
   };
 }
+function syncLockToggle(){ const el=$('#vLock'); if(el) el.checked=!!lockSet(); }
 function syncBugNote(){
   const n=errList().length;
   $('#mBugNote').textContent = n ? n+' รายการ' : 'ถ้ามีอะไรสะดุด';
@@ -6062,6 +6162,18 @@ $('#btnOHere').onclick=()=>{
   }, geoFail, {timeout:15000, maximumAge:60000});
 };
 $('#vName').addEventListener('change',saveMe);
+/* ตั้ง/ปิดล็อกหน้าจอ — ใช้แป้นเดียวกับหน้าล็อก ไม่สร้างหน้าใหม่ (ข้อ 116) */
+let lockSetup=null;
+$('#vLock').addEventListener('change',async e=>{
+  if(!e.target.checked){
+    LS.del(K_LOCK); toast('ปิดล็อกหน้าจอแล้ว'); return;
+  }
+  e.target.checked=false;                 /* ยังไม่ติ๊กจริงจนกว่าจะตั้งเสร็จ */
+  lockSetup={first:null};
+  buildKeys(); lockBuf=''; paintDots();
+  $('#lockMsg').textContent='ตั้งตัวเลขสี่หลัก';
+  lockOn=true; $('#lock').classList.add('on'); $('#lock').setAttribute('aria-hidden','false');
+});
 $('#vWF').addEventListener('change',e=>{
   LS.set('drift.wf', e.target.checked?'1':'0');
   toast(e.target.checked?'เปิดตัวกรองแล้ว':'ปิดตัวกรองแล้ว');
@@ -6674,12 +6786,22 @@ syncOriginNote();
 LS.set('lw.probe','1');
 if(!LS_OK) setTimeout(()=>toast('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ — ปิดแล้วประวัติจะหาย'),800);
 requestAnimationFrame(frame);
-/* ---------- ตารางเปิดแอป (ข้อ 99.10ซ) ----------
+/* ---------- ตารางเปิดแอป (ข้อ 99.10ซ · ล็อกเพิ่มในข้อ 116) ----------
    ลิงก์มาก่อนเสมอ — คนที่กดลิงก์มาต้องได้เห็นสิ่งที่เขากดมาดู ไม่ใช่หน้าเปิดของแอป
-   หน้าเปิดเป็นของคนที่มาเองแบบมือเปล่าเท่านั้น */
-if(location.hash.length>10) receiveFromHash();
-else if(isNewcomer()) openIntro();
-addEventListener('hashchange',receiveFromHash);   /* วางลิงก์ในแท็บที่เปิดอยู่แล้วก็ต้องรับได้ */
+   หน้าเปิดเป็นของคนที่มาเองแบบมือเปล่าเท่านั้น
+
+   ⚠️ แต่ **ล็อกหน้าจอมาก่อนแม้กระทั่งลิงก์** — ไม่งั้นส่งลิงก์เข้ามาก็ข้ามล็อกได้
+      ซึ่งทำให้ล็อกไม่มีความหมายเลย · ลิงก์ไม่หายไปไหน มันรออยู่ใน hash */
+function bootRoute(){
+  if(location.hash.length>10) receiveFromHash();
+  else if(isNewcomer()) openIntro();
+}
+if(lockSet()){ pendingBoot=bootRoute; openLock(); }
+else bootRoute();
+addEventListener('hashchange',()=>{   /* วางลิงก์ในแท็บที่เปิดอยู่แล้วก็ต้องรับได้ */
+  if(lockOn){ pendingBoot=receiveFromHash; return; }   /* ยังไม่ปลดล็อก = ยังไม่เปิดจดหมาย */
+  receiveFromHash();
+});
 notifyArrivals();
 setInterval(()=>{ if(document.hidden) return; notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
 
