@@ -4702,13 +4702,20 @@ function tracesOf(L,upto){
   /* การเคลือบตัดร่องรอยที่มันกันได้ (ข้อ 13) — ความเก่าตามวันยังอยู่เสมอ เพราะเวลาไม่มีอะไรกันได้
      กอล์ฟตัดสิน 26 ส.ค. (ข้อ 98): กันน้ำกันความเปียกทั้งหมด · เคลือบหนากันรอยแตกและรอยยับทั้งหมด */
   const ct=L.ct|0;
+  /* ---------- ความเก่าต้องนับจากเวลาที่ *ผ่านไปแล้ว* (ข้อ 122) ----------
+     ⚠️ ของเดิมใช้ `L.th/24` ซึ่งเป็นเวลาเดินทาง *ทั้งหมด* — จดหมายที่เพิ่งปล่อยไปเมื่อครู่
+     จึงเก่าเท่ากับตอนที่มันถึงปลายทางแล้ว ทั้งที่ยังไม่ได้ไปไหนเลย
+     ผู้ส่งเปิดสำเนาดูระหว่างทางจะเห็นกระดาษที่ผ่านพายุมาครบแล้ว ซึ่งยังไม่จริง
+     ⚠️ ต้องผูกกับสิ่งเดียวกับที่ `upto` ผูกอยู่ ไม่งั้นคราบกับความเก่าเดินคนละจังหวะ */
+  const doneH = (upto===undefined) ? L.th
+              : L.lg.slice(0, Math.min(n, L.lg.length)).reduce((a,l)=>a+l[0]+l[1], 0);
   return {
     id:    L.id||'',
     wet:   ct>=1 ? 0 : clamp(pre/40,0,1),
     storm: ct===2 ? 0 : Math.min(3,st),
     gust:  ct===2 ? 0 : Math.min(4,gu),
     ice:   ct===2 ? 0 : Math.min(4,ic),
-    days:  L.th/24
+    days:  Math.min(doneH, L.th)/24
   };
 }
 /* รหัสจดหมาย → ตัวเลข สำหรับสุ่มลายร่องรอย (ข้อ 98)
@@ -6134,7 +6141,12 @@ function paintPaper(){
   const cv=$('#rCanvas'); if(!cv||!current) return;
   const box=$('#rPaper'); if(!box) return;
   cv.style.width=box.clientWidth+'px'; cv.style.height=box.clientHeight+'px';
-  drawPaper(cv,tracesOf(current));
+  /* ---------- ร่องรอยสะสมตามที่ผ่านมาจริง (ข้อ 122) ----------
+     ⚠️ ของเดิมเรียก `tracesOf(current)` เปล่า ๆ = นับทุกช่วงเสมอ
+     สำเนาขาออกที่ยังบินอยู่จึงแสดงคราบฝนและรอยยับของพายุที่ *ยังไม่ได้ผ่าน*
+     `tracesOf` รับ `upto` มาตั้งแต่แรกแล้ว แต่ไม่เคยมีใครส่งให้ */
+  const st=letterState(current, nowFor(current));
+  drawPaper(cv, tracesOf(current, (st.arrived||st.gone) ? undefined : st.legIdx));
 }
 function buildLog(L,st){
   const log=$('#rLog'); let h='';
