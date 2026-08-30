@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>drift — โมเมนต์หาย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c69a54;--txt:rgba(43,43,47,.9);--dim:rgba(84,90,104,.55);--faint:rgba(84,90,104,.36)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:linear-gradient(165deg,#dfe2e6,#eee9de);
+  font-family:'Noto Serif Thai',Georgia,serif;font-weight:300;color:var(--txt)}
+/* ⚠️ แบบศึกษานี้ *ไม่คัดลอกตรรกะ* — มันเรียกองก์จริงในแอปผ่าน iframe
+   ที่ receive-studies ทำคือวาดเองด้วย meshPoints ซึ่งแยกจากของจริงได้ตลอดเวลา
+   อันนี้แสดงสิ่งที่ผู้ใช้เห็นจริงเป๊ะ ๆ เพราะมันคือแอปตัวเดียวกัน */
+#app{position:fixed;inset:0;width:100%;height:100%;border:0}
+/* ⚠️ แถวเดียวเลื่อนได้ ไม่ตัดบรรทัด — ตัดบรรทัดแล้วแผงสูงไม่คงที่
+   แล้วบรรทัดบอกเฟสที่วางด้วยตำแหน่งตายตัวจะถูกทับ (เห็นตอนลองที่ 390px) */
+#panel{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:0;right:0;z-index:9;
+  display:flex;gap:6px;align-items:center;font-size:11.5px;
+  overflow-x:auto;white-space:nowrap;padding:0 10px 2px;
+  scrollbar-width:none;-ms-overflow-style:none}
+#panel::-webkit-scrollbar{display:none}
+#panel > *{flex:0 0 auto}
+.b{border:1px solid rgba(84,90,104,.2);border-radius:999px;padding:6px 12px;
+  background:rgba(255,255,255,.72);color:var(--txt);cursor:pointer;font:inherit;
+  backdrop-filter:blur(6px)}
+.b.on{background:rgba(255,255,255,.97);border-color:rgba(198,154,84,.7);color:#8a6a34}
+.lb{color:var(--dim);margin:0 2px 0 6px;font-size:11px}
+#sub{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 10px);
+  text-align:center;font-size:11px;color:var(--faint);z-index:9;pointer-events:none;line-height:1.9}
+#phase{position:fixed;top:calc(env(safe-area-inset-top) + 50px);left:0;right:0;text-align:center;
+  font-size:11px;letter-spacing:.02em;color:var(--dim);z-index:9;pointer-events:none}
+</style>
+</head>
+<body>
+<iframe id="app" src="index.html"></iframe>
+<div id="panel">
+  <button class="b" id="play">เล่นองก์หาย</button>
+  <span class="lb">ลม</span>
+  <button class="b w" data-w="8">อ่อน</button>
+  <button class="b w on" data-w="25">กลาง</button>
+  <button class="b w" data-w="60">แรง</button>
+  <span class="lb">ทิศ</span>
+  <button class="b d" data-d="90">→</button>
+  <button class="b d on" data-d="215">↙</button>
+  <button class="b d" data-d="270">←</button>
+  <span class="lb">ความเร็ว</span>
+  <button class="b s on" data-s="1">จริง</button>
+  <button class="b s" data-s="0.35">ช้า</button>
+  <button class="b s" data-s="0.12">ช้ามาก</button>
+</div>
+<div id="phase"></div>
+<div id="sub">องก์นี้เห็นได้ยากในแอปจริง เพราะจดหมายหายแค่ 1.8–16.5% ตามการเคลือบ<br>
+  ที่นี่บังคับให้มันหายทุกครั้ง — ทุกอย่างที่เห็นคือโค้ดตัวเดียวกับที่ผู้ใช้เจอ</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let APP=null, WIND=25, DIR=215, SPEED=1, ready=false;
+
+/* ยืดเวลาในแอปโดยไม่แตะโค้ดแอป — องก์ทุกองก์อ่านเวลาจาก performance.now
+   ครอบมันตัวเดียวจึงช้าลงทั้งองก์ พร้อมกัน และไม่มีค่าคงที่ไหนต้องเปลี่ยน */
+function setSpeed(k){
+  APP.eval('(function(){'
+    + 'if(!window.__rt) window.__rt=performance.now.bind(performance);'
+    + 'var t0=window.__rt(), k=' + k + ';'
+    + 'performance.now=function(){ return t0 + (window.__rt()-t0)*k; };'
+    + '})()');
+}
+
+/* จดหมายที่ *ต้อง* หาย — lo=1 แปลว่าหายที่ช่วงที่ 1 จากสองช่วง
+   ค่าลมกับทิศฝังอยู่ใน leg ตัวนั้น เพราะองก์หายอ่านลมจากช่วงที่หายจริง (ข้อ 120.2) */
+function makeLost(){
+  const now = Date.now();
+  return {
+    id:'STUDY', dir:'out', s: now - 20*3600000, th:10,
+    f:{n:'กอล์ฟ', la:13.7, lo:101.1, p:'ฉะเชิงเทรา'},
+    t:{n:'ใบเตย', la:18.8, lo:99.0, p:'เชียงใหม่'},
+    lg:[[0.8,0,18,200,0,0,0,0],[0.8,0,WIND,DIR,1,0,2,95]],
+    lo:1,
+    bd:'ตัวอย่างจดหมายสำหรับดูองก์หาย'
+  };
+}
+
+/* ⚠️ `const store` ที่ระดับบนสุดของสคริปต์ **ไม่กลายเป็น property ของ window**
+   จึงเรียก APP.store ตรง ๆ ไม่ได้ ต้องผ่าน eval ซึ่งทำงานใน global scope ของ iframe */
+function play(){
+  if(!ready) return;
+  const L = JSON.stringify(makeLost());
+  APP.eval('(function(){'
+    + ' try{ closeSheet(); }catch(e){}'
+    + ' if(typeof xPHASE!=="undefined") xPHASE="off";'
+    + ' var L=' + L + ';'
+    + ' store.saveAll([L]);'
+    + ' openLost(L, function(){ try{ closeSheet(); }catch(e){} });'   /* จบแล้วอยู่เฉย ๆ กดดูซ้ำได้ทันที */
+    + '})()');
+  setSpeed(SPEED);
+}
+
+const WORD={globe:'๑ · เห็นก่อนว่ามันหายตรงไหน', snatch:'๒ · ยังทานอยู่ แล้วเสียหลัก',
+            tumble:'๓ · หมุนคว้าง ไกลออกไป จางลง', gone:'๔ · เหลือแต่ลมที่ยังพัดอยู่', off:''};
+setInterval(()=>{
+  if(!ready) return;
+  let p='off';
+  try{ p = APP.eval('typeof xPHASE!=="undefined" ? xPHASE : "off"'); }catch(e){}
+  $('#phase').textContent = WORD[p] || '';
+}, 90);
+
+$('#play').onclick = play;
+document.querySelectorAll('.b.w').forEach(b=>b.onclick=()=>{
+  WIND=+b.dataset.w;
+  document.querySelectorAll('.b.w').forEach(x=>x.classList.toggle('on',x===b));
+  play();
+});
+document.querySelectorAll('.b.d').forEach(b=>b.onclick=()=>{
+  DIR=+b.dataset.d;
+  document.querySelectorAll('.b.d').forEach(x=>x.classList.toggle('on',x===b));
+  play();
+});
+document.querySelectorAll('.b.s').forEach(b=>b.onclick=()=>{
+  SPEED=+b.dataset.s;
+  document.querySelectorAll('.b.s').forEach(x=>x.classList.toggle('on',x===b));
+  play();
+});
+
+$('#app').addEventListener('load',()=>{
+  APP = $('#app').contentWindow;
+  /* รอให้แอปตั้งตัวก่อน — องก์ต้องการลูกโลกที่วาดแล้วและขนาดจอที่วัดแล้ว */
+  setTimeout(()=>{
+    try{
+      APP.eval('(function(){ try{ localStorage.clear(); }catch(e){}'
+             + ' store.setMe({name:"กอล์ฟ", lat:13.69, lng:101.07, place:"ฉะเชิงเทรา"});'
+             + ' try{ closeSheet(); }catch(e){} })()');
+      ready = true;
+      play();
+    }catch(e){ $('#phase').textContent='เปิดแบบศึกษาไม่ได้: '+e.message; }
+  }, 900);
+});
+</script>
+</body>
+</html>
