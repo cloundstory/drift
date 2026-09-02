@@ -98,6 +98,14 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>เส้น กลางคืน</label>
       <input type="range" id="gInkN" min="-40" max="25" value="0"><output id="oGInkN"></output></div>
 
+    <p class="grp">กระดาษ — มีเนื้อของตัวเอง ต่างจากลูกโลก</p>
+    <div class="row"><label>กระดาษ สว่าง</label>
+      <input type="range" id="pL" min="-72" max="10" value="0"><output id="oPL"></output></div>
+    <div class="row"><label>กระดาษ ความอุ่น</label>
+      <input type="range" id="pW" min="-30" max="45" value="0"><output id="oPW"></output></div>
+    <div class="row"><label>หมึกบนกระดาษ</label>
+      <input type="range" id="pInk" min="-20" max="80" value="0"><output id="oPInk"></output></div>
+
     <div class="tabs" id="tabs">
       <button data-go="home" class="on">ลูกโลก</button>
       <button data-go="menu">เมนู</button>
@@ -123,10 +131,11 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 let dark = true;
 
-const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gFog','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN'];
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gFog','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN','pL','pW','pInk'];
 /* ความทึบเป็นเปอร์เซ็นต์ 100 = เท่าเดิม — คุมคนละเรื่องกับสี จึงแยกออกมา (ข้อ 129) */
 const GA = {gDayA:'dayA', gNightA:'nightA'};
 const GB = {gBaseA:'baseA'};   /* ความทึบของเนื้อโลก 0-100% (ข้อ 129) */
+const PK = ['pL','pW','pInk'];   /* กระดาษ (ข้อ 130) */
 /* สไลเดอร์หนึ่งตัวคุมสีหลายตัวที่เป็นเรื่องเดียวกัน — ไม่ให้มี 19 ปุ่มที่ไม่มีใครหมุนไหว
    ⓘ ซีกกลางวันแยกจากแสงตกกระทบ เพราะเป็นคนละคำถาม (ข้อ 129)
      lift = ความสว่างรวมทั้งซีก · lit = ไฮไลต์ตรงจุดที่แดดตั้งฉาก แล้วไล่ลง
@@ -148,6 +157,8 @@ function css(v){
   const sh  = (a) => hsl(42, v.shW, v.shL, a);          /* แผ่น — อุ่นเล็กน้อย ไม่ขาวโพลน */
   const ink = (a) => hsl(40, 12, v.inkL, a);
   const gold= (l) => hsl(38, 46, l);
+  /* หมึกบนกระดาษ — เข้มขึ้นตามที่กระดาษหรี่ลง เพื่อให้ contrast ไม่ตก */
+  const paperInk = (a) => `hsl(28 18% ${Math.max(8, 18 + v.pL * 0.12)}% / ${a})`;
   return `
   body{background:linear-gradient(165deg,${bg1},${bg2}) !important;color:${ink(.92)} !important}
   :root{
@@ -170,6 +181,17 @@ function css(v){
   .mbtn:active i{background:${ink(.85)} !important}
   #toast{background:${hsl(v.bgH,v.bgS,Math.min(96,v.bgL+72),.94)} !important;color:${hsl(v.bgH,v.bgS,v.bgL)} !important}
   #splash{background:${bg1} !important}
+
+  /* ---- กระดาษเป็นเกาะของตัวเอง (ข้อ 130) ----
+     ⚠️ ทุกอย่างที่อยู่ *บนกระดาษ* ต้องใช้สีของกระดาษ ไม่ใช่สีของ UI มืด
+        กระดาษยังเป็นแผ่นสว่างในโหมดมืด หมึกบนมันจึงต้องเข้ม ไม่ใช่สว่าง
+        ถ้าลืมข้อนี้ ช่องกรอกจะกลายเป็นกล่องสว่างทับบนกระดาษ และหมึกจะหายไปกับพื้น */
+  #cSheet input,#cSheet textarea,#cWho .who{background:transparent !important;color:${paperInk(.92)} !important}
+  #cSheet input:focus,#cSheet textarea:focus{background:transparent !important}
+  #cSheet input::placeholder,#cSheet textarea::placeholder{color:${paperInk(.38)} !important}
+  .wline .lb{color:${paperInk(.9)} !important}
+  .ptext{color:${paperInk(.9)} !important}
+  .sig{color:${paperInk(.6)} !important}
   .brand img,#introMark,#spMark{filter:invert(1) hue-rotate(180deg) brightness(1.15)}
   `;
 }
@@ -206,6 +228,37 @@ function applyGlobe(){
      ไม่ล้างก่อน จะได้ภาพเดิมกลับมาแล้วนึกว่าค่าที่ปรับไม่มีผล (ข้อ 129) */
   try{ w.eval('G._key=null; G._nkey=null;'); }catch(e){}
   try{ w.renderGlobe(); }catch(e){}
+  applyPaper();
+}
+
+/* กระดาษหรี่ลงเอง ไม่ใช่เพิ่มความทึบ — มันเป็นวัตถุ ไม่ใช่ฟิล์ม (ข้อ 130) */
+function applyPaper(){
+  const w = app.contentWindow; if(!w) return;
+  let p;
+  try{ p = w.eval('typeof PAPER !== "undefined" ? PAPER : null'); }catch(e){ return; }
+  if(!p) return;
+  if(!w.__PAPER0) w.__PAPER0 = {fresh:p.fresh.slice(), aged:p.aged.slice(), line:p.line, edge:p.edge,
+    sheetFresh:p.sheetFresh.slice(), sheetAged:p.sheetAged.slice()};
+  const v = V(), P0 = w.__PAPER0;
+  const warm = (arr, dL, dW) => arr.map((c, i) => {
+    let x = dL > 0 ? c + (255 - c) * (dL / 100) : c * (1 + dL / 100);
+    x += (i === 0 ? dW * 0.55 : i === 1 ? 0 : -dW * 0.9);   /* อุ่น = แดงขึ้น น้ำเงินลง */
+    return Math.max(0, Math.min(255, Math.round(x)));
+  });
+  if(dark){
+    p.fresh = warm(P0.fresh, v.pL, v.pW);
+    p.aged  = warm(P0.aged,  v.pL, v.pW);
+    p.sheetFresh = warm(P0.sheetFresh, v.pL, v.pW);
+    p.sheetAged  = warm(P0.sheetAged,  v.pL, v.pW);
+    p.line  = shiftL(P0.line, v.pInk);
+    p.edge  = shiftL(P0.edge, v.pInk);
+  }else{
+    p.fresh = P0.fresh.slice(); p.aged = P0.aged.slice();
+    p.sheetFresh = P0.sheetFresh.slice(); p.sheetAged = P0.sheetAged.slice();
+    p.line = P0.line; p.edge = P0.edge;
+  }
+  /* กระดาษหน้าเขียนวาดครั้งเดียวตอนเปิด — ต้องสั่งวาดใหม่เอง */
+  try{ w.repaintPaper && w.repaintPaper(); }catch(e){}
 }
 
 function apply(){
