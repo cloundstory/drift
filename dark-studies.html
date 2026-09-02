@@ -78,21 +78,21 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 
     <p class="grp">ลูกโลก — แก้สีที่วาดบน canvas จริง</p>
     <div class="row"><label>หมอก</label>
-      <input type="range" id="gFog" min="0" max="72" value="72"><output id="oGFog"></output></div>
+      <input type="range" id="gFog" min="0" max="72" value="18"><output id="oGFog"></output></div>
     <div class="row"><label>เนื้อโลก ทึบ</label>
-      <input type="range" id="gBaseA" min="0" max="100" value="0"><output id="oGBaseA"></output></div>
+      <input type="range" id="gBaseA" min="0" max="100" value="30"><output id="oGBaseA"></output></div>
     <div class="row"><label>เนื้อโลก สว่าง</label>
-      <input type="range" id="gBaseL" min="-70" max="40" value="0"><output id="oGBaseL"></output></div>
+      <input type="range" id="gBaseL" min="-70" max="40" value="-49"><output id="oGBaseL"></output></div>
     <div class="row"><label>กลางวัน ทึบ</label>
-      <input type="range" id="gDayA" min="100" max="1400" value="100"><output id="oGDayA"></output></div>
+      <input type="range" id="gDayA" min="100" max="1400" value="320"><output id="oGDayA"></output></div>
     <div class="row"><label>กลางคืน ทึบ</label>
-      <input type="range" id="gNightA" min="20" max="400" value="100"><output id="oGNightA"></output></div>
+      <input type="range" id="gNightA" min="20" max="800" value="300"><output id="oGNightA"></output></div>
     <div class="row"><label>แสงตกกระทบ</label>
       <input type="range" id="gLit" min="-40" max="85" value="0"><output id="oGLit"></output></div>
     <div class="row"><label>ซีกกลางคืน ยก</label>
       <input type="range" id="gDay" min="-40" max="85" value="0"><output id="oGDay"></output></div>
     <div class="row"><label>กลางคืน สว่าง</label>
-      <input type="range" id="gNight" min="-20" max="55" value="0"><output id="oGNight"></output></div>
+      <input type="range" id="gNight" min="-70" max="55" value="-47"><output id="oGNight"></output></div>
     <div class="row"><label>เส้น กลางวัน</label>
       <input type="range" id="gInkD" min="-30" max="60" value="0"><output id="oGInkD"></output></div>
     <div class="row"><label>เส้น กลางคืน</label>
@@ -105,6 +105,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <button data-go="inbox">กล่องจดหมาย</button>
       <button data-go="vault">บัญชี</button>
       <button data-go="ports">รายชื่อ</button>
+      <button id="btnTerm">หมุนหาเส้นแบ่งวัน-คืน</button>
     </div>
 
     <div class="acts">
@@ -226,6 +227,22 @@ function paintOut(){
 }
 
 K.forEach(k => $('#'+k).addEventListener('input', apply));
+
+/* ลูกโลกมักหันซีกกลางวันมาทั้งใบ แล้วจะไม่เห็นความต่างวัน-คืนเลย
+   ต้องหมุนไปที่มุมที่ดวงอาทิตย์อยู่ริมขอบก่อน ถึงจะเห็นทั้งสองซีกพร้อมกัน (ข้อ 129.6) */
+$('#btnTerm').addEventListener('click', () => {
+  const w = app.contentWindow;
+  try{ w.eval(`(function(){
+    const r0=G.rotY; let best=null;
+    for(let i=0;i<180;i++){
+      G.rotY = r0 + i*Math.PI/90;
+      const z = Math.abs(G.project(G.rotate(sunVec())).z);
+      if(!best || z < best.z) best = {z, rot:G.rotY};
+    }
+    G.rotY = best.rot; G.vY = 0;
+  })()`); }catch(e){}
+  applyGlobe();
+});
 
 $('#btnMin').addEventListener('click', () => {
   const p = $('#panel'); p.classList.toggle('min');
