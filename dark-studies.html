@@ -45,6 +45,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 .acts button.gold{background:#c69a54;color:#221c10}
 #out{margin-top:11px;font-size:11px;line-height:1.6;opacity:.6;white-space:pre-wrap;
   font-family:ui-monospace,Menlo,monospace;max-height:120px;overflow:auto}
+.grp{font-size:11px;letter-spacing:.16em;opacity:.5;margin:16px 0 2px;
+  border-top:1px solid rgba(232,227,216,.12);padding-top:12px}
 .note{font-size:11px;opacity:.45;margin:7px 0 0;line-height:1.55}
 </style>
 </head>
@@ -72,6 +74,16 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>ทอง สว่าง</label>
       <input type="range" id="goL" min="40" max="90" value="66"><output id="oGoL"></output></div>
 
+    <p class="grp">ลูกโลก — แก้สีที่วาดบน canvas จริง</p>
+    <div class="row"><label>กลางวัน สว่าง</label>
+      <input type="range" id="gDay" min="-45" max="30" value="0"><output id="oGDay"></output></div>
+    <div class="row"><label>กลางคืน สว่าง</label>
+      <input type="range" id="gNight" min="-20" max="55" value="0"><output id="oGNight"></output></div>
+    <div class="row"><label>เส้น กลางวัน</label>
+      <input type="range" id="gInkD" min="-30" max="60" value="0"><output id="oGInkD"></output></div>
+    <div class="row"><label>เส้น กลางคืน</label>
+      <input type="range" id="gInkN" min="-40" max="25" value="0"><output id="oGInkN"></output></div>
+
     <div class="tabs" id="tabs">
       <button data-go="home" class="on">ลูกโลก</button>
       <button data-go="menu">เมนู</button>
@@ -85,8 +97,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <button id="btnOff">ดูแบบสว่าง</button>
       <button id="btnCopy" class="gold">คัดลอกค่า</button>
     </div>
-    <p class="note">⛔ ลูกโลก · กระดาษ 3D · ลม · อากาศ ยังไม่เปลี่ยนตาม เพราะวาดบน canvas
-      ด้วยสีที่เขียนตายตัว — ต้องรอขั้นที่ canvas อ่านสีจากที่เดียวกับ CSS</p>
+    <p class="note">✅ ลูกโลกปรับได้แล้ว — สไลเดอร์สี่ตัวล่างแก้สีที่วาดบน canvas จริง
+      <br>⛔ กระดาษ 3D · ลม · อากาศ ยังไม่เปลี่ยนตาม เป็นกลุ่มถัดไป</p>
     <div id="out"></div>
   </div>
 </div>
@@ -96,7 +108,10 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 let dark = true;
 
-const K = ['bgL','bgH','bgS','shL','shW','inkL','goL'];
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gDay','gNight','gInkD','gInkN'];
+/* สไลเดอร์หนึ่งตัวคุมสีหลายตัวที่เป็นเรื่องเดียวกัน — ไม่ให้มี 18 ปุ่มที่ไม่มีใครหมุนไหว */
+const GK = {gDay:['lit','litMid','litEdge','lift'], gNight:['nightBg','nightG0','nightG1','nightG2'],
+            gInkD:['dayInk'], gInkN:['nightGrid','nightCoast','termLine']};
 const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
 
 function hsl(h,s,l,a){ return a==null ? `hsl(${h} ${s}% ${l}%)` : `hsl(${h} ${s}% ${l}% / ${a})`; }
@@ -136,8 +151,33 @@ function css(v){
   `;
 }
 
+/* ปรับความสว่างโดยคงเนื้อสีไว้ — บวกคือเข้าหาขาว ลบคือคูณลง */
+function shiftL(rgb, d){
+  if(!d) return rgb;
+  const p = rgb.split(',').map(Number);
+  const f = v => Math.max(0, Math.min(255, Math.round(d > 0 ? v + (255 - v) * (d / 100) : v * (1 + d / 100))));
+  return f(p[0]) + ',' + f(p[1]) + ',' + f(p[2]);
+}
+
+/* แก้ SKIN ของแอปจริงแล้วสั่งวาดใหม่ — ไม่ได้จำลองลูกโลกขึ้นมาเอง */
+function applyGlobe(){
+  const w = app.contentWindow; if(!w) return;
+  /* SKIN ประกาศด้วย const จึงไม่เป็น property ของ window — ต้องหยิบผ่าน eval
+     ⓘ แก้ที่เครื่องมือ ไม่แก้แอปเพื่อให้เครื่องมือเข้าถึงง่ายขึ้น */
+  let skin;
+  try{ skin = w.eval('typeof SKIN !== "undefined" ? SKIN : null'); }catch(e){ return; }
+  if(!skin) return;
+  if(!w.__SKIN0) w.__SKIN0 = Object.assign({}, skin);
+  const v = V();
+  Object.keys(GK).forEach(sl => GK[sl].forEach(k => {
+    skin[k] = dark ? shiftL(w.__SKIN0[k], v[sl]) : w.__SKIN0[k];
+  }));
+  try{ w.renderGlobe(); }catch(e){}
+}
+
 function apply(){
   const d = app.contentDocument; if(!d) return;
+  applyGlobe();
   let st = d.getElementById('__dark');
   if(!dark){ if(st) st.remove(); paintOut(); return; }
   if(!st){ st = d.createElement('style'); st.id='__dark'; d.head.appendChild(st); }
@@ -177,7 +217,7 @@ $('#tabs').addEventListener('click', e => {
   [...$('#tabs').children].forEach(x => x.classList.toggle('on', x===b));
   const w = app.contentWindow, go = b.dataset.go;
   try{
-    if(go==='home'){ w.closeSheet && w.closeSheet(); }
+    if(go==='home'){ w.closeSheet && w.closeSheet(); setTimeout(applyGlobe, 60); }
     else { w.openSheet && w.openSheet(go); }
   }catch(err){ $('#out').textContent = 'เรียกไม่ได้: ' + err.message; }
 });

@@ -2929,6 +2929,33 @@ let SOFT=0.90;
 const PAINT_BUDGET=6;
 
 /* ---------- GLOBE 2.5D ---------- */
+/* ---------- สีของลูกโลก (ข้อ 128) ----------
+   ยกออกมาจากที่กระจายอยู่ 12 จุด เพื่อให้มีที่เดียวที่ต้องแก้ตอนทำโหมดมืด
+   ⚠️ ค่าทุกตัวเท่าของเดิมเป๊ะ — ขั้นนี้ไม่เปลี่ยนหน้าตาแม้แต่พิกเซลเดียว
+   ⚠️ ต้องอยู่เหนือ G ที่ใช้มัน — const ไม่ยกขึ้นเหมือน function (ข้อ 106.6)
+   ⓘ เก็บเป็น 'r,g,b' เพราะ segs() ประกอบ rgba เองอยู่แล้ว */
+const SKIN = {
+  lit:      '255,253,246',   /* แสงที่ตกบนโลกฝั่งโดนแดด */
+  litMid:   '240,238,232',
+  litEdge:  '196,193,186',
+  lift:     '238,235,227',   /* ยกซีกกลางวันให้สว่างขึ้นทั้งซีก */
+  nightBg:  '34,40,60',      /* พื้นกลางคืน ทึบสม่ำเสมอ (ข้อ 41) */
+  nightG0:  '28,34,54',      /* ไล่ระดับความลึกของกลางคืน */
+  nightG1:  '32,38,58',
+  nightG2:  '36,42,62',
+  dayInk:   '84,90,104',     /* เส้นชายฝั่ง+กริด ฝั่งกลางวัน */
+  nightGrid:'204,220,244',   /* ฝั่งกลางคืนกลับขั้ว เส้นสว่างบนพื้นมืด (ข้อ 40) */
+  nightCoast:'222,232,248',
+  termLine: '228,214,186',   /* เส้นขอบแสง รอยต่อวัน-คืน */
+  rim:      '70,76,86',      /* ขอบโลก */
+  atmo:     '198,154,84',    /* ชั้นบรรยากาศฝั่งโดนแดด */
+  cityGlow: '226,172,88',    /* ไฟเมือง — วงแสงรอบจุด */
+  cityDot:  '240,206,140',
+  markHalo: '247,245,239',   /* วงแสงรอบจุดจดหมาย */
+  selHalo:  '198,154,84',
+  selDot:   '210,168,96',
+};
+
 const G = {
   rotY:.3, rotX:-.25, vY:0, vX:0, drag:false, lastX:0, lastY:0,
   _pY:.3, _pX:-.25, _pZ:1, _cost:0,
@@ -3127,11 +3154,11 @@ const G = {
       const rad=.65+m*1.5;
       if(m>.45&&!fast){
         const g=c.createRadialGradient(p.x,p.y,0,p.x,p.y,rad*4);
-        g.addColorStop(0,'rgba(226,172,88,'+Math.min(.5,a*.55).toFixed(3)+')');
-        g.addColorStop(1,'rgba(226,172,88,0)');
+        g.addColorStop(0,'rgba('+SKIN.cityGlow+','+Math.min(.5,a*.55).toFixed(3)+')');
+        g.addColorStop(1,'rgba('+SKIN.cityGlow+',0)');
         c.fillStyle=g; c.beginPath(); c.arc(p.x,p.y,rad*4,0,6.2832); c.fill();
       }
-      c.fillStyle='rgba(240,206,140,'+Math.min(.85,a).toFixed(3)+')';
+      c.fillStyle='rgba('+SKIN.cityDot+','+Math.min(.85,a).toFixed(3)+')';
       c.beginPath(); c.arc(p.x,p.y,rad,0,6.2832); c.fill();
     }
   },
@@ -3144,9 +3171,9 @@ const G = {
     const s=this.project(this.rotate(sunVec()));
     const ax=this.CX-(s.x-this.CX), ay=this.CY-(s.y-this.CY);
     const g=c.createRadialGradient(ax,ay,0,ax,ay,this.R*1.25);
-    g.addColorStop(0,'rgba(238,235,227,'+lift.toFixed(3)+')');
-    g.addColorStop(.55,'rgba(238,235,227,'+(lift*.62).toFixed(3)+')');
-    g.addColorStop(1,'rgba(238,235,227,0)');
+    g.addColorStop(0,'rgba('+SKIN.lift+','+lift.toFixed(3)+')');
+    g.addColorStop(.55,'rgba('+SKIN.lift+','+(lift*.62).toFixed(3)+')');
+    g.addColorStop(1,'rgba('+SKIN.lift+',0)');
     c.save();
     c.beginPath(); c.arc(this.CX,this.CY,this.R,0,6.2832); c.clip();
     c.fillStyle=g; c.fillRect(this.CX-this.R,this.CY-this.R,this.R*2,this.R*2);
@@ -3171,9 +3198,9 @@ const G = {
     const lit=s.z>=0;
     const hx=lit?CX+(s.x-CX)*.6:CX, hy=lit?CY+(s.y-CY)*.6:CY;
     const g=c.createRadialGradient(hx,hy,R*.04,CX,CY,R*1.06);
-    g.addColorStop(0,'rgba(255,253,246,'+(lit?.5:.22)+')');
-    g.addColorStop(.55,'rgba(240,238,232,0.15)');
-    g.addColorStop(1,'rgba(196,193,186,0.06)');
+    g.addColorStop(0,'rgba('+SKIN.lit+','+(lit?.5:.22)+')');
+    g.addColorStop(.55,'rgba('+SKIN.litMid+',0.15)');
+    g.addColorStop(1,'rgba('+SKIN.litEdge+',0.06)');
     c.fillStyle=g; c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.fill();
     /* 3. ซีกกลางคืน = พื้นมืดจริง
        ของเดิมขอบคมเป๊ะเหมือนตัดกระดาษ เพราะซีกมืดถูก clip ด้วยรูปทรงเส้นแบ่งจริง
@@ -3212,12 +3239,12 @@ const G = {
          แก้เป็น: พื้นทึบสม่ำเสมอ + ไล่ระดับลึกขึ้นอีกนิดตรงกลางดึก */
       /* ถูก clip ด้วยรูปทรงเงาอยู่แล้ว เติมเต็มจอจึงพอ — ที่ซูมสูง R*2 ใหญ่กว่าจอหลายเท่า */
       const box=this.fillBox();
-      tgt.fillStyle='rgba(34,40,60,0.34)';
+      tgt.fillStyle='rgba('+SKIN.nightBg+',0.34)';
       tgt.fillRect(box[0],box[1],box[2],box[3]);
       const n=tgt.createRadialGradient(ax,ay,0,ax,ay,R*0.95);
-      n.addColorStop(0,'rgba(28,34,54,0.22)');
-      n.addColorStop(.6,'rgba(32,38,58,0.10)');
-      n.addColorStop(1,'rgba(36,42,62,0)');
+      n.addColorStop(0,'rgba('+SKIN.nightG0+',0.22)');
+      n.addColorStop(.6,'rgba('+SKIN.nightG1+',0.10)');
+      n.addColorStop(1,'rgba('+SKIN.nightG2+',0)');
       tgt.fillStyle=n; tgt.fillRect(box[0],box[1],box[2],box[3]);
       tgt.restore();
       if(useBlur){
@@ -3230,35 +3257,35 @@ const G = {
       }
     }
     /* 4. เส้นซีกหน้า — หมึกเข้มฝั่งกลางวัน / สีอ่อนฝั่งกลางคืน ไล่ข้ามกันตรงสนธยา */
-    this.segs(c,GRID,.13,.7,true,1,'84,90,104',this.shadeDay);
-    for(const cs of this.coastSets()) this.segs(c,cs[0],.25*cs[1],.85,true,stride,'84,90,104',this.shadeDay);
+    this.segs(c,GRID,.13,.7,true,1,SKIN.dayInk,this.shadeDay);
+    for(const cs of this.coastSets()) this.segs(c,cs[0],.25*cs[1],.85,true,stride,SKIN.dayInk,this.shadeDay);
     if(term){
       /* กลางคืนอ่านออกได้จาก "การกลับขั้ว" — เส้นสว่างบนพื้นมืด ตรงข้ามกับกลางวัน
          จึงต้องเข้มพอจะเห็นชัด ไม่งั้นซีกมืดจะเป็นแค่พื้นที่เทา ๆ ที่ไม่มีอะไร
          (ไฟเมืองย้ายไปวาดสดใน sphere() เพราะต้องกะพริบ ซึ่งชั้นที่ cache ไว้ทำไม่ได้) */
       /* ซีกกลางคืนยังต้องเข้มกว่ากลางวันอยู่ เพราะการกลับขั้วคือสิ่งที่ทำให้อ่านออกว่าเป็นกลางคืน
          แต่ลดลงตามสัดส่วนเดียวกัน ไม่งั้นซีกมืดจะกลายเป็นด้านที่ดังกว่าอากาศ */
-      this.segs(c,GRID,.15,.7,true,1,'204,220,244',this.shadeNight);
-      for(const cs of this.coastSets()) this.segs(c,cs[0],.33*cs[1],.9,true,stride,'222,232,248',this.shadeNight);
+      this.segs(c,GRID,.15,.7,true,1,SKIN.nightGrid,this.shadeNight);
+      for(const cs of this.coastSets()) this.segs(c,cs[0],.33*cs[1],.9,true,stride,SKIN.nightCoast,this.shadeNight);
     }
     /* 5. เส้นขอบแสง — บาง จาง ให้รอยต่อมีรูปทรง
        จางลงตามความนุ่ม ที่นุ่มสุดหายไปเลย ไม่มีอะไรย้ำรอยตัด */
     const lineA=0.45*(1-SOFT);
     if(term&&!term.all&&lineA>0.02){
-      c.strokeStyle='rgba(228,214,186,'+lineA.toFixed(3)+')'; c.lineWidth=.9;
+      c.strokeStyle='rgba('+SKIN.termLine+','+lineA.toFixed(3)+')'; c.lineWidth=.9;
       c.beginPath();
       c.moveTo(term.arc[0].x,term.arc[0].y);
       for(let i=1;i<term.arc.length;i++) c.lineTo(term.arc[i].x,term.arc[i].y);
       c.stroke();
     }
     /* 6. ขอบโลก + ชั้นบรรยากาศ: ทองด้านโดนแดด น้ำเงินด้านมืด */
-    c.strokeStyle='rgba(70,76,86,0.45)'; c.lineWidth=1.1;
+    c.strokeStyle='rgba('+SKIN.rim+',0.45)'; c.lineWidth=1.1;
     c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.stroke();
     if(term&&!term.all&&!fast){
       [[R*.06,.045],[R*.032,.075],[R*.013,.12]].forEach(pair=>{
         const w=pair[0], al=pair[1];
         c.lineWidth=w*2;
-        c.strokeStyle='rgba(198,154,84,'+al+')';
+        c.strokeStyle='rgba('+SKIN.atmo+','+al+')';
         c.beginPath(); c.arc(CX,CY,R-w*.5,term.a1,term.a0,!term.ccw); c.stroke();
         c.strokeStyle='rgba(120,146,200,'+(al*1.5).toFixed(3)+')';
         c.beginPath(); c.arc(CX,CY,R-w*.5,term.a1,term.a0,term.ccw); c.stroke();
@@ -3737,7 +3764,7 @@ const G = {
       r.closePath(); r.clip();
     }
     const box=this.fillBox();
-    r.fillStyle='rgba(34,40,60,0.34)';
+    r.fillStyle='rgba('+SKIN.nightBg+',0.34)';
     r.fillRect(box[0],box[1],box[2],box[3]);
     r.restore();
     /* เจาะรูตรงวงเปิด — ในวงไม่ต้องเติมอะไร เพราะความมืดจริงแสดงอยู่แล้ว */
@@ -3799,9 +3826,9 @@ const G = {
     const r=hollow?4.4:3.6;
     /* วงแสงจาง ๆ เปิดที่ว่างรอบจุด ให้เส้นอากาศไม่กลืนมัน */
     const halo=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3.4);
-    halo.addColorStop(0,'rgba(247,245,239,'+(.78*a)+')');
-    halo.addColorStop(.55,'rgba(247,245,239,'+(.34*a)+')');
-    halo.addColorStop(1,'rgba(247,245,239,0)');
+    halo.addColorStop(0,'rgba('+SKIN.markHalo+','+(.78*a)+')');
+    halo.addColorStop(.55,'rgba('+SKIN.markHalo+','+(.34*a)+')');
+    halo.addColorStop(1,'rgba('+SKIN.markHalo+',0)');
     ctx.fillStyle=halo;ctx.beginPath();ctx.arc(p.x,p.y,r*3.4,0,Math.PI*2);ctx.fill();
     if(hollow){
       ctx.strokeStyle='rgba(52,52,58,'+a+')';ctx.lineWidth=1.5;
@@ -3816,10 +3843,10 @@ const G = {
     const a=p.z<0?.3:1;
     const r=9*(sel?1.35:1);
     const halo=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
-    halo.addColorStop(0,'rgba(198,154,84,'+(.45*a*pulse)+')');
-    halo.addColorStop(1,'rgba(198,154,84,0)');
+    halo.addColorStop(0,'rgba('+SKIN.selHalo+','+(.45*a*pulse)+')');
+    halo.addColorStop(1,'rgba('+SKIN.selHalo+',0)');
     ctx.fillStyle=halo;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(210,168,96,'+a+')';
+    ctx.fillStyle='rgba('+SKIN.selDot+','+a+')';
     ctx.beginPath();ctx.arc(p.x,p.y,sel?3.4:2.8,0,Math.PI*2);ctx.fill();
   },
   ghost(ctx,p){    /* จดหมายที่หายไปกับลม — จางค้างไว้ */
