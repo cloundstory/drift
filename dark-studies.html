@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2233">
+<title>drift — แบบศึกษาโหมดมืด</title>
+<style>
+/* แบบศึกษาโหมดมืด (ข้อ 127)
+   ⚠️ ไม่คัดลอกตรรกะของแอปมาเลย — iframe ตัวจริงแล้วยัด CSS ทับ
+      หลักเดียวกับ lost-studies.html ที่เรียก openLost() ตัวจริงผ่าน iframe
+   ⛔ อะไรที่วาดบน canvas (ลูกโลก กระดาษ 3D ลม อากาศ) ยังคุมไม่ได้จากที่นี่
+      ต้องรอให้ canvas อ่านสีจาก token ก่อน */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;
+  font-family:"Noto Serif Thai",Georgia,serif;background:#0f1420;color:#e8e3d8}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+#stagebox{flex:1;position:relative;min-height:0;background:#000}
+iframe{width:100%;height:100%;border:0;display:block}
+#panel{background:#171d2b;border-top:1px solid rgba(232,227,216,.14);
+  padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);
+  max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#panel.min{max-height:52px;overflow:hidden}
+.hd{display:flex;align-items:center;gap:10px;height:32px}
+.hd b{font-weight:400;font-size:13px;letter-spacing:.2em;flex:1;opacity:.75}
+.tog{background:rgba(232,227,216,.12);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 13px;height:32px;min-width:44px;border-radius:16px}
+.row{display:flex;align-items:center;gap:11px;margin:9px 0}
+.row label{width:96px;font-size:12px;opacity:.7;flex:none}
+.row output{width:44px;text-align:right;font-size:12px;opacity:.55;flex:none;
+  font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;height:44px;background:none;-webkit-appearance:none;appearance:none;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:#e8e3d8;margin-top:-12px}
+input[type=range]::-moz-range-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#e8e3d8}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:11px 0 3px}
+.tabs button{background:rgba(232,227,216,.1);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 12px;height:38px;border-radius:19px}
+.tabs button.on{background:rgba(232,227,216,.26)}
+.acts{display:flex;gap:9px;margin-top:12px}
+.acts button{flex:1;height:44px;border:0;border-radius:9px;font:inherit;font-size:13px;
+  background:rgba(232,227,216,.16);color:inherit}
+.acts button.gold{background:#c69a54;color:#221c10}
+#out{margin-top:11px;font-size:11px;line-height:1.6;opacity:.6;white-space:pre-wrap;
+  font-family:ui-monospace,Menlo,monospace;max-height:120px;overflow:auto}
+.note{font-size:11px;opacity:.45;margin:7px 0 0;line-height:1.55}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stagebox"><iframe id="app" src="index.html"></iframe></div>
+  <div id="panel">
+    <div class="hd">
+      <b>โหมดมืด</b>
+      <button class="tog" id="btnMin">ย่อ</button>
+    </div>
+
+    <div class="row"><label>พื้น มืดแค่ไหน</label>
+      <input type="range" id="bgL" min="4" max="34" value="13"><output id="oBgL"></output></div>
+    <div class="row"><label>พื้น โทนสี</label>
+      <input type="range" id="bgH" min="180" max="280" value="222"><output id="oBgH"></output></div>
+    <div class="row"><label>พื้น ความอิ่ม</label>
+      <input type="range" id="bgS" min="0" max="40" value="22"><output id="oBgS"></output></div>
+    <div class="row"><label>แผ่น สว่าง</label>
+      <input type="range" id="shL" min="55" max="100" value="86"><output id="oShL"></output></div>
+    <div class="row"><label>แผ่น ความอุ่น</label>
+      <input type="range" id="shW" min="0" max="60" value="34"><output id="oShW"></output></div>
+    <div class="row"><label>หมึก สว่าง</label>
+      <input type="range" id="inkL" min="60" max="100" value="88"><output id="oInkL"></output></div>
+    <div class="row"><label>ทอง สว่าง</label>
+      <input type="range" id="goL" min="40" max="90" value="66"><output id="oGoL"></output></div>
+
+    <div class="tabs" id="tabs">
+      <button data-go="home" class="on">ลูกโลก</button>
+      <button data-go="menu">เมนู</button>
+      <button data-go="compose">เขียน</button>
+      <button data-go="inbox">กล่องจดหมาย</button>
+      <button data-go="vault">บัญชี</button>
+      <button data-go="ports">รายชื่อ</button>
+    </div>
+
+    <div class="acts">
+      <button id="btnOff">ดูแบบสว่าง</button>
+      <button id="btnCopy" class="gold">คัดลอกค่า</button>
+    </div>
+    <p class="note">⛔ ลูกโลก · กระดาษ 3D · ลม · อากาศ ยังไม่เปลี่ยนตาม เพราะวาดบน canvas
+      ด้วยสีที่เขียนตายตัว — ต้องรอขั้นที่ canvas อ่านสีจากที่เดียวกับ CSS</p>
+    <div id="out"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app');
+let dark = true;
+
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL'];
+const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
+
+function hsl(h,s,l,a){ return a==null ? `hsl(${h} ${s}% ${l}%)` : `hsl(${h} ${s}% ${l}% / ${a})`; }
+
+/* สร้าง CSS ที่จะยัดเข้าไปในแอป
+   ⚠️ UI ของแอปเกือบทั้งหมดคือ rgba(255,255,255,α) วางทับพื้น — ไม่ได้ระบายสี
+      โหมดมืดจึงคือ "เปลี่ยนแผ่นขาวเป็นแผ่นสว่างบนพื้นเข้ม" ไม่ใช่เปลี่ยนเป็นดำ */
+function css(v){
+  const bg1 = hsl(v.bgH, v.bgS, v.bgL);
+  const bg2 = hsl(v.bgH - 14, Math.max(0,v.bgS - 6), v.bgL + 4);
+  const sh  = (a) => hsl(42, v.shW, v.shL, a);          /* แผ่น — อุ่นเล็กน้อย ไม่ขาวโพลน */
+  const ink = (a) => hsl(40, 12, v.inkL, a);
+  const gold= (l) => hsl(38, 46, l);
+  return `
+  body{background:linear-gradient(165deg,${bg1},${bg2}) !important;color:${ink(.92)} !important}
+  :root{
+    --txt:${ink(.92)} !important; --dim:${ink(.62)} !important; --faint:${ink(.42)} !important;
+    --line:${sh(.26)} !important; --line-soft:${sh(.13)} !important;
+    --gold:${gold(v.goL)} !important;
+  }
+  .sheet{background:linear-gradient(165deg,${hsl(v.bgH,v.bgS,v.bgL+2,.985)},${hsl(v.bgH-14,Math.max(0,v.bgS-6),v.bgL+6,.985)}) !important}
+  .btn{background:${sh(.13)} !important;color:${gold(v.goL)} !important;border-color:${sh(.3)} !important}
+  .btn:active,.chip.sel{background:${sh(.26)} !important}
+  .pbtn{background:${sh(.17)} !important}
+  .chip,.fc,.pick,.link,.addr,.shade{background:${sh(.1)} !important}
+  .pick.on{background:${sh(.2)} !important}
+  .hit,.mrow:active,#status:active{background:${sh(.1)} !important}
+  .hit:active{background:${sh(.22)} !important}
+  input,textarea{background:${sh(.1)} !important;color:${ink(.92)} !important}
+  input:focus,textarea:focus{background:${sh(.16)} !important}
+  #cHits{background:${hsl(v.bgH,v.bgS,v.bgL+3)} !important}
+  .mbtn i{background:${ink(.6)} !important}
+  .mbtn:active i{background:${ink(.85)} !important}
+  #toast{background:${hsl(v.bgH,v.bgS,Math.min(96,v.bgL+72),.94)} !important;color:${hsl(v.bgH,v.bgS,v.bgL)} !important}
+  #splash{background:${bg1} !important}
+  .brand img,#introMark,#spMark{filter:invert(1) hue-rotate(180deg) brightness(1.15)}
+  `;
+}
+
+function apply(){
+  const d = app.contentDocument; if(!d) return;
+  let st = d.getElementById('__dark');
+  if(!dark){ if(st) st.remove(); paintOut(); return; }
+  if(!st){ st = d.createElement('style'); st.id='__dark'; d.head.appendChild(st); }
+  st.textContent = css(V());
+  paintOut();
+}
+
+function paintOut(){
+  const v = V();
+  K.forEach(k => $('#o'+k[0].toUpperCase()+k.slice(1)).textContent = v[k]);
+  $('#out').textContent = dark
+    ? JSON.stringify(v) + '\n\n' + css(v).trim().split('\n').slice(0,3).join('\n') + ' …'
+    : 'โหมดสว่าง (ของเดิม)';
+}
+
+K.forEach(k => $('#'+k).addEventListener('input', apply));
+
+$('#btnMin').addEventListener('click', () => {
+  const p = $('#panel'); p.classList.toggle('min');
+  $('#btnMin').textContent = p.classList.contains('min') ? 'ขยาย' : 'ย่อ';
+});
+
+$('#btnOff').addEventListener('click', () => {
+  dark = !dark; $('#btnOff').textContent = dark ? 'ดูแบบสว่าง' : 'ดูแบบมืด'; apply();
+});
+
+$('#btnCopy').addEventListener('click', async () => {
+  const txt = JSON.stringify(V(), null, 2) + '\n\n' + css(V());
+  try{ await navigator.clipboard.writeText(txt); $('#btnCopy').textContent='คัดลอกแล้ว';
+       setTimeout(()=>$('#btnCopy').textContent='คัดลอกค่า',1400); }
+  catch(e){ $('#out').textContent = txt; }
+});
+
+/* เรียกฟังก์ชันของแอปตรง ๆ ไม่จำลองการกด — same-origin จึงเข้าถึงได้ */
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  [...$('#tabs').children].forEach(x => x.classList.toggle('on', x===b));
+  const w = app.contentWindow, go = b.dataset.go;
+  try{
+    if(go==='home'){ w.closeSheet && w.closeSheet(); }
+    else { w.openSheet && w.openSheet(go); }
+  }catch(err){ $('#out').textContent = 'เรียกไม่ได้: ' + err.message; }
+});
+
+app.addEventListener('load', () => {
+  try{
+    /* ให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว จะได้ไม่ติดหน้าเปิดกับ splash ระหว่างจูน */
+    const w = app.contentWindow;
+    w.localStorage.setItem('lw.v1.intro','1');
+    w.sessionStorage.setItem('lw.v1.splash','1');
+  }catch(e){}
+  apply();
+});
+paintOut();
+</script>
+</body>
+</html>
