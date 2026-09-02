@@ -77,14 +77,16 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <input type="range" id="goL" min="40" max="90" value="66"><output id="oGoL"></output></div>
 
     <p class="grp">ลูกโลก — แก้สีที่วาดบน canvas จริง</p>
+    <div class="row"><label>หมอก</label>
+      <input type="range" id="gFog" min="0" max="72" value="72"><output id="oGFog"></output></div>
     <div class="row"><label>เนื้อโลก ทึบ</label>
       <input type="range" id="gBaseA" min="0" max="100" value="0"><output id="oGBaseA"></output></div>
     <div class="row"><label>เนื้อโลก สว่าง</label>
       <input type="range" id="gBaseL" min="-70" max="40" value="0"><output id="oGBaseL"></output></div>
     <div class="row"><label>กลางวัน ทึบ</label>
-      <input type="range" id="gDayA" min="100" max="500" value="100"><output id="oGDayA"></output></div>
+      <input type="range" id="gDayA" min="100" max="1400" value="100"><output id="oGDayA"></output></div>
     <div class="row"><label>กลางคืน ทึบ</label>
-      <input type="range" id="gNightA" min="40" max="260" value="100"><output id="oGNightA"></output></div>
+      <input type="range" id="gNightA" min="20" max="400" value="100"><output id="oGNightA"></output></div>
     <div class="row"><label>แสงตกกระทบ</label>
       <input type="range" id="gLit" min="-40" max="85" value="0"><output id="oGLit"></output></div>
     <div class="row"><label>ซีกกลางคืน ยก</label>
@@ -120,7 +122,7 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 let dark = true;
 
-const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN'];
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gFog','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN'];
 /* ความทึบเป็นเปอร์เซ็นต์ 100 = เท่าเดิม — คุมคนละเรื่องกับสี จึงแยกออกมา (ข้อ 129) */
 const GA = {gDayA:'dayA', gNightA:'nightA'};
 const GB = {gBaseA:'baseA'};   /* ความทึบของเนื้อโลก 0-100% (ข้อ 129) */
@@ -194,6 +196,10 @@ function applyGlobe(){
   }));
   Object.keys(GA).forEach(sl => { skin[GA[sl]] = dark ? v[sl] / 100 : 1; });
   Object.keys(GB).forEach(sl => { skin[GB[sl]] = dark ? v[sl] / 100 : 0; });
+  /* ⚠️ เพดานความทึบของลูกโลกคือ 1 - CFG.FOG — หมอกลบความทึบออก 72% นอกวงที่เปิด (ข้อ 41)
+     ในโหมดสว่างลูกโลกที่จางลงถูกกลืนในหมอกสีอ่อน · ในโหมดมืดมันหายไปในความมืด
+     ดัน dayA เท่าไหร่ก็ชนเพดานนี้ ต้องลดหมอกเท่านั้น (ข้อ 129.5) */
+  try{ w.eval('CFG.FOG=' + (dark ? (v.gFog/100) : 0.72) + ';'); }catch(e){}
   skin.base = dark ? shiftL(w.__SKIN0.base, v.gBaseL) : w.__SKIN0.base;
   /* ⚠️ sphere() แคชภาพไว้ด้วย _key ที่คิดจากมุมกับซูมเท่านั้น ไม่รู้จักสี
      ไม่ล้างก่อน จะได้ภาพเดิมกลับมาแล้วนึกว่าค่าที่ปรับไม่มีผล (ข้อ 129) */

@@ -3224,7 +3224,10 @@ const G = {
     const lit=s.z>=0;
     const hx=lit?CX+(s.x-CX)*.6:CX, hy=lit?CY+(s.y-CY)*.6:CY;
     const g=c.createRadialGradient(hx,hy,R*.04,CX,CY,R*1.06);
-    const dA=v=>Math.min(1,v*SKIN.dayA).toFixed(3);
+    /* ⚠️ อย่าคูณ alpha ตรง ๆ — จุดสว่างสุดเป็นวงเล็ก (รัศมี 4%) มันตันที่ 1 ทันที
+       ขณะที่ขอบซึ่งกินพื้นที่ส่วนใหญ่แทบไม่ขยับ ที่ตัวคูณ 5 ขอบยังโปร่ง 70% (ข้อ 129.4)
+       สูตรทบต้นคือการซ้อนฟิล์มหลายชั้น — ดันขอบได้จริง และ 1 ให้ค่าเดิมเป๊ะ */
+    const dA=v=>Math.min(1,1-Math.pow(1-v,SKIN.dayA)).toFixed(3);
     g.addColorStop(0,'rgba('+SKIN.lit+','+dA(lit?.5:.22)+')');
     g.addColorStop(.55,'rgba('+SKIN.litMid+','+dA(0.15)+')');
     g.addColorStop(1,'rgba('+SKIN.litEdge+','+dA(0.06)+')');
@@ -3266,10 +3269,10 @@ const G = {
          แก้เป็น: พื้นทึบสม่ำเสมอ + ไล่ระดับลึกขึ้นอีกนิดตรงกลางดึก */
       /* ถูก clip ด้วยรูปทรงเงาอยู่แล้ว เติมเต็มจอจึงพอ — ที่ซูมสูง R*2 ใหญ่กว่าจอหลายเท่า */
       const box=this.fillBox();
-      tgt.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,0.34*SKIN.nightA).toFixed(3)+')';
+      tgt.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,1-Math.pow(0.66,SKIN.nightA)).toFixed(3)+')';
       tgt.fillRect(box[0],box[1],box[2],box[3]);
       const n=tgt.createRadialGradient(ax,ay,0,ax,ay,R*0.95);
-      const nA=v=>Math.min(1,v*SKIN.nightA).toFixed(3);
+      const nA=v=>Math.min(1,1-Math.pow(1-v,SKIN.nightA)).toFixed(3);
       n.addColorStop(0,'rgba('+SKIN.nightG0+','+nA(0.22)+')');
       n.addColorStop(.6,'rgba('+SKIN.nightG1+','+nA(0.10)+')');
       n.addColorStop(1,'rgba('+SKIN.nightG2+',0)');
@@ -3792,7 +3795,7 @@ const G = {
       r.closePath(); r.clip();
     }
     const box=this.fillBox();
-    r.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,0.34*SKIN.nightA).toFixed(3)+')';
+    r.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,1-Math.pow(0.66,SKIN.nightA)).toFixed(3)+')';
     r.fillRect(box[0],box[1],box[2],box[3]);
     r.restore();
     /* เจาะรูตรงวงเปิด — ในวงไม่ต้องเติมอะไร เพราะความมืดจริงแสดงอยู่แล้ว */
