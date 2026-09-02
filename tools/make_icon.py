@@ -32,13 +32,13 @@ JS = r"""
     var N=200, pts=[];
     for(var j=0;j<N;j++){
       var t=j/(N-1), p=bez3(A,B,C,D,t);
-      pts.push([p[0], p[1]-Math.sin(t*Math.PI*2.6)*S*0.028]);
+      pts.push([p[0], p[1]-Math.sin(t*Math.PI*(P.sw||2.6))*S*(P.sa==null?0.028:P.sa)]);
     }
     var cut=Math.floor(N*P.cut);
     x.lineCap='round';
     for(var j=0;j<cut-1;j++){
       var t=j/(cut-2);
-      x.strokeStyle='rgba(84,90,104,'+(0.02+P.ink*t).toFixed(3)+')';
+      x.strokeStyle='rgba('+(P.windc||'84,90,104')+','+(0.02+P.ink*t).toFixed(3)+')';
       x.lineWidth=S*P.lw;
       x.beginPath(); x.moveTo(pts[j][0],pts[j][1]); x.lineTo(pts[j+1][0],pts[j+1][1]); x.stroke();
     }
@@ -49,7 +49,7 @@ JS = r"""
     x.save();
     x.translate(e[0]+S*P.dx, e[1]+S*P.dy);
     x.rotate(P.rot*Math.PI/180);
-    x.shadowColor='rgba(51,51,58,'+P.sh+')'; x.shadowBlur=S*0.045; x.shadowOffsetY=S*0.016;
+    if(P.sh>0){ x.shadowColor='rgba(51,51,58,'+P.sh+')'; x.shadowBlur=S*0.045; x.shadowOffsetY=S*0.016; }
     if(P.mode==='photo'){
       drawFlutter(x, 0, 0, PW*0.74, PW, P.t, P.w, 0, null);
     }else{
@@ -66,14 +66,16 @@ JS = r"""
       x.beginPath();
       edge.forEach(function(p,ii){ ii?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y); });
       x.closePath();
-      x.fillStyle='rgba(253,252,249,0.97)'; x.fill();
+      x.fillStyle=P.paper||'rgba(253,252,249,0.97)'; x.fill();
       x.shadowColor='transparent';
-      x.strokeStyle='rgba(74,79,92,'+P.oa+')'; x.lineWidth=S*P.ol; x.lineJoin='round'; x.stroke();
+      var INK=P.inkc||'74,79,92';
+      if(P.ol>0){ x.strokeStyle='rgba('+INK+','+P.oa+')'; x.lineWidth=S*P.ol; x.lineJoin='round'; x.stroke(); }
       if(P.fold){
         /* รอยพับเส้นเดียว — ตำแหน่งที่กระดาษบิดแรงที่สุดตามฟิสิกส์เดียวกัน */
         x.beginPath();
         for(var rr=0;rr<=Rw;rr++){ var p=pp[rr][Math.round(C*0.62)]; rr?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y); }
-        x.strokeStyle='rgba(74,79,92,0.26)'; x.lineWidth=S*P.ol*0.62; x.stroke();
+        x.strokeStyle='rgba('+(P.foldc||INK)+','+(P.folda||0.26)+')';
+        x.lineWidth=S*(P.ol||0.012)*0.62; x.stroke();
       }
     }
     x.restore();
