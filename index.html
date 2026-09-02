@@ -22,6 +22,7 @@
              || (me && (me.name || me.lat!=null));
     if(!known) return no();                                      /* คนใหม่ → หน้าเปิด */
     sessionStorage.setItem('lw.v1.splash','1');
+    document.documentElement.className+=' spin';   /* ลูกโลกรอเข้าฉาก (ข้อ 126) */
   }catch(e){ return no(); }   /* ที่เก็บของพัง = ไม่แสดงดีกว่าค้าง */
 })();
 </script>
@@ -102,6 +103,13 @@ html.nosp #splash{display:none}
   transition:transform .95s cubic-bezier(.32,.05,.24,1), opacity .8s ease .08s}
 #splash.out #spWord{opacity:0;transform:translateY(-18px);
   transition:transform .95s cubic-bezier(.32,.05,.24,1) .07s, opacity .8s ease .15s}
+/* ลูกโลกต้อง *เข้าฉาก* ไม่ใช่รออยู่เต็มที่แล้วให้ม่านเปิด (ข้อ 126)
+   ต้นเหตุที่ยังรู้สึกเหมือนเปลี่ยนหน้าแม้โลโก้จะลอยแล้ว
+   ⚠️ ทำด้วย CSS บน element เท่านั้น ไม่แตะโค้ดวาดลูกโลกสักบรรทัด
+   ⚠️ ห้าม transform .veil — มันสร้าง containing block ใหม่ ทำ position:fixed ข้างในเพี้ยน */
+#stage,.veil{transition:opacity 1.15s ease-out, transform 1.2s cubic-bezier(.22,.61,.36,1)}
+html.spin #stage{opacity:0;transform:scale(1.055)}
+html.spin .veil{opacity:0}
 .tools{display:flex;gap:7px}
 .spacer{flex:1;pointer-events:none}
 
@@ -5195,13 +5203,16 @@ const SPLASH_MS=1500;   /* เวลาที่ได้มองโลโก�
 let splashGone=false;
 function hideSplash(){
   if(splashGone) return; splashGone=true;
+  document.documentElement.classList.remove('spin');   /* ลูกโลกเข้าฉากพร้อมโลโก้ลอยออก */
   const el=$('#splash'); if(!el) return;
   el.classList.add('out');
   setTimeout(()=>{ el.remove(); }, 1250);   /* ยาวกว่า transition ที่ช้าที่สุด (.95s + .18s หน่วง) */
 }
 function startSplash(){
   const el=$('#splash'); if(!el || document.documentElement.classList.contains('nosp')){
-    if(el) el.remove(); splashGone=true; return;
+    if(el) el.remove(); splashGone=true;
+    document.documentElement.classList.remove('spin');   /* กันลูกโลกจางค้างถ้า splash ไม่ได้แสดง */
+    return;
   }
   const im=$('#spMark');
   im.addEventListener('load', ()=>{ im.classList.add('on'); setTimeout(hideSplash, SPLASH_MS); });
