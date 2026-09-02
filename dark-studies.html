@@ -52,7 +52,9 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 </head>
 <body>
 <div id="wrap">
-  <div id="stagebox"><iframe id="app" src="index.html"></iframe></div>
+  <!-- ⚠️ ไม่มี src ตอนแรก — ต้องตั้ง localStorage ให้เสร็จก่อน ไม่งั้นแอปตัดสินว่า
+       เป็นคนใหม่แล้วเปิดหน้าเปิดค้างไว้ ทำให้จูนลูกโลกไม่ได้ (ข้อ 129) -->
+  <div id="stagebox"><iframe id="app"></iframe></div>
   <div id="panel">
     <div class="hd">
       <b>โหมดมืด</b>
@@ -75,8 +77,18 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <input type="range" id="goL" min="40" max="90" value="66"><output id="oGoL"></output></div>
 
     <p class="grp">ลูกโลก — แก้สีที่วาดบน canvas จริง</p>
-    <div class="row"><label>กลางวัน สว่าง</label>
-      <input type="range" id="gDay" min="-45" max="30" value="0"><output id="oGDay"></output></div>
+    <div class="row"><label>เนื้อโลก ทึบ</label>
+      <input type="range" id="gBaseA" min="0" max="100" value="0"><output id="oGBaseA"></output></div>
+    <div class="row"><label>เนื้อโลก สว่าง</label>
+      <input type="range" id="gBaseL" min="-70" max="40" value="0"><output id="oGBaseL"></output></div>
+    <div class="row"><label>กลางวัน ทึบ</label>
+      <input type="range" id="gDayA" min="100" max="500" value="100"><output id="oGDayA"></output></div>
+    <div class="row"><label>กลางคืน ทึบ</label>
+      <input type="range" id="gNightA" min="40" max="260" value="100"><output id="oGNightA"></output></div>
+    <div class="row"><label>แสงตกกระทบ</label>
+      <input type="range" id="gLit" min="-40" max="85" value="0"><output id="oGLit"></output></div>
+    <div class="row"><label>ซีกกลางคืน ยก</label>
+      <input type="range" id="gDay" min="-40" max="85" value="0"><output id="oGDay"></output></div>
     <div class="row"><label>กลางคืน สว่าง</label>
       <input type="range" id="gNight" min="-20" max="55" value="0"><output id="oGNight"></output></div>
     <div class="row"><label>เส้น กลางวัน</label>
@@ -108,9 +120,17 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 let dark = true;
 
-const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gDay','gNight','gInkD','gInkN'];
-/* สไลเดอร์หนึ่งตัวคุมสีหลายตัวที่เป็นเรื่องเดียวกัน — ไม่ให้มี 18 ปุ่มที่ไม่มีใครหมุนไหว */
-const GK = {gDay:['lit','litMid','litEdge','lift'], gNight:['nightBg','nightG0','nightG1','nightG2'],
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN'];
+/* ความทึบเป็นเปอร์เซ็นต์ 100 = เท่าเดิม — คุมคนละเรื่องกับสี จึงแยกออกมา (ข้อ 129) */
+const GA = {gDayA:'dayA', gNightA:'nightA'};
+const GB = {gBaseA:'baseA'};   /* ความทึบของเนื้อโลก 0-100% (ข้อ 129) */
+/* สไลเดอร์หนึ่งตัวคุมสีหลายตัวที่เป็นเรื่องเดียวกัน — ไม่ให้มี 19 ปุ่มที่ไม่มีใครหมุนไหว
+   ⓘ ซีกกลางวันแยกจากแสงตกกระทบ เพราะเป็นคนละคำถาม (ข้อ 129)
+     lift = ความสว่างรวมทั้งซีก · lit = ไฮไลต์ตรงจุดที่แดดตั้งฉาก แล้วไล่ลง
+   ⚠️ ดวงอาทิตย์ไม่ได้หรี่ตามไฟห้องของคนใช้ — ลูกโลกอยู่ในอวกาศ ไม่ได้อยู่ในห้อง
+     กรอบ "แสงที่ส่องเปลี่ยน" ใช้กับกระดาษ ไม่ใช้กับลูกโลก */
+const GK = {gDay:['lift'], gLit:['lit','litMid','litEdge'],
+            gNight:['nightBg','nightG0','nightG1','nightG2'],
             gInkD:['dayInk'], gInkN:['nightGrid','nightCoast','termLine']};
 const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
 
@@ -172,6 +192,12 @@ function applyGlobe(){
   Object.keys(GK).forEach(sl => GK[sl].forEach(k => {
     skin[k] = dark ? shiftL(w.__SKIN0[k], v[sl]) : w.__SKIN0[k];
   }));
+  Object.keys(GA).forEach(sl => { skin[GA[sl]] = dark ? v[sl] / 100 : 1; });
+  Object.keys(GB).forEach(sl => { skin[GB[sl]] = dark ? v[sl] / 100 : 0; });
+  skin.base = dark ? shiftL(w.__SKIN0.base, v.gBaseL) : w.__SKIN0.base;
+  /* ⚠️ sphere() แคชภาพไว้ด้วย _key ที่คิดจากมุมกับซูมเท่านั้น ไม่รู้จักสี
+     ไม่ล้างก่อน จะได้ภาพเดิมกลับมาแล้วนึกว่าค่าที่ปรับไม่มีผล (ข้อ 129) */
+  try{ w.eval('G._key=null; G._nkey=null;'); }catch(e){}
   try{ w.renderGlobe(); }catch(e){}
 }
 
@@ -222,15 +248,19 @@ $('#tabs').addEventListener('click', e => {
   }catch(err){ $('#out').textContent = 'เรียกไม่ได้: ' + err.message; }
 });
 
-app.addEventListener('load', () => {
-  try{
-    /* ให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว จะได้ไม่ติดหน้าเปิดกับ splash ระหว่างจูน */
-    const w = app.contentWindow;
-    w.localStorage.setItem('lw.v1.intro','1');
-    w.sessionStorage.setItem('lw.v1.splash','1');
-  }catch(e){}
-  apply();
-});
+app.addEventListener('load', () => { apply(); });
+
+/* ตั้งค่าให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว *ก่อน* ปล่อยให้มันโหลด
+   same-origin จึงเป็น localStorage ก้อนเดียวกัน ตั้งจากตรงนี้ได้เลย */
+try{
+  localStorage.setItem('lw.v1.intro','1');
+  sessionStorage.setItem('lw.v1.splash','1');
+}catch(e){}
+/* ⚠️ service worker แคชแอปไว้ — iframe จะได้ไฟล์เก่าแล้วเราจะนึกว่าโค้ดที่เพิ่งแก้ไม่ทำงาน
+   เป็นกฎ "reload สองครั้ง" เดิมที่โผล่มาในรูปใหม่ · ที่นี่ต้องเห็นของสดเสมอ (ข้อ 129) */
+navigator.serviceWorker && navigator.serviceWorker.getRegistrations
+  && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+app.src = 'index.html?fresh=' + Date.now();
 paintOut();
 </script>
 </body>

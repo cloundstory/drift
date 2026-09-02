@@ -2938,7 +2938,7 @@ const SKIN = {
   lit:      '255,253,246',   /* แสงที่ตกบนโลกฝั่งโดนแดด */
   litMid:   '240,238,232',
   litEdge:  '196,193,186',
-  lift:     '238,235,227',   /* ยกซีกกลางวันให้สว่างขึ้นทั้งซีก */
+  lift:     '238,235,227',   /* ⚠️ ยกซีก*กลางคืน*ให้ไม่ทึบเกิน (liftNight) ไม่ใช่กลางวัน */
   nightBg:  '34,40,60',      /* พื้นกลางคืน ทึบสม่ำเสมอ (ข้อ 41) */
   nightG0:  '28,34,54',      /* ไล่ระดับความลึกของกลางคืน */
   nightG1:  '32,38,58',
@@ -2954,6 +2954,26 @@ const SKIN = {
   markHalo: '247,245,239',   /* วงแสงรอบจุดจดหมาย */
   selHalo:  '198,154,84',
   selDot:   '210,168,96',
+
+  /* ---- ตัวคูณความทึบ (ข้อ 129) ----
+     ⚠️ ซีกกลางวันของลูกโลก *ไม่มีสีของตัวเอง* — มันคือพื้นแอปที่มองผ่านชั้นสีจาง
+        (alpha .5 ตรงจุดที่แดดตั้งฉาก ไล่ลงเหลือ .06 ที่ขอบ)
+        พอพื้นแอปมืด ฐานที่ซีกกลางวันยืนอยู่ก็หายไป เพิ่มค่า RGB เท่าไหร่ก็ไม่ช่วย
+        เพราะที่ขอบ 94% ของสีที่ตาเห็นคือพื้น ไม่ใช่สีของโลก
+     📌 โหมดมืดจึงต้องยกความทึบ ไม่ใช่แค่เปลี่ยนสี
+     ⓘ 1 = เท่าเดิมเป๊ะ · ค่ามากกว่า 1 ทำให้ซีกนั้นมีตัวตนของตัวเองมากขึ้น */
+  dayA:  1,    /* เนื้อทรงกลมฝั่งกลางวัน */
+  nightA: 1,   /* ชั้นมืดฝั่งกลางคืน */
+
+  /* ---- พื้นทรงกลม (ข้อ 129) ----
+     วัดที่ pixel จริง: ลูกโลกทั้งใบทึบแค่ 4-12% — กลาง .125 ขอบ .039
+     แปลว่า 88-96% ของสีที่ตาเห็นคือ *พื้นแอป* ที่มองทะลุผ่านฟิล์มบาง
+     โหมดสว่างรอดเพราะพื้นสว่างอยู่แล้ว · พอพื้นมืด ลูกโลกก็มืดตามทันที
+     📌 ทางแก้ไม่ใช่ดันความทึบของฟิล์มทีละนิด (ไล่ระดับจะเพี้ยน)
+        แต่ให้ลูกโลกมี *เนื้อ* ของตัวเองรองอยู่ข้างใต้
+     ⓘ baseA 0 = ไม่มีชั้นนี้ = พฤติกรรมเดิมเป๊ะ */
+  base:  '236,238,241',
+  baseA: 0,
 };
 
 const G = {
@@ -3194,13 +3214,20 @@ const G = {
       this.segs(c,GRID,.10,.7,false,1,'84,90,104',this.shadeDay);
       for(const cs of this.coastSets()) this.segs(c,cs[0],.16*cs[1],.8,false,1,'84,90,104',this.shadeDay);
     }
+    /* 1ก. พื้นทรงกลม — เนื้อของโลกเอง ไม่ใช่พื้นแอปที่มองทะลุ (ข้อ 129)
+       ต้องวาดก่อนทุกชั้น เพราะทุกชั้นที่เหลือเป็นฟิล์มโปร่งที่วางทับมัน */
+    if(SKIN.baseA>0){
+      c.fillStyle='rgba('+SKIN.base+','+Math.min(1,SKIN.baseA).toFixed(3)+')';
+      c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.fill();
+    }
     /* 2. เนื้อทรงกลมฝั่งกลางวัน — จุดสว่างอยู่ทางดวงอาทิตย์จริง */
     const lit=s.z>=0;
     const hx=lit?CX+(s.x-CX)*.6:CX, hy=lit?CY+(s.y-CY)*.6:CY;
     const g=c.createRadialGradient(hx,hy,R*.04,CX,CY,R*1.06);
-    g.addColorStop(0,'rgba('+SKIN.lit+','+(lit?.5:.22)+')');
-    g.addColorStop(.55,'rgba('+SKIN.litMid+',0.15)');
-    g.addColorStop(1,'rgba('+SKIN.litEdge+',0.06)');
+    const dA=v=>Math.min(1,v*SKIN.dayA).toFixed(3);
+    g.addColorStop(0,'rgba('+SKIN.lit+','+dA(lit?.5:.22)+')');
+    g.addColorStop(.55,'rgba('+SKIN.litMid+','+dA(0.15)+')');
+    g.addColorStop(1,'rgba('+SKIN.litEdge+','+dA(0.06)+')');
     c.fillStyle=g; c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.fill();
     /* 3. ซีกกลางคืน = พื้นมืดจริง
        ของเดิมขอบคมเป๊ะเหมือนตัดกระดาษ เพราะซีกมืดถูก clip ด้วยรูปทรงเส้นแบ่งจริง
@@ -3239,11 +3266,12 @@ const G = {
          แก้เป็น: พื้นทึบสม่ำเสมอ + ไล่ระดับลึกขึ้นอีกนิดตรงกลางดึก */
       /* ถูก clip ด้วยรูปทรงเงาอยู่แล้ว เติมเต็มจอจึงพอ — ที่ซูมสูง R*2 ใหญ่กว่าจอหลายเท่า */
       const box=this.fillBox();
-      tgt.fillStyle='rgba('+SKIN.nightBg+',0.34)';
+      tgt.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,0.34*SKIN.nightA).toFixed(3)+')';
       tgt.fillRect(box[0],box[1],box[2],box[3]);
       const n=tgt.createRadialGradient(ax,ay,0,ax,ay,R*0.95);
-      n.addColorStop(0,'rgba('+SKIN.nightG0+',0.22)');
-      n.addColorStop(.6,'rgba('+SKIN.nightG1+',0.10)');
+      const nA=v=>Math.min(1,v*SKIN.nightA).toFixed(3);
+      n.addColorStop(0,'rgba('+SKIN.nightG0+','+nA(0.22)+')');
+      n.addColorStop(.6,'rgba('+SKIN.nightG1+','+nA(0.10)+')');
       n.addColorStop(1,'rgba('+SKIN.nightG2+',0)');
       tgt.fillStyle=n; tgt.fillRect(box[0],box[1],box[2],box[3]);
       tgt.restore();
@@ -3764,7 +3792,7 @@ const G = {
       r.closePath(); r.clip();
     }
     const box=this.fillBox();
-    r.fillStyle='rgba('+SKIN.nightBg+',0.34)';
+    r.fillStyle='rgba('+SKIN.nightBg+','+Math.min(1,0.34*SKIN.nightA).toFixed(3)+')';
     r.fillRect(box[0],box[1],box[2],box[3]);
     r.restore();
     /* เจาะรูตรงวงเปิด — ในวงไม่ต้องเติมอะไร เพราะความมืดจริงแสดงอยู่แล้ว */
