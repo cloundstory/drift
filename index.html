@@ -387,6 +387,23 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   box-shadow:0 2px 10px rgba(var(--shadow-rgb),.16)}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(8px);background:rgba(var(--ink-rgb),.93);color:#f1eee7;font-size:12.5px;letter-spacing:.015em;padding:9px 18px;border-radius:999px;opacity:0;transition:opacity .28s,transform .28s;z-index:60;pointer-events:none}
 #toast.on{opacity:1;transform:translateX(-50%)}
+/* ---------- แสงเทียน (ข้อ 134) ----------
+   ⛔ ไม่มีเทียน มีแต่แสงที่ตกลงบนกระดาษ — เห็นเทียนเป็นวัตถุคือของตกแต่ง
+      ที่แย่งพื้นที่จากคำ ซึ่งเป็นสิ่งเดียวที่หน้านั้นมีไว้ทำ (ข้อ 127.1)
+   ⓘ ใช้ ::before ไม่เพิ่ม element · ตำแหน่งกับความเข้มมาจากตัวแปรที่ :root
+      loop เดียวจึงคุมได้ทั้งหน้าเขียนและหน้าอ่าน
+   ⚠️ โผล่เฉพาะโหมดมืด ผูกแกนเดียวกับทุกอย่าง ไม่ดูนาฬิกา (ข้อ 127.1) */
+@media (prefers-color-scheme: dark){
+  #cSheet::before,.ptext::before{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+    background:radial-gradient(128% 94% at var(--cnd-x,50%) var(--cnd-y,-7%),
+      rgba(255,206,138,var(--cnd-a,.15)),
+      rgba(255,176,96,calc(var(--cnd-a,.15) * .38)) 42%,
+      transparent 70%);
+  }
+  /* เนื้อหาต้องอยู่เหนือแสง ไม่งั้นตัวหนังสือถูกฉาบจนซีด */
+  #cSheet .ink,.ptext > *{position:relative;z-index:2}
+}
 /* ---------- โหมดมืด (ข้อ 131) ----------
    📌 "แสงน้อยลง" ไม่ใช่ "กลับสี" — แผ่นขาวกลายเป็นแผ่นสว่างบนพื้นเข้ม (ข้อ 127.1)
    ⛔ กระดาษเป็นเกาะของตัวเอง — ทุกอย่างบนกระดาษใช้สีของกระดาษ ไม่ใช่สีของ UI
@@ -6014,7 +6031,7 @@ function openCompose(){
   typeMode=false; fillWho();
   openSheet('compose');
   document.documentElement.style.setProperty('--kb','0px');
-  paintWritePaper(); syncKB(); windHere();
+  paintWritePaper(); syncKB(); windHere(); candleOn();
   if(!wRaf) writeLoop();
 }
 /* ตัวนับโผล่เฉพาะตอนใกล้เพดาน — นั่งนับให้ดูตลอดเวลาทำให้คนเขียนสั้นลงโดยไม่จำเป็น */
@@ -6093,6 +6110,33 @@ function breatheWrite(){
 function writeLoop(){
   if(sheetOpen!=='compose'){ wRaf=null; return; }
   wRaf=requestAnimationFrame(writeLoop); breatheWrite();
+}
+
+/* ---------- แสงเทียน (ข้อ 134) ----------
+   ⚠️ ไหวตามลมจริงที่ต้นทางเท่านั้น — ไม่รู้ลม = นิ่งสนิท
+      กฎเดียวกับกระดาษหายใจ (ข้อ 102.2) ที่ทำให้เทียนเป็นตัวบอกลม ไม่ใช่ของประดับ
+   ⓘ ทำงานเฉพาะหน้าเขียนกับหน้าอ่าน และเฉพาะโหมดมืด */
+let cndTick=0, cndRaf=null;
+function candleSet(x,y,a){
+  const r=document.documentElement.style;
+  r.setProperty('--cnd-x', x.toFixed(1)+'%');
+  r.setProperty('--cnd-y', y.toFixed(1)+'%');
+  r.setProperty('--cnd-a', a.toFixed(3));
+}
+function candleStep(){
+  if(!SCHEME.matches || (sheetOpen!=='compose' && sheetOpen!=='read')){ cndRaf=null; return; }
+  cndRaf=requestAnimationFrame(candleStep);
+  if(WIND_HERE===null){ candleSet(50,-7,.15); return; }   /* ไม่รู้ลม = เปลวนิ่ง */
+  const w=clamp(WIND_HERE/45,0,1);
+  cndTick+=1/60;
+  const k=0.5+w*2.4;
+  candleSet(50+Math.sin(cndTick*0.71)*k*1.5,
+            -7+Math.sin(cndTick*0.53+1.1)*k*0.7,
+            .15+Math.sin(cndTick*0.94+2.3)*k*0.006);
+}
+function candleOn(){
+  windHere();                       /* หน้าอ่านไม่เคยเรียก — เทียนจะนิ่งตลอดถ้าไม่เรียกที่นี่ */
+  if(!cndRaf) candleStep();
 }
 
 /* ลม ณ ต้นทาง — อ่านจากแคชลมก้อนเดิมที่แอปโหลดอยู่แล้ว ไม่ใช่คำขอใหม่
@@ -6378,6 +6422,7 @@ function openRead(L){
   }
   buildLog(L,st);
   openSheet('read');
+  candleOn();          /* แสงเทียนหน้าอ่าน (ข้อ 134) */
   refreshDock();
 }
 /* นับว่าอ่านแล้วเฉพาะตอนได้เห็นจริง — ฉบับที่ยังถูกม่านคลุมอยู่ ยังไม่ถือว่าอ่าน */
