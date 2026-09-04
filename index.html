@@ -229,6 +229,28 @@ textarea{min-height:200px;resize:vertical;line-height:2}
    เดิมมีของห้าก้อนแย่งสายตากับลูกโลก — แถบบนสองปุ่ม บรรทัดใบ้ แถบจดหมายเลื่อนได้ ที่จับ แถบเล่น
    เหลือสี่: ลูกโลก · บรรทัดสถานะ · เมนู · เขียน
    ⚠️ ทุกอันที่กดได้ต้องมีพื้นที่แตะ 44px แม้ตาจะเห็นแค่ตัวหนังสือบาง ๆ */
+/* ---------- ปุ่ม drift port บนแถบ (ข้อ 140.6) ----------
+   ⚠️ margin ลบเท่ากับ .mbtn เป๊ะ ๆ ไม่งั้นแถบสูงขึ้นและดันลูกโลกลง
+      ปุ่ม 44px กินความสูงจริงแค่ 28px เท่าโลโก้ (คอมเมนต์ที่ .brand img) */
+.bar-r{display:flex;align-items:center;gap:2px}
+.pbtn2{position:relative;width:44px;height:44px;margin:-8px 0;display:flex;
+  align-items:center;justify-content:center;padding:0}
+.pbtn2[hidden]{display:none}
+.pbtn2 svg{width:23px;height:23px;display:block;overflow:visible}
+/* กระดาษ: พื้นทึบพอให้อ่านออกบนแถบ · เส้นหนา 1.5 เท่าขีดของ .mbtn (ข้อ 124.5) */
+.pbtn2 .pg{fill:rgba(var(--sheet-rgb),.92);stroke:rgba(var(--ink-rgb),.62);
+  stroke-width:1.5;stroke-linejoin:round}
+.pbtn2 .pl{fill:none;stroke:rgba(var(--ink-rgb),.42);stroke-width:1.4;stroke-linecap:round}
+/* ---- จุดทองทำหน้าที่บอกสถานะเอง ----
+   ⛔ ลองใส่ตัวเลขข้างไอคอนแล้ว **ไม่เอา** — ที่ 24px ไม่มีที่ให้มันยืน
+      วางมุมปุ่มก็ลอยห่างจนดูไม่เกี่ยวกัน (วัดได้ 9.5px) · ขยับเข้ามาก็ชนจุดทองพอดี
+   📌 และแอปนี้ไม่มีตัวเลขเร่งเร้าที่ไหนเลยสักจุด — จำนวนไปบอกในหน้า drift port ได้
+   ⓘ จาง = มีจดหมาย (identity ข้อ 106) · เต็ม = มีฉบับที่ยังไม่ได้เปิด
+      หลักเดียวกับ .mrow.on ที่ใช้สีทองบอก "ยังไม่ได้เปิด" อยู่แล้ว */
+.pbtn2 .pd{fill:rgba(var(--ink-rgb),.30);transition:fill .3s}
+.pbtn2.new .pd{fill:var(--gold)}
+.pbtn2:active .pg{stroke:rgba(var(--ink-rgb),.85)}
+
 .mbtn{width:44px;height:44px;margin:-8px -10px -8px 0;display:flex;flex-direction:column;
   align-items:flex-end;justify-content:center;gap:4.5px;padding:0 10px 0 0}
 .mbtn i{display:block;height:1.5px;width:20px;background:rgba(var(--ink-rgb),.55);border-radius:1px;
@@ -482,7 +504,25 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <div class="veil">
   <header class="bar">
     <div class="brand"><img id="brandMark" alt=""><span>drift</span></div>
-    <button class="mbtn" id="btnMenu" aria-label="เมนู"><i></i><i></i><i></i></button>
+    <!-- ปุ่ม drift port (ข้อ 140.6)
+         ⛔ ห้ามใช้ซองจดหมาย (ข้อ 60 · 107.3) ซึ่งเป็นสัญลักษณ์ที่คนคุ้นที่สุดพอดี
+         ⚠️ กระดาษต้อง *ตั้ง* ไม่ใช่นอนราบ — ทรงที่มี perspective เหลือหนา 3-4px
+            แล้วเบลอเป็นก้อนที่ขนาดจริง (บทเรียนซ้ำข้อ 124.5)
+         ⓘ จุดทอง = จดหมาย ตามที่ข้อ 106 นิยามไว้แล้ว · วงกลมตันไม่จางที่ขนาดเล็ก
+         ⚠️ โผล่เฉพาะเมื่อมีอะไรให้ดู — ห้ามมีปุ่มที่กดแล้วว่าง -->
+    <div class="bar-r">
+      <button class="pbtn2" id="btnPort" aria-label="drift port" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g transform="rotate(-9 12 12)">
+            <path class="pg" d="M6.4 4.2h7.4l3.4 3.4V19.6H6.4z"/>
+            <path class="pl" d="M13.8 4.2v3.4h3.4"/>
+            <path class="pl" d="M8.9 12.1h6.1M8.9 15.4h4.2"/>
+          </g>
+          <circle class="pd" cx="18.1" cy="5.2" r="3.05"/>
+        </svg>
+      </button>
+      <button class="mbtn" id="btnMenu" aria-label="ตั้งค่า"><i></i><i></i><i></i></button>
+    </div>
   </header>
   <div class="spacer"></div>
   <button id="status" hidden></button>
@@ -640,7 +680,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <div class="act th" style="margin-bottom:5px">ฟ้าที่นั่นตอนนี้</div>
       <div style="font-size:15px;letter-spacing:.03em" id="p1Sky"></div>
     </div>
-    <p class="note faint" id="p1Count"></p>
+    <!-- ⓘ เดิมเป็นบรรทัดตัวเลขที่กดไม่ได้ — ทั้งที่ portLetters() กรองตามคนได้อยู่แล้ว (ข้อ 140.3) -->
+    <button class="mrow" id="p1Letters"><b>จดหมายที่เขียนถึงกัน</b><em id="p1Count"></em></button>
     <div class="rule"></div>
     <button class="btn wide gold" id="btnP1Write">เขียนถึง</button>
     <button class="btn wide" id="p1Give" style="margin-top:6px">ให้ที่อยู่ของฉันกับเขา</button>
@@ -648,14 +689,29 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   </div>
 </section>
 
+<!-- ท่าเรือของเรา (ข้อ 140) — "drift port ก็พอ มันเหมือนท่าเรือ แล้วค่อยไปย่อยเอาข้างใน"
+     ⓘ รวมสามอย่างที่คนกลับมาดูทุกวัน: รหัสของเรา · จดหมาย · ท่าของคนอื่น
+     ⛔ ห้ามซอยตามคนอย่างเดียว — ต้องมีรายการรวม ไม่งั้นจดหมายจากคนนอกรายชื่อหาย (ข้อ 61) -->
+<section class="sheet" id="porthome">
+  <button class="close" data-close>ปิด</button>
+  <div class="wrap">
+    <h2>drift port</h2>
+    <p class="sub" id="phSub"></p>
+    <button class="mrow" id="phMine"><b>รหัส port ของฉัน</b><em>ให้ใครสักคน</em></button>
+    <div id="phLetters"></div>
+    <div id="phPorts"></div>
+    <div class="rule"></div>
+    <p class="note faint" id="phNote"></p>
+  </div>
+</section>
+
 <section class="sheet" id="menu">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
-    <h2>drift</h2>
+    <h2>ตั้งค่า</h2>
     <p class="sub">เก็บในเครื่องนี้เท่านั้น</p>
-    <button class="mrow" id="mInbox"><b>กล่องจดหมาย</b><em id="mCount"></em></button>
-    <button class="mrow" id="mPorts"><b>คนที่เขียนถึงได้</b><em id="mPortCount"></em></button>
-    <button class="mrow" id="mMine"><b>drift port ของฉัน</b><em>แบ่งปันที่อยู่</em></button>
+    <!-- ⛔ จดหมาย · รายชื่อ · รหัส port ย้ายไป #porthome แล้ว (ข้อ 140.1)
+         อย่าเอากลับมา — ที่นี่มีแต่ของที่ตั้งครั้งเดียวแล้วลืม -->
     <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
     <button class="mrow" id="mInstall"><b>เพิ่มลงหน้าจอโฮม</b><em id="mInstallNote"></em></button>
     <button class="mrow" id="mBug"><b>แจ้งปัญหา</b><em id="mBugNote"></em></button>
@@ -693,8 +749,9 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <section class="sheet" id="inbox">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
-    <h2>กล่องจดหมาย</h2>
-    <p class="sub">แตะฉบับที่ถึงแล้วเพื่ออ่าน · ฉบับที่ยังเดินทางอยู่จะพาไปดูบนลูกโลก</p>
+    <!-- หัวเรื่องเปลี่ยนตามตัวกรอง — ดูของทุกคน หรือของคนเดียว (ข้อ 140.3) -->
+    <h2 id="inboxTitle">กล่องจดหมาย</h2>
+    <p class="sub" id="inboxSub">แตะฉบับที่ถึงแล้วเพื่ออ่าน · ฉบับที่ยังเดินทางอยู่จะพาไปดูบนลูกโลก</p>
     <div id="inboxList"></div>
   </div>
 </section>
@@ -5234,9 +5291,25 @@ function pickLetter(L){
   G.focus(posAt(L,st.prog), G.fitZoom(fitKm(L)));
   refreshDock();
 }
+/* ---------- กล่องจดหมาย ----------
+   ⚠️ refreshDock เรียกฟังก์ชันนี้ทุกครั้งที่จอเปลี่ยน — ตัวกรองจึงต้องเป็นสถานะที่ตั้งไว้
+      ตอน *เปิด* หน้า ไม่ใช่พารามิเตอร์ ไม่งั้นวาดรอบถัดไปตัวกรองหายเอง
+   inboxPort = ดูเฉพาะจดหมายกับคนนี้ (ข้อ 140.3) · null = ทั้งหมด */
+let inboxPort=null;
+/* จดหมายกับคนหนึ่งคน — ตรรกะเดียวกับ portLetters() ที่นับจำนวน (ข้อ 140.3)
+   ⚠️ ขาออกจับคู่ด้วยรหัส port ขาเข้าจับด้วยชื่อ เพราะจดหมายไม่พก port ผู้ส่งมา (ข้อ 140.4) */
+function withPort(list,pt){
+  return list.filter(L=> L.dir==='out' ? (L.tp===pt.i) : (L.f&&L.f.n===pt.n));
+}
 function fillInbox(list,now){
   const box=$('#inboxList'); box.innerHTML='';
-  const rows=list.map(L=>({L,st:letterState(L,now)}));
+  const pt=inboxPort;
+  const shown = pt ? withPort(list,pt) : list;
+  $('#inboxTitle').textContent = pt ? safeName(pt.n) : 'กล่องจดหมาย';
+  $('#inboxSub').textContent = pt
+    ? 'จดหมายที่เขียนถึงกันกับ '+safeName(pt.n)
+    : 'แตะฉบับที่ถึงแล้วเพื่ออ่าน · ฉบับที่ยังเดินทางอยู่จะพาไปดูบนลูกโลก';
+  const rows=shown.map(L=>({L,st:letterState(L,now)}));
   const grp=[
     ['กำลังมา',  rows.filter(x=>x.L.dir==='in'&&!x.st.arrived&&!x.st.gone)],
     ['ถึงแล้ว',   rows.filter(x=>x.L.dir==='in'&&(x.st.arrived||x.st.gone))],
@@ -5256,15 +5329,66 @@ function fillInbox(list,now){
       box.appendChild(b);
     });
   });
-  if(!n) box.innerHTML='<p class="note">ยังไม่มีจดหมายในเครื่องนี้</p>';
-  const np=store.ports().length;
-  $('#mPortCount').textContent = np ? np+' คน' : 'ยังไม่มี';
-  $('#mCount').textContent = list.length ? (function(){
-    const unread=list.filter(L=>L.dir==='in'&&letterState(L,now).arrived&&!L.read).length;
-    const coming=list.filter(L=>L.dir==='in'&&!letterState(L,now).arrived).length;
-    const p=[]; if(unread) p.push('ยังไม่ได้เปิด '+unread); if(coming) p.push('กำลังมา '+coming);
-    return p.length?p.join(' · '):list.length+' ฉบับ';
-  })() : 'ยังไม่มี';
+  if(!n) box.innerHTML = pt
+    ? '<p class="note">ยังไม่เคยเขียนถึงกัน</p>'
+    : '<p class="note">ยังไม่มีจดหมายในเครื่องนี้</p>';
+  fillPortHome(list,now);
+}
+
+/* ---------- ท่าเรือของเรา (ข้อ 140) ----------
+   ⛔ ห้ามใส่บรรทัดที่กดแล้วไม่มีอะไร — กลุ่มที่ว่างต้องไม่ขึ้น
+   ⓘ เรียงตามความรีบ: ฉบับที่รออยู่ก่อน แล้วค่อยของที่กำลังเดินทาง */
+function fillPortHome(list,now){
+  const st=L=>letterState(L,now);
+  const unread = list.filter(L=>L.dir==='in'&&st(L).arrived&&!L.read).length;
+  const here   = list.filter(L=>L.dir==='in'&&(st(L).arrived||st(L).gone)).length;
+  const coming = list.filter(L=>L.dir==='in'&&!st(L).arrived&&!st(L).gone).length;
+  const going  = list.filter(L=>L.dir!=='in'&&!st(L).arrived&&!st(L).gone).length;
+  const ports  = store.ports().sort((x,y)=>(y.at||0)-(x.at||0));
+
+  $('#phSub').textContent = list.length
+    ? list.length+' ฉบับในเครื่องนี้' : 'ยังไม่มีจดหมายในเครื่องนี้';
+
+  const box=$('#phLetters'); box.innerHTML='';
+  const row=(label,note,fn,gold)=>{
+    const b=document.createElement('button');
+    b.className='mrow'+(gold?' on':'');
+    b.innerHTML='<b>'+label+'</b><em>'+note+'</em>';
+    b.onclick=fn; box.appendChild(b);
+  };
+  const openAll=()=>{ inboxPort=null; refreshDock(); openSheet('inbox'); };
+  if(here||coming||going){
+    const h=document.createElement('div'); h.className='grp'; h.textContent='จดหมาย';
+    box.appendChild(h);
+    /* ⚠️ "ร่อนลงมาแล้ว" คือคำขององก์รับ (ข้อ 61.4) ไม่ใช่ "ถึงแล้ว" ซึ่งเป็นคำของขาส่ง */
+    if(here)   row('ร่อนลงมาแล้ว', unread?'ยังไม่ได้เปิด '+unread:here+' ฉบับ', openAll, !!unread);
+    if(coming) row('กำลังมา', coming+' ฉบับ', openAll);
+    if(going)  row('ของฉันที่กำลังไป', going+' ฉบับ', openAll);
+  }
+
+  const pb=$('#phPorts'); pb.innerHTML='';
+  if(ports.length){
+    const h=document.createElement('div'); h.className='grp'; h.textContent='คนที่เขียนถึงได้';
+    pb.appendChild(h);
+    ports.forEach(pt=>{
+      const mine=withPort(list,pt);
+      const nu=mine.filter(L=>L.dir==='in'&&st(L).arrived&&!L.read).length;
+      const b=document.createElement('button');
+      b.className='mrow'+(nu?' on':'');
+      b.innerHTML='<b>'+esc(safeName(pt.n))+'</b><em>'
+        +(nu?'ยังไม่ได้เปิด '+nu:(mine.length?mine.length+' ฉบับ':'ยังไม่เคยเขียนถึงกัน'))+'</em>';
+      b.onclick=()=>openPort(pt);
+      pb.appendChild(b);
+    });
+  }
+  $('#phNote').textContent = ports.length
+    ? 'แตะชื่อเพื่อดูฟ้าที่เขาอยู่ และจดหมายที่เขียนถึงกัน'
+    : 'ยังไม่มีใครในรายชื่อ — ให้รหัส port ของคุณกับใครสักคน แล้วขอของเขากลับมา';
+
+  /* ปุ่มบนแถบ: มีของให้ดูถึงจะโผล่ (ข้อ 140.6)
+     ⓘ ครั้งแรกที่ปุ่มโผล่ = ครั้งแรกที่เขาเพิ่งเห็นจุดทองบนลูกโลก ความหมายจึงสอนตัวเอง */
+  $('#btnPort').hidden = !(list.length || ports.length);
+  $('#btnPort').classList.toggle('new', !!unread);
 }
 /* ============================================================
    first-run — ขั้นที่ 3 (ข้อ 105)
@@ -5594,6 +5718,9 @@ async function takePort(giveBack){
 }
 
 /* ---------- คนที่เขียนถึงได้ ---------- */
+/* ⚠️ ไม่มีทางเข้าแล้วตั้งแต่ข้อ 140 — รายชื่อย้ายไปอยู่ในหน้า drift port
+   ⓘ เลือกผู้รับตอนนี้ทำผ่านแถวชื่อบนกระดาษ (fillWho ข้อ 110.4) ไม่ผ่านหน้านี้
+   ยังไม่ลบทิ้ง รอกอล์ฟตัดสิน — sheet #ports · openPorts · fillPorts · pickMode · pickPort */
 function openPorts(pick){
   pickMode=!!pick;
   $('#portsTitle').textContent = pickMode ? 'เขียนถึงใคร' : 'คนที่เขียนถึงได้';
@@ -5685,7 +5812,10 @@ async function openPort(pt){
   $('#p1Name').textContent=safeName(pt.n);
   $('#p1Sub').textContent=(pt.p||'ไม่ระบุที่')+(d!=null?' · '+Math.round(d).toLocaleString()+' กม.':'');
   const n=portLetters(pt);
-  $('#p1Count').textContent = n ? 'เขียนถึงกันมาแล้ว '+n+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน';
+  $('#p1Count').textContent = n ? n+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน';
+  /* ⛔ ไม่มีจดหมาย = ไม่มีบรรทัด ห้ามให้กดแล้วเจอหน้าว่าง */
+  $('#p1Letters').hidden = !n;
+  $('#p1Letters').onclick=()=>{ inboxPort=pt; refreshDock(); openSheet('inbox'); };
   $('#p1Give').hidden = !!pt.gave;
   $('#p1Sky').textContent='กำลังดูฟ้าที่นั่น…';
   openSheet('port1');
@@ -5698,12 +5828,14 @@ async function openPort(pt){
     : 'ไม่รู้ฟ้าที่นั่น — อยู่นอกเขตที่แอปเก็บลมไว้';
 }
 
-$('#btnMenu').onclick=()=>{ refreshDock(); syncBugNote(); openSheet('menu'); };
-$('#mInbox').onclick=()=>{ openSheet('inbox'); };
+$('#btnMenu').onclick=()=>{ syncBugNote(); openSheet('menu'); };
 $('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
-$('#mPorts').onclick=()=>openPorts(false);
-$('#mMine').onclick=openMine;
 $('#mInstall').onclick=openInstall;
+
+/* ---------- ท่าเรือ (ข้อ 140) ----------
+   ⚠️ ล้างตัวกรองทุกครั้งที่เข้าท่า ไม่งั้นเปิดจากหน้าคนหนึ่งแล้วกลับมาจะเห็นของเก่าค้าง */
+$('#btnPort').onclick=()=>{ inboxPort=null; refreshDock(); openSheet('porthome'); };
+$('#phMine').onclick=openMine;
 
 /* ---------- คิวอาร์ของที่อยู่ (ข้อ 117) ----------
    รุ่น 10 และ 15 · แก้ความผิดพลาดระดับ L · byte mode อย่างเดียว
