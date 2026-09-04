@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2233">
+<title>drift — แบบศึกษาหมอก</title>
+<style>
+/* แบบศึกษาหมอก (ข้อ 137)
+   ⚠️ ไม่คัดลอกตรรกะของแอป — iframe ตัวจริงแล้วแก้ CFG โดยตรง
+      หลักเดียวกับ dark-studies.html (ข้อ 127.3) และ lost-studies.html
+   ⛔ art-review.html §6 ไม่ใช่หมอกตัวนี้ — นั่นเป็น prototype ที่ไม่เคยเข้าแอป */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;
+  font-family:"Noto Serif Thai",Georgia,serif;background:#0f1420;color:#e8e3d8}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+#stagebox{flex:1;position:relative;min-height:0;background:#000}
+iframe{width:100%;height:100%;border:0;display:block}
+#panel{background:#171d2b;border-top:1px solid rgba(232,227,216,.14);
+  padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);
+  max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#panel.min{max-height:52px;overflow:hidden}
+.hd{display:flex;align-items:center;gap:10px;height:32px}
+.hd b{font-weight:400;font-size:13px;letter-spacing:.2em;flex:1;opacity:.75}
+.tog{background:rgba(232,227,216,.12);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 13px;height:32px;min-width:44px;border-radius:16px}
+.row{display:flex;align-items:center;gap:11px;margin:9px 0}
+.row label{width:104px;font-size:12px;opacity:.7;flex:none}
+.row output{width:52px;text-align:right;font-size:12px;opacity:.55;flex:none;
+  font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;height:44px;background:none;-webkit-appearance:none;appearance:none;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:#e8e3d8;margin-top:-12px}
+input[type=range]::-moz-range-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#e8e3d8}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:11px 0 3px}
+.tabs button{background:rgba(232,227,216,.1);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 12px;height:38px;border-radius:19px}
+.acts{display:flex;gap:9px;margin-top:12px}
+.acts button{flex:1;height:44px;border:0;border-radius:9px;font:inherit;font-size:13px;
+  background:rgba(232,227,216,.16);color:inherit}
+.acts button.gold{background:#c69a54;color:#221c10}
+.grp{font-size:11px;letter-spacing:.16em;opacity:.5;margin:16px 0 2px;
+  border-top:1px solid rgba(232,227,216,.12);padding-top:12px}
+.note{font-size:11px;opacity:.5;margin:8px 0 0;line-height:1.6}
+#out{margin-top:10px;font-size:11px;line-height:1.6;opacity:.6;white-space:pre-wrap;
+  font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <!-- ไม่มี src ตอนแรก — ต้องตั้ง localStorage ก่อน ไม่งั้นแอปเปิดหน้าเปิดค้าง (ข้อ 129) -->
+  <div id="stagebox"><iframe id="app"></iframe></div>
+  <div id="panel">
+    <div class="hd"><b>หมอก</b><button class="tog" id="btnMin">ย่อ</button></div>
+
+    <div class="row"><label>ความทึบ</label>
+      <input type="range" id="fog" min="0" max="95" value="72"><output id="oFog"></output></div>
+    <div class="row"><label>ความนุ่มขอบ</label>
+      <input type="range" id="soft" min="0" max="100" value="55"><output id="oSoft"></output></div>
+
+    <p class="grp">วงที่เปิด — ต้องมีจดหมายถึงจะเห็น</p>
+    <div class="row"><label>รัศมี % ของทาง</label>
+      <input type="range" id="frac" min="4" max="60" value="22"><output id="oFrac"></output></div>
+    <div class="row"><label>เล็กสุด กม.</label>
+      <input type="range" id="rmin" min="40" max="600" value="120"><output id="oRmin"></output></div>
+    <div class="row"><label>ใหญ่สุด กม.</label>
+      <input type="range" id="rmax" min="600" max="6000" value="2400"><output id="oRmax"></output></div>
+    <div class="row"><label>หดตอนพายุ</label>
+      <input type="range" id="storm" min="20" max="100" value="62"><output id="oStorm"></output></div>
+
+    <div class="tabs">
+      <button id="btnTerm">หมุนหาเส้นแบ่งวัน-คืน</button>
+      <button id="btnFocus">โฟกัสจดหมาย</button>
+      <button id="btnZoomOut">ถอยออก</button>
+    </div>
+
+    <div class="acts">
+      <button id="btnReset">คืนค่าเดิม</button>
+      <button id="btnCopy" class="gold">คัดลอกค่า</button>
+    </div>
+    <p class="note" id="status">กำลังโหลด…</p>
+    <div id="out"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app');
+
+/* ค่าที่แอปใช้อยู่จริง — ปุ่มคืนค่าเดิมกลับมาที่นี่ */
+const BASE = {fog:72, soft:55, frac:22, rmin:120, rmax:2400, storm:62};
+const K = Object.keys(BASE);
+const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
+
+function apply(){
+  const w = app.contentWindow; if(!w) return;
+  const v = V();
+  try{
+    w.eval('CFG.FOG=' + (v.fog/100) + '; CFG.FOG_SOFT=' + (v.soft/100)
+         + '; CFG.REVEAL_FRAC=' + (v.frac/100) + '; CFG.REVEAL_MIN=' + v.rmin
+         + '; CFG.REVEAL_MAX=' + v.rmax + '; CFG.REVEAL_STORM=' + (v.storm/100) + ';');
+    /* ⚠️ sphere() แคชด้วย _key ที่คิดจากมุมกับซูมเท่านั้น ไม่รู้จักหมอก (ข้อ 128.3) */
+    w.eval('G._key=null; G._nkey=null;');
+    w.renderGlobe();
+  }catch(e){}
+  paintOut();
+}
+
+function paintOut(){
+  const v = V();
+  K.forEach(k => $('#o'+k[0].toUpperCase()+k.slice(1)).textContent = v[k]);
+  $('#out').textContent = 'FOG ' + (v.fog/100).toFixed(2) + ' · SOFT ' + (v.soft/100).toFixed(2)
+    + ' · FRAC ' + (v.frac/100).toFixed(2) + ' · MIN ' + v.rmin + ' · MAX ' + v.rmax
+    + ' · STORM ' + (v.storm/100).toFixed(2);
+}
+
+K.forEach(k => $('#'+k).addEventListener('input', apply));
+
+$('#btnMin').addEventListener('click', () => {
+  const p = $('#panel'); p.classList.toggle('min');
+  $('#btnMin').textContent = p.classList.contains('min') ? 'ขยาย' : 'ย่อ';
+});
+
+$('#btnReset').addEventListener('click', () => {
+  K.forEach(k => $('#'+k).value = BASE[k]); apply();
+});
+
+$('#btnCopy').addEventListener('click', async () => {
+  const v = V();
+  const txt = 'FOG: ' + (v.fog/100).toFixed(2) + ', FOG_SOFT: ' + (v.soft/100).toFixed(2)
+    + ', REVEAL_FRAC: ' + (v.frac/100).toFixed(2) + ', REVEAL_MIN: ' + v.rmin
+    + ', REVEAL_MAX: ' + v.rmax + ', REVEAL_STORM: ' + (v.storm/100).toFixed(2);
+  try{ await navigator.clipboard.writeText(txt); $('#btnCopy').textContent='คัดลอกแล้ว';
+       setTimeout(()=>$('#btnCopy').textContent='คัดลอกค่า',1400); }
+  catch(e){ $('#out').textContent = txt; }
+});
+
+/* ลูกโลกมักหันซีกกลางวันมาทั้งใบ แล้วจะไม่เห็นความต่าง (ข้อ 129.6) */
+$('#btnTerm').addEventListener('click', () => {
+  try{ app.contentWindow.eval(`(function(){
+    const r0=G.rotY; let best=null;
+    for(let i=0;i<180;i++){ G.rotY=r0+i*Math.PI/90;
+      const z=Math.abs(G.project(G.rotate(sunVec())).z);
+      if(!best||z<best.z) best={z,rot:G.rotY}; }
+    G.rotY=best.rot; G.vY=0;
+  })()`); }catch(e){}
+  apply();
+});
+
+/* วงที่เปิดจะเห็นก็ต่อเมื่อมีจดหมาย — โฟกัสไปที่ฉบับแรกที่ยังบินอยู่ */
+$('#btnFocus').addEventListener('click', () => {
+  const w = app.contentWindow;
+  try{
+    const n = w.eval(`(function(){
+      const list = store.letters(); if(!list.length) return 0;
+      const L = list[0];
+      const st = letterState(L, nowFor(L));
+      selected = L.id;
+      G.focus(posAt(L, st.prog), G.fitZoom(CFG.REVEAL_MIN*2));
+      return list.length;
+    })()`);
+    $('#status').textContent = n ? ('จดหมายในเครื่อง ' + n + ' ฉบับ — โฟกัสฉบับแรกแล้ว')
+      : '⚠️ ยังไม่มีจดหมายในเครื่อง — วงที่เปิดจะไม่ปรากฏ ลองส่งสักฉบับในแอปจริงก่อน';
+  }catch(e){ $('#status').textContent = 'โฟกัสไม่ได้: ' + e.message; }
+  apply();
+});
+
+$('#btnZoomOut').addEventListener('click', () => {
+  try{ app.contentWindow.eval('selected=null; G.zTarget=1; for(let i=0;i<200;i++) G.step();'); }catch(e){}
+  apply();
+});
+
+app.addEventListener('load', () => {
+  setTimeout(() => {
+    apply();
+    try{
+      const n = app.contentWindow.eval('store.letters().length');
+      $('#status').textContent = n
+        ? ('จดหมายในเครื่อง ' + n + ' ฉบับ · กด "โฟกัสจดหมาย" เพื่อดูวงที่เปิด')
+        : '⚠️ ยังไม่มีจดหมายในเครื่อง — ปรับได้แค่ "ความทึบ" ส่วนวงที่เปิดต้องมีจดหมายก่อน';
+    }catch(e){ $('#status').textContent = 'อ่านสถานะไม่ได้'; }
+  }, 1200);
+});
+
+/* ⚠️ service worker ส่งไฟล์เก่าให้ iframe — ต้องข้ามแคชเสมอ (ข้อ 127.4) */
+navigator.serviceWorker && navigator.serviceWorker.getRegistrations
+  && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+try{
+  localStorage.setItem('lw.v1.intro','1');
+  sessionStorage.setItem('lw.v1.splash','1');
+}catch(e){}
+app.src = 'index.html?fresh=' + Date.now();
+paintOut();
+</script>
+</body>
+</html>
