@@ -2887,7 +2887,7 @@ function wxCardBolt(ctx,cx,cy,t,intensity,scale){
   const flash=cyc<0.24 ? Math.pow(1-cyc/0.24,1.5) : 0;
   if(flash>0.02){
     const a=(0.34+0.46*intensity)*flash;
-    ctx.strokeStyle='rgba(48,53,66,'+a.toFixed(3)+')';
+    ctx.strokeStyle='rgba('+SKIN.gust+','+a.toFixed(3)+')';
     ctx.lineWidth=1.6;
     ctx.beginPath();
     ctx.moveTo(-3,-24); ctx.lineTo(-10,-2); ctx.lineTo(-2,-2); ctx.lineTo(-8,22);
@@ -3057,6 +3057,17 @@ const SKIN = {
      วัดได้ 175 → 119 (ลด 32%) ตอนหมุนจนเห็นทั้งสองซีก
      ถูกตามฟิสิกส์ แต่ในโหมดมืดมันจมหายเพราะฐานต่ำอยู่แล้ว จึงต้องมีพื้นให้ยืน */
   dayEdge: 0.06,
+
+  /* ---- อากาศบนลูกโลก (ข้อ 135) ----
+     ⚠️ ทั้งหมดเป็นสีเข้มที่วาดทับผิวโลก — ได้ผลตอนผิวสว่าง
+        พอโหมดมืดหรี่ผิวลง ความต่างก็หายตาม (เมฆ 27 → 5.6)
+     📌 โหมดมืดจึงต้องกลับขั้วให้สว่างขึ้น หลักเดียวกับเส้นชายฝั่งกลางคืน (ข้อ 40) */
+  cloud:  '58,63,76',      /* ลายเมฆที่ถูกถม */
+  rain:   '48,53,66',      /* เม็ดฝนที่ร่วง */
+  ice:    '52,60,78',      /* ฝนแข็ง */
+  iceDot: '255,255,252',   /* เกล็ดหิมะ — สว่างอยู่แล้วทั้งสองโหมด */
+  fog:    '46,54,72',      /* หมอกจริง */
+  gust:   '48,53,66',      /* ลมกระโชก */
   nightA: 1,   /* ชั้นมืดฝั่งกลางคืน */
 
   /* ---- พื้นทรงกลม (ข้อ 129) ----
@@ -3533,7 +3544,7 @@ const G = {
     ctx.lineWidth=0.95;
     B.forEach((arr,ai)=>{
       /* เข้มกว่าริ้วลม (84,90,104) อยู่ระดับหนึ่ง — ดินสอแท่งเดียวกัน แต่มือกดหนักกว่า */
-      ctx.strokeStyle='rgba(58,63,76,'+(ai/90).toFixed(4)+')';
+      ctx.strokeStyle='rgba('+SKIN.cloud+','+(ai/90).toFixed(4)+')';
       ctx.beginPath();
       for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
       ctx.stroke();
@@ -3589,7 +3600,7 @@ const G = {
     B.forEach((arr,ai)=>{
       /* เข้มกว่าเมฆอยู่บ้าง แต่ไม่ต้องมาก — สิ่งที่ทำให้อ่านออกคือการเคลื่อนไหว ไม่ใช่น้ำหนัก
          ถ้าเข้มเกินไปมันจะกลายเป็นขีดแข็ง ๆ วิ่งผ่าน ไม่ใช่สายฝน */
-      ctx.strokeStyle='rgba(48,53,66,'+(ai/32).toFixed(3)+')';
+      ctx.strokeStyle='rgba('+SKIN.rain+','+(ai/32).toFixed(3)+')';
       ctx.beginPath();
       for(let i=0;i<arr.length;i+=4){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
       ctx.stroke();
@@ -3676,7 +3687,7 @@ const G = {
     }
     ctx.save(); ctx.lineCap='round'; ctx.lineWidth=0.9;
     B.forEach((arr,ai)=>{
-      ctx.strokeStyle='rgba(52,60,78,'+(ai/32).toFixed(3)+')';
+      ctx.strokeStyle='rgba('+SKIN.ice+','+(ai/32).toFixed(3)+')';
       ctx.beginPath();
       for(let i=0;i<arr.length;i+=5){ ctx.moveTo(arr[i],arr[i+1]); ctx.lineTo(arr[i+2],arr[i+3]); }
       ctx.stroke();
@@ -3688,7 +3699,7 @@ const G = {
       let a2=Gl.get(ai); if(!a2) Gl.set(ai,a2=[]);
       a2.push(arr[i],arr[i+1]); } });
     Gl.forEach((arr,ai)=>{
-      ctx.fillStyle='rgba(255,255,252,'+(ai/24).toFixed(3)+')';
+      ctx.fillStyle='rgba('+SKIN.iceDot+','+(ai/24).toFixed(3)+')';
       ctx.beginPath();
       for(let i=0;i<arr.length;i+=2){ ctx.moveTo(arr[i]+1.15,arr[i+1]);
         ctx.arc(arr[i],arr[i+1],1.15,0,6.2832); }
@@ -3708,7 +3719,7 @@ const G = {
         arr.push(p.x,p.y,s);
       }
       C.forEach((arr,ai)=>{
-        ctx.strokeStyle='rgba(46,54,72,'+(ai/40).toFixed(3)+')';
+        ctx.strokeStyle='rgba('+SKIN.fog+','+(ai/40).toFixed(3)+')';
         ctx.beginPath();
         for(let i=0;i<arr.length;i+=3){
           const x=arr[i],y=arr[i+1],s=arr[i+2];
@@ -7410,6 +7421,10 @@ const DARK_SKIN = {
   dayA:3.2, nightA:3.0,
   nightBg:'18,21,32', nightG0:'15,18,29', nightG1:'17,20,31', nightG2:'19,22,33',
   nightGrid:'108,117,129', nightCoast:'118,123,131', termLine:'121,113,99',
+  /* กลับขั้ว: ผิวโลกหรี่ลงแล้ว อากาศจึงต้องสว่างขึ้นถึงจะยังอ่านออก (ข้อ 135)
+     ⓘ iceDot สว่างอยู่แล้วทั้งสองโหมด ไม่ต้องเปลี่ยน */
+  cloud:'214,220,232', rain:'224,230,242', ice:'218,226,240',
+  fog:'206,214,228', gust:'224,230,242',
 };
 const DARK_PAPER = {
   fresh:[165,154,134], aged:[145,125,85],
