@@ -3290,8 +3290,10 @@ const SKIN = {
 
   /* ---- ชั้นหลังลูกโลก (ข้อ 150) ----
      เงา = ความมืดที่เบียดออกจากขอบฝั่งตรงข้ามดวงอาทิตย์ · ฝุ่น = อากาศที่ลอยตามลมจริง */
-  shade: '96,102,116',
-  dust:  '120,126,138',
+  shade:  '96,102,116',
+  dust:   '120,126,138',
+  rainBg: '108,116,132',   /* ฝนที่ตกจริงตรงที่ผู้ใช้อยู่ (ข้อ 152) */
+  grain:  '92,86,72',      /* เนื้อกระดาษ — อุ่นกว่าหมึก UI เพราะเป็นเนื้อวัสดุ ไม่ใช่ตัวอักษร */
 
   /* ---- อากาศบนลูกโลก (ข้อ 135) ----
      ⚠️ ทั้งหมดเป็นสีเข้มที่วาดทับผิวโลก — ได้ผลตอนผิวสว่าง
@@ -5256,8 +5258,19 @@ function dust(ctx,dt){
   /* dir = ทิศที่ลม *มาจาก* — ที่ฝุ่นเคลื่อนไปคือด้านตรงข้าม */
   const th=(WIND_DIR+180)*RAD;
   const vx=Math.sin(th), vy=-Math.cos(th);
-  const sp=(.004+clamp(WIND_HERE/45,0,1)*.022)*dt;
   dustT+=dt;
+  /* ---- ลมมาเป็นระลอก ไม่ได้พัดสม่ำเสมอ (ข้อ 152) ----
+     ⚠️ ที่ฝุ่นดูนิ่งเพราะเดินด้วย *ความเร็วเฉลี่ย* ซึ่งที่ฉะเชิงเทราคือ 8.4 กม./ชม.
+        = 3 px/วินาที ข้ามจอสองนาที · แต่ลมกระโชกจริงขึ้นถึง 41 ซึ่งเร็วกว่าเท่าตัว
+     📌 การเคลื่อนไหวคือสิ่งที่ทำให้ตาจับได้ — และลมจริงไม่เคยพัดเรียบ */
+  const gust = (WIND_GUST!=null && WIND_GUST>WIND_HERE) ? WIND_GUST : WIND_HERE*1.4;
+  /* คลื่นสองชั้นที่คาบไม่ลงตัวกัน — ระลอกจึงไม่ซ้ำรอยเดิมให้จับจังหวะได้ */
+  const pulse = .5 + .5*Math.sin(dustT*.42) * Math.sin(dustT*.17+1.3);
+  const nowSpd = WIND_HERE + (gust-WIND_HERE)*Math.max(0,pulse);
+  /* ⚠️ ฐานเดิม .004+.022 ทำให้ที่ลมจริงข้ามจอใช้ **7 นาที** — นิ่งจนอ่านเป็นรอยเปื้อน
+     ⓘ อย่าลืมว่า p.a (.25-1) คูณซ้ำอีกชั้น ความเร็วจริงจึงเหลือราวสองในสาม
+     เป้าหมาย: ข้ามจอราวหนึ่งนาทีครึ่งที่ลมปกติ — ช้าพอจะสงบ แต่เห็นว่าเคลื่อน */
+  const sp=(.010+clamp(nowSpd/45,0,1)*.040)*dt;
   ctx.fillStyle='rgba('+SKIN.dust+',1)';
   DUST.forEach((p,i)=>{
     p.x+=vx*sp*p.a; p.y+=vy*sp*p.a;
@@ -5273,15 +5286,77 @@ function dust(ctx,dt){
   ctx.globalAlpha=1;
 }
 
+/* ---------- ฝนที่ตกอยู่จริงตรงที่คุณอยู่ (ข้อ 152) ----------
+   ⛔ ไม่ใช่เอฟเฟกต์ที่เปิดตลอด — โผล่เฉพาะตอนฝนตกจริงที่ต้นทางของผู้ใช้
+      วัดที่ฉะเชิงเทรา: ตก 15 ใน 24 ชั่วโมง · 0-1.8 mm
+   📌 ความหมายอยู่ตรงที่มัน *บางวันมี บางวันไม่มี* — เปิดแอปตอนฝนตก แล้วในแอปก็ฝนตกด้วย
+   ⓘ เส้นฝนเอียงตามทิศลมจริง เพราะฝนที่ตกในลมไม่เคยตกดิ่ง */
+const RAIN=[];
+function rain(ctx,dt){
+  if(!RAIN_HERE || RAIN_HERE<=0 || WIND_DIR===null) return;
+  /* 0.1 mm = พรำ · 1.8 mm = ตกหนักสุดของวันนี้ — คุมไม่ให้เกิน 40 เส้น */
+  const n=Math.round(clamp(RAIN_HERE*22,6,40));
+  while(RAIN.length<n) RAIN.push({x:Math.random(), y:Math.random(), s:.6+Math.random()*.7});
+  RAIN.length=n;
+  const th=(WIND_DIR+180)*RAD;
+  /* ฝนตกลงเป็นหลัก ลมทำให้เอียง — ไม่ใช่ปลิวไปตามลมล้วน ๆ */
+  const wx=Math.sin(th)*clamp((WIND_HERE||0)/40,0,.85);
+  const len=9+clamp(RAIN_HERE*7,0,10);
+  ctx.strokeStyle='rgba('+SKIN.rainBg+',1)';
+  ctx.lineWidth=1; ctx.lineCap='round';
+  RAIN.forEach(p=>{
+    p.y += (.32+.26*p.s)*dt;
+    p.x += wx*(.20+.16*p.s)*dt;
+    if(p.y>1.05){ p.y=-.05; p.x=Math.random(); }
+    if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
+    ctx.globalAlpha=.055+.055*p.s;
+    ctx.beginPath();
+    ctx.moveTo(p.x*W, p.y*H);
+    ctx.lineTo(p.x*W + wx*len*1.5, p.y*H + len*(.7+.5*p.s));
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+}
+
+/* ---------- เนื้อกระดาษ (ข้อ 152) ----------
+   ⛔ ไม่ได้มาจากข้อมูลเหมือนอย่างอื่น — มาจาก identity ของแอปตรง ๆ
+      พื้น gradient เรียบสนิทคือความเรียบแบบดิจิทัล · จดหมายเขียนบนกระดาษ ไม่ใช่บนกระจก
+   ⚠️ สร้างครั้งเดียวแล้ววาดซ้ำ — สุ่มทุกเฟรมคือ 300,000 pixel ต่อเฟรม และจะกลายเป็น
+      "สัญญาณรบกวนทีวี" ที่กะพริบ ไม่ใช่เนื้อกระดาษที่นิ่งอยู่กับที่ */
+let GRAIN=null, _grainW=0, _grainH=0;
+function grain(ctx){
+  if(!W||!H) return;
+  if(!GRAIN || _grainW!==W || _grainH!==H){
+    _grainW=W; _grainH=H;
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const g=c.getContext('2d'), im=g.createImageData(W,H), d=im.data;
+    const [r,gr,b]=SKIN.grain.split(',').map(Number);
+    for(let i=0;i<d.length;i+=4){
+      /* ⓘ เกรนกระดาษเป็นก้อนหยาบกว่าเกรนดิจิทัล — สุ่มทีละพิกเซลจะละเอียดเกินจนหายไป */
+      const v=Math.random();
+      d[i]=r; d[i+1]=gr; d[i+2]=b;
+      d[i+3]= v<.55 ? 0 : Math.round(4+v*9);
+    }
+    g.putImageData(im,0,0);
+    GRAIN=c;
+  }
+  ctx.drawImage(GRAIN,0,0);
+}
+
 let _lastFrame=0;
 function renderGlobe(){
   sctx.clearRect(0,0,W,H);
   G.step();
   paintSky();
-  /* ⚠️ ชั้นหลังลูกโลก วาดก่อนเสมอ — ฝุ่นอยู่ไกลสุด แล้วเงา แล้วค่อยลูกโลกทับ */
+  /* ⚠️ ชั้นหลังลูกโลก วาดก่อนเสมอ เรียงจากไกลไปใกล้
+     เนื้อกระดาษ (พื้นผิว) → ฝุ่น → ฝน → เงา → ลูกโลกทับทั้งหมด
+     ⛔ ฝนอยู่ *หลัง* ลูกโลก แม้ตามความจริงมันตกอยู่ระหว่างเรากับลูกโลก
+        เพราะกฎของหน้านี้คือลูกโลกต้องเด่นที่สุด — ฝนบังหน้าจะแย่งไป */
   const now=performance.now();
   const dt=Math.min(.05,(now-_lastFrame)/1000)||0; _lastFrame=now;
+  grain(sctx);
   dust(sctx,dt);
+  rain(sctx,dt);
   globeShade(sctx);
   const list=store.letters();
   /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
@@ -6537,7 +6612,7 @@ $('#cBody').addEventListener('input',()=>{
 });
 
 /* ---------- องก์ Write — กระดาษหายใจ และคีย์บอร์ดมือถือ (ข้อ 63) ---------- */
-let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null;
+let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null, WIND_GUST=null, RAIN_HERE=null;
 
 function paintWritePaper(tries){
   const cv=$('#cPaper'), box=$('#cSheet');
@@ -6642,8 +6717,11 @@ async function windHere(){
      บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
   const w=await wxAt(me.lat,me.lng);
   if(w && typeof w.spd==='number') WIND_HERE=w.spd;
-  /* ⓘ wxAt คืนทิศมาด้วยตลอด แค่ไม่เคยมีใครเก็บ — ฝุ่นในพื้นหลังต้องใช้ (ข้อ 150) */
+  /* ⓘ wxAt คืนสี่ค่ามาตลอด แต่แอปเคยใช้แค่ spd — อีกสามตัวมีข้อมูลจริงและอยู่ในแคชก้อนเดียวกัน
+     วัดที่ฉะเชิงเทรา: ลมต่อเนื่อง 5.7-20.9 · กระโชก 10.6-41.2 · ฝนตก 15 ใน 24 ชั่วโมง (ข้อ 152) */
   if(w && typeof w.dir==='number') WIND_DIR=w.dir;
+  if(w && typeof w.gst==='number') WIND_GUST=w.gst;
+  if(w && typeof w.pre==='number') RAIN_HERE=w.pre;
 }
 
 /* วางปากกา = เลิกพิมพ์ ไม่ใช่กดปุ่ม — จับจาก focus/blur ของช่องบนกระดาษ */
@@ -7915,6 +7993,7 @@ const DARK_SKIN = {
   nightGrid:'108,117,129', nightCoast:'118,123,131', termLine:'121,113,99',
   /* กลับขั้ว: พื้นมืดแล้ว เงาที่มืดกว่าอ่านไม่ออก · ฝุ่นต้องสว่างขึ้นถึงจะเห็น (ข้อ 150) */
   shade:'8,10,16', dust:'214,220,232',
+  rainBg:'186,196,214', grain:'228,226,220',
   /* กลับขั้ว: ผิวโลกหรี่ลงแล้ว อากาศจึงต้องสว่างขึ้นถึงจะยังอ่านออก (ข้อ 135)
      ⓘ iceDot สว่างอยู่แล้วทั้งสองโหมด ไม่ต้องเปลี่ยน */
   cloud:'214,220,232', rain:'224,230,242', ice:'218,226,240',
