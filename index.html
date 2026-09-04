@@ -309,8 +309,9 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #mCode:focus{outline:0;border-color:rgba(var(--gold-rgb),.55)}
 #mine .btn.wide{margin-top:8px}
 /* หัวข้อรองชุดเดียวกับหน้า drift port — ต้องตรงกัน ไม่งั้นสองหน้าพูดคนละภาษา (ข้อ 146) */
-#mine .grp{font-size:17px;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
+#mine .grp{font-size:17px;font-weight:700;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
   padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
+#mine h2{font-size:22px;font-weight:700;letter-spacing:.01em}
 
 /* ---------- ทดลอง: ระบบขนาดตัวอักษร เฉพาะหน้า drift port (ข้อ 145) ----------
    ⚠️ ปัญหาที่วัดได้ทั้งแอป: ใช้ขนาดต่างกัน **16 ขนาด** ในช่วง 10-21px
@@ -318,7 +319,12 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       แต่ทำให้ไม่มีระบบ ค่าถูกเลือกทีละจุดตามความรู้สึกตอนนั้น
    📌 ห้าขนาดที่ห่างกันจริง ดีกว่าสิบหกขนาดที่ไม่มีใครเห็นความต่าง
    ⓘ ยังไม่ขยายไปทั้งแอป — ทดลองหน้าเดียวก่อน */
-#porthome h2{font-size:22px;letter-spacing:.01em;margin-bottom:3px}
+/* ⓘ ตัวหนาเป็น faux bold — ฝังไว้แค่ weight 400 (@font-face มีตัวเดียว)
+   ⚠️ วัดแล้วก่อนใช้: หมึกเพิ่ม 71% และ **สระไทยไม่เละ** วรรณยุกต์ยังเกาะพยัญชนะ
+      ทั้งที่ 34px และ 17px — จึงไม่ต้องฝังฟอนต์ 700 เพิ่มอีก ~80KB (ข้อ 147) */
+/* ⓘ สามหน้านี้เป็นเส้นทางเดียวกัน — ท่า → กองจดหมาย → แลกที่อยู่
+   จึงต้องใช้ระบบเดียว ไม่งั้นเดินสามก้าวก็เจอสามแบบ (ข้อ 147) */
+#porthome h2,#mine h2,#inbox h2{font-size:22px;font-weight:700;letter-spacing:.01em;margin-bottom:3px}
 #porthome .sub{font-size:12.5px;margin-bottom:30px}
 #porthome .mrow b{font-size:15px}
 #porthome .mrow em{font-size:11.5px}
@@ -332,8 +338,13 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       เผลอหยิบ pattern "label ตัวจิ๋ว ช่องไฟกว้าง" มาใช้ ทั้งที่นี่คือ *หัวข้อ* ไม่ใช่ label
    2. .14em กับข้อความไทย ละเมิดข้อ 110.1 ที่ตั้งไว้เองว่า **ไทยไม่เกิน .04em**
       สระลอยกับวรรณยุกต์หลุดจากพยัญชนะ — "จดหมาย" แตกเป็นชิ้น */
-#porthome .grp{font-size:17px;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
-  margin:0 0 6px;padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
+/* ⚠️ หน้า inbox ตอนนี้หัวกลุ่มคือ *ชื่อคน* ไม่ใช่ป้ายสถานะอีกต่อไป (ข้อ 147)
+   มันจึงเป็นหัวข้อรองเหมือนหน้า drift port — ขนาดเดียวกัน */
+#porthome .grp,#inbox .grp{font-size:17px;font-weight:700;letter-spacing:.03em;
+  color:rgba(var(--ink-rgb),.86);margin:26px 0 6px;padding-bottom:7px;
+  border-bottom:1px solid var(--line-soft)}
+#inbox .grp:first-child{margin-top:8px}
+#porthome .grp{margin-top:0}
 /* ⚠️ หัวกลุ่มทั้งสองเป็น :first-child ของ container ตัวเอง (#phLetters / #phPorts)
       กฎ :first-child จึงกินทั้งคู่ ระยะเลยเท่ากันหมดทั้งที่ตั้ง 26px ไว้ — วัดได้ 14/14
    📌 ระยะที่ต่างกันต้องมี *เหตุผล* ไม่ใช่บังเอิญ:
@@ -346,15 +357,16 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #porthome .mrow.on::before{content:'';position:absolute;left:1px;top:50%;
   width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold)}
 /* ที่อยู่กับระยะทางของแต่ละคน — บรรทัดที่สองใต้ชื่อ ไม่ใช่ต่อท้ายให้ยาว */
-#porthome .mrow.who{display:block;padding-top:13px;padding-bottom:13px}
-#porthome .mrow.who b{display:block}
-#porthome .mrow.who em{display:block;margin-top:3px;white-space:normal}
+#porthome .mrow.who{display:block;padding-top:14px;padding-bottom:14px}
+/* บรรทัดบน: ชื่อชิดซ้าย สถานะชิดขวา — เหมือนแถวจดหมาย จะได้อ่านเป็นระบบเดียวกัน */
+#porthome .mrow.who .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+#porthome .mrow.who em{white-space:nowrap;flex:0 0 auto}
+/* บรรทัดล่าง: ที่อยู่กับระยะทาง — ข้อเท็จจริง ไม่ใช่สถานะ ห้ามเป็นสีทองตามแถว
+   ไม่งั้น "โตเกียว" ของคนที่มีจดหมายใหม่ ดูสำคัญกว่า "ลอนดอน" ของคนที่ไม่มี */
+#porthome .mrow.who .w{display:block;margin-top:4px;font-size:11.5px;color:var(--faint)}
 /* ⚠️ จุดต้องอยู่ระดับ *ชื่อ* ไม่ใช่กลางแถว — แถวคนสูงสองบรรทัด
       จุดที่ 50% ไปเกาะบรรทัดที่อยู่ ดูเหมือนกำลังชี้ผิดของ (เห็นจากภาพจริง) */
-#porthome .mrow.who.on::before{top:22px;margin-top:0}
-/* ที่อยู่กับระยะทางเป็นข้อเท็จจริง ไม่ใช่สถานะ — ห้ามเปลี่ยนเป็นสีทองตามแถว
-   ไม่งั้น "โตเกียว" ของคนที่มีจดหมายใหม่ ดูสำคัญกว่า "ลอนดอน" ของคนที่ไม่มี */
-#porthome .mrow.who em .w{color:var(--faint)}
+#porthome .mrow.who.on::before{top:23px;margin-top:0}
 /* แถวที่อยู่ของเรา — เงียบกว่าทุกอย่าง เพราะใช้นาน ๆ ครั้ง */
 #porthome .mrow.quiet b{color:var(--dim);font-size:13.5px}
 
@@ -5387,6 +5399,9 @@ function pickLetter(L){
       ตอน *เปิด* หน้า ไม่ใช่พารามิเตอร์ ไม่งั้นวาดรอบถัดไปตัวกรองหายเอง
    inboxPort = ดูเฉพาะจดหมายกับคนนี้ (ข้อ 140.3) · null = ทั้งหมด */
 let inboxPort=null;
+/* inboxMode — null = ทุกฉบับ · 'new' = ที่ร่อนลงมาแล้วยังไม่ได้เปิด · 'kept' = กองที่เก็บไว้ (ข้อ 147)
+   ⓘ 'kept' จัดกลุ่มตาม *ชื่อคน* ไม่ใช่ตามสถานะ — กองเก่าคนมองหาว่า "ของใคร" ไม่ใช่ "ถึงยัง" */
+let inboxMode=null;
 /* จดหมายกับคนหนึ่งคน — ตรรกะเดียวกับ portLetters() ที่นับจำนวน (ข้อ 140.3)
    ⚠️ ขาออกจับคู่ด้วยรหัส port ขาเข้าจับด้วยชื่อ เพราะจดหมายไม่พก port ผู้ส่งมา (ข้อ 140.4) */
 function withPort(list,pt){
@@ -5395,15 +5410,40 @@ function withPort(list,pt){
 function fillInbox(list,now){
   const box=$('#inboxList'); box.innerHTML='';
   const pt=inboxPort;
-  const shown = pt ? withPort(list,pt) : list;
-  $('#inboxTitle').textContent = pt ? safeName(pt.n) : 'กล่องจดหมาย';
+  const isNew = L => L.dir==='in' && letterState(L,now).arrived && !L.read;
+  let shown = pt ? withPort(list,pt) : list;
+  if(!pt && inboxMode==='new')  shown = shown.filter(isNew);
+  /* กองที่เก็บไว้ = เดินทางจบแล้วและไม่ได้รออยู่ — ฉบับที่ยังบินไม่เข้ามาที่นี่ (ข้อ 147) */
+  if(!pt && inboxMode==='kept') shown = shown.filter(L=>{
+    const s=letterState(L,now); return (s.arrived||s.gone) && !isNew(L);
+  });
+
+  $('#inboxTitle').textContent = pt ? safeName(pt.n)
+    : inboxMode==='new' ? 'ร่อนลงมาแล้ว' : inboxMode==='kept' ? 'เก็บไว้แล้ว' : 'กล่องจดหมาย';
   /* ⓘ ตัด "แตะฉบับที่ถึงแล้วเพื่ออ่าน" ออก — แตะแถวแล้วเปิดคือสิ่งที่คนเดาได้เอง (ข้อ 144)
      ⛔ ครึ่งหลังห้ามตัด — "พาไปดูบนลูกโลก" คาดเดาไม่ได้ และเป็นของที่แอปนี้มีอยู่คนเดียว */
   $('#inboxSub').textContent = pt
     ? 'จดหมายที่เขียนถึงกันกับ '+safeName(pt.n)
+    : inboxMode==='new'  ? 'มาถึงแล้ว รออยู่ตรงนี้'
+    : inboxMode==='kept' ? 'เดินทางจบแล้ว จัดตามชื่อคน'
     : 'ฉบับที่ยังเดินทางอยู่ แตะแล้วจะพาไปดูบนลูกโลก';
+
   const rows=shown.map(L=>({L,st:letterState(L,now)}));
-  const grp=[
+  /* กองที่เก็บไว้จัดกลุ่มตาม *ชื่อคน* — คนมองหาว่า "ของใคร" ไม่ใช่ "ถึงยัง" (ข้อ 147)
+     ⚠️ ขาออกรู้ชื่อจาก L.t.n ขาเข้าจาก L.f.n เพราะจดหมายไม่พก port ผู้ส่งมา (ข้อ 140.4)
+        จึงจับคู่ด้วยชื่อที่แสดง ซึ่งเป็นสิ่งเดียวที่ทั้งสองทางมีเหมือนกัน */
+  const grp = (!pt && inboxMode==='kept')
+    ? (()=>{
+        const by=new Map();
+        rows.forEach(x=>{
+          const who = x.L.dir==='in' ? safeName((x.L.f&&x.L.f.n)||'') : ((x.L.t&&x.L.t.n)||'');
+          const k = who || 'ไม่ระบุชื่อ';
+          if(!by.has(k)) by.set(k,[]);
+          by.get(k).push(x);
+        });
+        return [...by.entries()].sort((a,b)=>b[1].length-a[1].length);
+      })()
+    : [
     ['กำลังมา',  rows.filter(x=>x.L.dir==='in'&&!x.st.arrived&&!x.st.gone)],
     ['ถึงแล้ว',   rows.filter(x=>x.L.dir==='in'&&(x.st.arrived||x.st.gone))],
     ['ของคุณที่กำลังไป', rows.filter(x=>x.L.dir!=='in'&&!x.st.arrived&&!x.st.gone)],
@@ -5417,7 +5457,14 @@ function fillInbox(list,now){
       n++;
       const b=document.createElement('button');
       b.className='mrow'+(L.dir==='in'&&st.arrived&&!L.read?' on':'')+(st.gone?' gone':'');
-      b.innerHTML='<b>'+esc(letterWho(L))+'</b><em>'+etaWord(L,st)+'</em>';
+      /* ⓘ ในกองที่จัดตามชื่อคนแล้ว การเขียน "จาก มะลิ" ใต้หัวข้อ "มะลิ" คือการพูดซ้ำ
+         แถวจึงบอก *วันที่* แทน ซึ่งเป็นสิ่งที่หัวกลุ่มบอกไม่ได้ และเป็นสิ่งที่คน
+         มองหาจริงเวลารื้อกองเก่า — ฉบับไหนก่อนหลัง (ข้อ 147) */
+      const byName = (!pt && inboxMode==='kept');
+      const label = byName
+        ? new Date(L.s).toLocaleDateString('th-TH',{day:'numeric',month:'short'})
+        : letterWho(L);
+      b.innerHTML='<b>'+esc(label)+'</b><em>'+etaWord(L,st)+'</em>';
       b.onclick=()=>{ closeSheet(); if(st.arrived||st.gone) openRead(L); else pickLetter(L); };
       box.appendChild(b);
     });
@@ -5434,14 +5481,26 @@ function fillInbox(list,now){
 function fillPortHome(list,now){
   const st=L=>letterState(L,now);
   const unread = list.filter(L=>L.dir==='in'&&st(L).arrived&&!L.read).length;
-  const here   = list.filter(L=>L.dir==='in'&&(st(L).arrived||st(L).gone)).length;
-  const coming = list.filter(L=>L.dir==='in'&&!st(L).arrived&&!st(L).gone).length;
-  const going  = list.filter(L=>L.dir!=='in'&&!st(L).arrived&&!st(L).gone).length;
+  /* ⓘ here · coming · going ถูกลบทิ้ง — ไม่มีกลุ่ม "กำลังมา"/"ของฉันที่กำลังไป" แล้ว (ข้อ 147) */
   const ports  = store.ports().sort((x,y)=>(y.at||0)-(x.at||0));
 
-  $('#phSub').textContent = list.length
-    ? list.length+' ฉบับในเครื่องนี้' : 'ยังไม่มีจดหมายในเครื่องนี้';
+  /* ⚠️ เก็บไว้แล้ว = ฉบับที่ **เดินทางจบแล้ว** เท่านั้น (อ่านแล้ว · ส่งถึงแล้ว · หายไปกับลม)
+     ⛔ ฉบับที่ยังบินอยู่ไม่อยู่ในทั้งสองกอง — มันอยู่บนลูกโลก ซึ่งเป็นเหตุผลที่เอา
+        "กำลังมา" กับ "ของฉันที่กำลังไป" ออกตั้งแต่แรก ถ้าปล่อยให้ตกมาที่นี่ก็เท่าเดิม */
+  const done = list.filter(L=>{ const s=st(L); return s.arrived||s.gone; });
+  const kept = done.length - unread;
+  const flying = list.length - done.length;
 
+  /* ⓘ บอกจำนวนที่ *กำลังเดินทาง* ไม่ใช่จำนวนทั้งหมด — มันอธิบายส่วนที่หายไปจากสองกอง
+     ข้างล่างพอดี และชี้ให้กลับไปมองลูกโลกซึ่งเป็นที่ที่ฉบับพวกนั้นอยู่จริง */
+  $('#phSub').textContent = !list.length ? 'ยังไม่มีจดหมายในเครื่องนี้'
+    : flying ? flying+' ฉบับกำลังเดินทางอยู่บนลูกโลก'
+    : list.length+' ฉบับในเครื่องนี้';
+
+  /* ---- สองกลุ่มเท่านั้น (ข้อ 147) ----
+     ⛔ "กำลังมา" กับ "ของฉันที่กำลังไป" ถูกเอาออก — **หน้าลูกโลกแสดงอยู่แล้ว**
+        ทั้งบรรทัดสถานะและจุดบนลูกโลก · รายการที่ซ้ำกับของที่เห็นอยู่ไม่ได้เพิ่มอะไร
+     ⓘ เหลือสิ่งที่ลูกโลกบอกไม่ได้: ฉบับที่ *มาถึงแล้วรออยู่* กับ *กองที่เก็บไว้* */
   const box=$('#phLetters'); box.innerHTML='';
   const row=(label,note,fn,gold)=>{
     const b=document.createElement('button');
@@ -5449,14 +5508,14 @@ function fillPortHome(list,now){
     b.innerHTML='<b>'+label+'</b><em>'+note+'</em>';
     b.onclick=fn; box.appendChild(b);
   };
-  const openAll=()=>{ inboxPort=null; refreshDock(); openSheet('inbox'); };
-  if(here||coming||going){
+  if(list.length){
     const h=document.createElement('div'); h.className='grp'; h.textContent='จดหมาย';
     box.appendChild(h);
     /* ⚠️ "ร่อนลงมาแล้ว" คือคำขององก์รับ (ข้อ 61.4) ไม่ใช่ "ถึงแล้ว" ซึ่งเป็นคำของขาส่ง */
-    if(here)   row('ร่อนลงมาแล้ว', unread?'ยังไม่ได้เปิด '+unread:here+' ฉบับ', openAll, !!unread);
-    if(coming) row('กำลังมา', coming+' ฉบับ', openAll);
-    if(going)  row('ของฉันที่กำลังไป', going+' ฉบับ', openAll);
+    if(unread) row('ร่อนลงมาแล้ว', unread+' ฉบับ',
+                   ()=>{ inboxMode='new'; inboxPort=null; refreshDock(); openSheet('inbox'); }, true);
+    if(kept)   row('เก็บไว้แล้ว', kept+' ฉบับ',
+                   ()=>{ inboxMode='kept'; inboxPort=null; refreshDock(); openSheet('inbox'); });
   }
 
   const pb=$('#phPorts'); pb.innerHTML='';
@@ -5474,8 +5533,10 @@ function fillPortHome(list,now){
       const where=[pt.p||'', d!=null?Math.round(d).toLocaleString()+' กม.':''].filter(Boolean).join(' · ');
       const what = nu ? 'ยังไม่ได้เปิด '+nu+' ฉบับ'
                       : (mine.length ? mine.length+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน');
-      b.innerHTML='<b>'+esc(safeName(pt.n))+'</b><em>'
-        +(where?'<span class="w">'+esc(where)+'</span><br>':'')+what+'</em>';
+      /* ⓘ ชื่อกับสถานะอยู่บรรทัดเดียวกัน (ซ้าย-ขวา) ที่อยู่ลงบรรทัดสอง
+         เดิมซ้อนกันสามบรรทัดชิดซ้ายหมด ทำให้แถวสูงและตาต้องไล่ลงทีละบรรทัด (ข้อ 147) */
+      b.innerHTML='<span class="top"><b>'+esc(safeName(pt.n))+'</b><em>'+what+'</em></span>'
+        +(where?'<span class="w">'+esc(where)+'</span>':'');
       b.onclick=()=>openPort(pt);
       pb.appendChild(b);
     });
@@ -5913,7 +5974,7 @@ async function openPort(pt){
   $('#p1Count').textContent = n ? n+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน';
   /* ⛔ ไม่มีจดหมาย = ไม่มีบรรทัด ห้ามให้กดแล้วเจอหน้าว่าง */
   $('#p1Letters').hidden = !n;
-  $('#p1Letters').onclick=()=>{ inboxPort=pt; refreshDock(); openSheet('inbox'); };
+  $('#p1Letters').onclick=()=>{ inboxPort=pt; inboxMode=null; refreshDock(); openSheet('inbox'); };
   $('#p1Give').hidden = !!pt.gave;
   $('#p1Sky').textContent='กำลังดูฟ้าที่นั่น…';
   openSheet('port1');
@@ -5932,7 +5993,7 @@ $('#mInstall').onclick=openInstall;
 
 /* ---------- ท่าเรือ (ข้อ 140) ----------
    ⚠️ ล้างตัวกรองทุกครั้งที่เข้าท่า ไม่งั้นเปิดจากหน้าคนหนึ่งแล้วกลับมาจะเห็นของเก่าค้าง */
-$('#btnPort').onclick=()=>{ inboxPort=null; refreshDock(); openSheet('porthome'); };
+$('#btnPort').onclick=()=>{ inboxPort=null; inboxMode=null; refreshDock(); openSheet('porthome'); };
 $('#phMine').onclick=openMine;
 /* ช่องรับที่อยู่ในหน้าแลก — ใช้ ingestPort ตัวเดียวกับที่ #vCode ใช้ (ข้อ 143.4)
    ⚠️ ที่นี่รับ *ที่อยู่* อย่างเดียว ต่างจาก #vCode ที่รับจดหมายด้วย
