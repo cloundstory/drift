@@ -56,7 +56,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="hd"><b>หมอก</b><button class="tog" id="btnMin">ย่อ</button></div>
 
     <div class="row"><label>ความทึบ</label>
-      <input type="range" id="fog" min="0" max="95" value="72"><output id="oFog"></output></div>
+      <input type="range" id="fog" min="0" max="95" value="48"><output id="oFog"></output></div>
     <div class="row"><label>ความนุ่มขอบ</label>
       <input type="range" id="soft" min="0" max="100" value="55"><output id="oSoft"></output></div>
 
@@ -90,7 +90,7 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 
 /* ค่าที่แอปใช้อยู่จริง — ปุ่มคืนค่าเดิมกลับมาที่นี่ */
-const BASE = {fog:72, soft:55, frac:22, rmin:120, rmax:2400, storm:62};
+const BASE = {fog:48, soft:55, frac:22, rmin:120, rmax:2400, storm:62};
 const K = Object.keys(BASE);
 const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
 
