@@ -295,6 +295,47 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 .grp{font-size:10px;letter-spacing:.03em;color:var(--faint);margin:16px 0 2px}
 .grp:first-child{margin-top:0}
 
+/* ---------- หน้าแลกที่อยู่ (ข้อ 143.4) ----------
+   QR เป็นของหลักของหน้านี้ ไม่ใช่ของแถม — วางกลาง มีกรอบให้มันเป็นวัตถุที่ยื่นให้คนอื่นดู
+   ⚠️ พื้นขาวรอบ QR ห้ามตัด กล้องต้องการขอบเงียบเพื่อหามุม (ข้อ 117) */
+#qrWrap{display:flex;justify-content:center;margin:18px 0 8px}
+#qrWrap canvas{display:block;border-radius:10px;padding:12px;background:#fff;
+  box-shadow:0 1px 14px rgba(var(--ink-rgb),.10)}
+#qrHint{text-align:center;margin:0}
+#mCode{width:100%;min-height:74px;font-family:ui-monospace,Menlo,monospace;font-size:12px;
+  line-height:1.5;padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px;
+  background:rgba(var(--sheet-rgb),.5);color:inherit;resize:none}
+#mCode::placeholder{font-family:"Noto Serif Thai",Georgia,serif;letter-spacing:0;
+  color:rgba(var(--ink-rgb),.34)}
+#mCode:focus{outline:0;border-color:rgba(var(--gold-rgb),.55)}
+#mine .btn.wide{margin-top:8px}
+#mine .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
+  padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+
+/* ---------- หน้า drift port — ลำดับชั้นทางสายตา (ข้อ 143) ----------
+   ⚠️ ปัญหาที่วัดได้: หัวเรื่อง 15px แต่ทุกแถว 14.5px — ต่างกัน 0.5px
+      หกแถวสูง 57px เท่ากันเป๊ะเรียงติดกัน 342px ตาไม่มีที่เกาะ
+      และหัวกลุ่ม 10px จาง .38 *เบากว่าเนื้อหา* ทั้งที่มันคือตัวแบ่ง */
+#porthome .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
+  margin:26px 0 4px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+#porthome .grp:first-child{margin-top:14px}
+/* จุดทองหน้าแถวที่รออยู่ — ตาจับได้ทันทีว่าต้องมองตรงไหน (จุดเดียวกับทั้งแอป ข้อ 106) */
+#porthome .mrow{position:relative;padding-left:15px}
+#porthome .mrow.on::before{content:'';position:absolute;left:1px;top:50%;
+  width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--gold)}
+/* ที่อยู่กับระยะทางของแต่ละคน — บรรทัดที่สองใต้ชื่อ ไม่ใช่ต่อท้ายให้ยาว */
+#porthome .mrow.who{display:block;padding-top:13px;padding-bottom:13px}
+#porthome .mrow.who b{display:block}
+#porthome .mrow.who em{display:block;margin-top:3px;white-space:normal}
+/* ⚠️ จุดต้องอยู่ระดับ *ชื่อ* ไม่ใช่กลางแถว — แถวคนสูงสองบรรทัด
+      จุดที่ 50% ไปเกาะบรรทัดที่อยู่ ดูเหมือนกำลังชี้ผิดของ (เห็นจากภาพจริง) */
+#porthome .mrow.who.on::before{top:22px;margin-top:0}
+/* ที่อยู่กับระยะทางเป็นข้อเท็จจริง ไม่ใช่สถานะ — ห้ามเปลี่ยนเป็นสีทองตามแถว
+   ไม่งั้น "โตเกียว" ของคนที่มีจดหมายใหม่ ดูสำคัญกว่า "ลอนดอน" ของคนที่ไม่มี */
+#porthome .mrow.who em .w{color:var(--faint)}
+/* แถวที่อยู่ของเรา — เงียบกว่าทุกอย่าง เพราะใช้นาน ๆ ครั้ง */
+#porthome .mrow.quiet b{color:var(--dim);font-size:13.5px}
+
 
 /* ---------- องก์ Write — กระดาษจริง (ข้อ 63) ----------
    ฟอร์มหายไป กลายเป็นส่วนต่าง ๆ ของจดหมายเอง — ชื่อผู้รับอยู่ตรงที่มันควรอยู่บนจดหมาย
@@ -637,19 +678,29 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <section class="sheet" id="mine">
   <button class="close" data-close>ปิด</button>
   <div class="wrap">
-    <h2>drift port ของฉัน</h2>
+    <h2>แลกที่อยู่กัน</h2>
     <p class="sub">ให้ครั้งเดียว เขาเขียนถึงคุณได้ตลอดไป</p>
-    <div class="addr" id="myAddr"></div>
     <!-- คิวอาร์ (ข้อ 117) — ทางแลกที่อยู่ตอนอยู่ด้วยกัน ไม่ต้องผ่านแอปแชท
-         ⚠️ ต้องมีขอบขาวรอบอย่างน้อยสี่ช่อง ไม่งั้นกล้องหาขอบไม่เจอ -->
-    <canvas id="myQR" style="display:block;margin:16px auto 4px;border-radius:6px"></canvas>
-    <p class="note faint" style="text-align:center;margin-bottom:12px">ให้เขาส่องด้วยกล้องมือถือ</p>
-    <div class="row" style="margin-top:11px">
+         ⚠️ ต้องมีขอบขาวรอบอย่างน้อยสี่ช่อง ไม่งั้นกล้องหาขอบไม่เจอ
+         ⛔ ไม่มีปุ่มสแกนในแอป และไม่ใช่เพราะทำไม่ได้ (ข้อ 143.4)
+            ที่อยู่ drift เป็น URL — กล้องของ iOS/Android เปิดลิงก์ให้เองอยู่แล้ว
+            ต่างจาก LINE ID ที่ไม่ใช่ URL จึงต้องมีสแกนเนอร์ในตัว
+            และ BarcodeDetector ไม่มีบน iOS Safari ปุ่มจะตายครึ่งหนึ่งของผู้ใช้ -->
+    <div id="qrWrap"><canvas id="myQR"></canvas></div>
+    <p class="note faint" id="qrHint">ให้เขาส่องด้วยกล้องมือถือ — กล้องจะเปิดให้เอง ไม่ต้องลงแอป</p>
+    <div class="row" style="margin-top:14px">
       <button class="btn" id="btnMyCopy">คัดลอก</button>
       <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
     </div>
-    <div class="rule"></div>
-    <table class="tbl" style="width:100%;border-collapse:collapse;font-size:12px">
+
+    <div class="grp" style="margin-top:26px">รับที่อยู่ที่เขาให้มา</div>
+    <p class="note faint" style="margin:2px 0 8px">วางลิงก์ที่เขาส่งมาทางแชท — ใช้ตอนแชทตัดลิงก์ขาด หรือกดแล้วไม่เปิด</p>
+    <textarea id="mCode" placeholder="วางลิงก์ทั้งอัน หรือเฉพาะรหัสหลัง # ก็ได้"></textarea>
+    <button class="btn wide" id="btnMCode">รับที่อยู่</button>
+
+    <div class="grp" style="margin-top:26px">ที่อยู่ของฉัน</div>
+    <div class="addr" id="myAddr"></div>
+    <table class="tbl" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px">
       <tr><td style="padding:6px 0">ชื่อบนจดหมาย</td><td id="myWho" style="text-align:right;color:var(--dim)"></td></tr>
       <tr><td style="padding:6px 0">ต้นทาง</td><td id="mySub" style="text-align:right;color:var(--dim)"></td></tr>
     </table>
@@ -711,11 +762,12 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   <div class="wrap">
     <h2>drift port</h2>
     <p class="sub" id="phSub"></p>
-    <button class="mrow" id="phMine"><b>รหัส port ของฉัน</b><em>ให้ใครสักคน</em></button>
     <div id="phLetters"></div>
     <div id="phPorts"></div>
-    <div class="rule"></div>
     <p class="note faint" id="phNote"></p>
+    <!-- รหัสอยู่ล่างสุด — ของที่ให้ครั้งเดียวแล้วจบ ไม่ใช่ของที่กลับมาดูทุกวัน (ข้อ 143) -->
+    <div class="rule"></div>
+    <button class="mrow quiet" id="phMine"><b>ที่อยู่ของฉัน</b><em>ให้ใครสักคน</em></button>
   </div>
 </section>
 
@@ -5388,16 +5440,21 @@ function fillPortHome(list,now){
       const mine=withPort(list,pt);
       const nu=mine.filter(L=>L.dir==='in'&&st(L).arrived&&!L.read).length;
       const b=document.createElement('button');
-      b.className='mrow'+(nu?' on':'');
+      b.className='mrow who'+(nu?' on':'');
+      /* ⓘ แอปรู้ที่อยู่และระยะทางอยู่แล้ว — บอกไปเลย แถวคนจะได้ไม่หน้าตาเหมือนแถวจดหมาย
+         และมันคือเรื่องของแอปนี้: ใครอยู่ไกลแค่ไหน จดหมายถึงต้องใช้เวลาเท่าไหร่ */
+      const d=portDist(pt);
+      const where=[pt.p||'', d!=null?Math.round(d).toLocaleString()+' กม.':''].filter(Boolean).join(' · ');
+      const what = nu ? 'ยังไม่ได้เปิด '+nu+' ฉบับ'
+                      : (mine.length ? mine.length+' ฉบับ' : 'ยังไม่เคยเขียนถึงกัน');
       b.innerHTML='<b>'+esc(safeName(pt.n))+'</b><em>'
-        +(nu?'ยังไม่ได้เปิด '+nu:(mine.length?mine.length+' ฉบับ':'ยังไม่เคยเขียนถึงกัน'))+'</em>';
+        +(where?'<span class="w">'+esc(where)+'</span><br>':'')+what+'</em>';
       b.onclick=()=>openPort(pt);
       pb.appendChild(b);
     });
   }
-  $('#phNote').textContent = ports.length
-    ? 'แตะชื่อเพื่อดูฟ้าที่เขาอยู่ และจดหมายที่เขียนถึงกัน'
-    : 'ยังไม่มีใครในรายชื่อ — ให้รหัส port ของคุณกับใครสักคน แล้วขอของเขากลับมา';
+  $('#phNote').textContent = ports.length ? ''
+    : 'ยังไม่มีใครในรายชื่อ — ให้ที่อยู่ของคุณกับใครสักคน แล้วขอของเขากลับมา';
 
   /* ปุ่มบนแถบ: มีของให้ดูถึงจะโผล่ (ข้อ 140.6)
      ⓘ ครั้งแรกที่ปุ่มโผล่ = ครั้งแรกที่เขาเพิ่งเห็นจุดทองบนลูกโลก ความหมายจึงสอนตัวเอง */
@@ -5850,6 +5907,22 @@ $('#mInstall').onclick=openInstall;
    ⚠️ ล้างตัวกรองทุกครั้งที่เข้าท่า ไม่งั้นเปิดจากหน้าคนหนึ่งแล้วกลับมาจะเห็นของเก่าค้าง */
 $('#btnPort').onclick=()=>{ inboxPort=null; refreshDock(); openSheet('porthome'); };
 $('#phMine').onclick=openMine;
+/* ช่องรับที่อยู่ในหน้าแลก — ใช้ ingestPort ตัวเดียวกับที่ #vCode ใช้ (ข้อ 143.4)
+   ⚠️ ที่นี่รับ *ที่อยู่* อย่างเดียว ต่างจาก #vCode ที่รับจดหมายด้วย
+      แต่คนวางมาไม่รู้ว่ามันคนละชนิด จึงต้องรับทั้งสองแบบแล้วบอกให้ถูกว่าได้อะไรมา */
+$('#btnMCode').onclick=async()=>{
+  let s=$('#mCode').value.trim();
+  if(!s) return toast('ยังไม่ได้วางลิงก์');
+  const i=s.indexOf('#'); if(i>=0) s=s.slice(i+1);
+  s=s.replace(/\s+/g,'');
+  if(s[0]==='p'){
+    try{ await ingestPort(s.slice(1)); $('#mCode').value=''; }
+    catch(e){ toast('ลิงก์ไม่ถูกต้องหรือขาดหาย'); }
+    return;
+  }
+  try{ await ingest(s); $('#mCode').value=''; toast('นี่เป็นจดหมาย ไม่ใช่ที่อยู่ — รับไว้แล้ว'); }
+  catch(e){ toast('ลิงก์ไม่ถูกต้องหรือขาดหาย'); }
+};
 
 /* ---------- คิวอาร์ของที่อยู่ (ข้อ 117) ----------
    รุ่น 10 และ 15 · แก้ความผิดพลาดระดับ L · byte mode อย่างเดียว
