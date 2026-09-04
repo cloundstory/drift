@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2233">
+<title>drift — แบบศึกษาชั้นหลังลูกโลก</title>
+<style>
+/* แบบศึกษาชั้นหลังลูกโลก (ข้อ 151) — แสง · เงา · ฝุ่น
+   ⚠️ ไม่คัดลอกตรรกะของแอป — iframe ตัวจริงแล้วแก้ค่าโดยตรง
+      หลักเดียวกับ fog-studies.html (ข้อ 137) และ dark-studies.html (ข้อ 127.3)
+   ⚠️ ฝุ่นไม่วาดถ้าแอปยังไม่รู้ลม — หน้านี้จึงป้อนลมให้ได้เอง ไม่ต้องรอแคช */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;
+  font-family:"Noto Serif Thai",Georgia,serif;background:#0f1420;color:#e8e3d8}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+#stagebox{flex:1;position:relative;min-height:0;background:#000}
+iframe{width:100%;height:100%;border:0;display:block}
+#panel{background:#171d2b;border-top:1px solid rgba(232,227,216,.14);
+  padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);
+  max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#panel.min{max-height:52px;overflow:hidden}
+.hd{display:flex;align-items:center;gap:10px;height:32px}
+.hd b{font-weight:400;font-size:13px;letter-spacing:.2em;flex:1;opacity:.75}
+.tog{background:rgba(232,227,216,.12);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 13px;height:32px;min-width:44px;border-radius:16px}
+.row{display:flex;align-items:center;gap:11px;margin:9px 0}
+.row label{width:112px;font-size:12px;opacity:.7;flex:none}
+.row output{width:56px;text-align:right;font-size:12px;opacity:.55;flex:none;
+  font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;height:44px;background:none;-webkit-appearance:none;appearance:none;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:#e8e3d8;margin-top:-12px}
+input[type=range]::-moz-range-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#e8e3d8}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:11px 0 3px}
+.tabs button{background:rgba(232,227,216,.1);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 12px;height:38px;border-radius:19px}
+.tabs button.on{background:rgba(198,154,84,.34)}
+.acts{display:flex;gap:9px;margin-top:12px}
+.acts button{flex:1;height:44px;border:0;border-radius:9px;font:inherit;font-size:13px;
+  background:rgba(232,227,216,.16);color:inherit}
+.acts button.gold{background:#c69a54;color:#221c10}
+.grp{font-size:11px;letter-spacing:.16em;opacity:.5;margin:16px 0 2px;
+  border-top:1px solid rgba(232,227,216,.12);padding-top:12px}
+.note{font-size:11px;opacity:.5;margin:8px 0 0;line-height:1.6}
+#out{margin-top:10px;font-size:11px;line-height:1.6;opacity:.6;white-space:pre-wrap;
+  font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <!-- ไม่มี src ตอนแรก — ต้องตั้ง localStorage ก่อน ไม่งั้นแอปเปิดหน้าเปิดค้าง (ข้อ 129) -->
+  <div id="stagebox"><iframe id="app"></iframe></div>
+  <div id="panel">
+    <div class="hd"><b>ชั้นหลังลูกโลก</b><button class="tog" id="btnMin">ย่อ</button></div>
+
+    <p class="grp">ฝุ่น — ต้องรู้ลมถึงจะวาด</p>
+    <div class="row"><label>จำนวนจุด</label>
+      <input type="range" id="n" min="0" max="80" value="26"><output id="oN"></output></div>
+    <div class="row"><label>ความทึบต่ำสุด</label>
+      <input type="range" id="a0" min="0" max="300" value="75"><output id="oA0"></output></div>
+    <div class="row"><label>ช่วงความทึบ</label>
+      <input type="range" id="a1" min="0" max="300" value="60"><output id="oA1"></output></div>
+    <div class="row"><label>ขนาดเล็กสุด</label>
+      <input type="range" id="r0" min="2" max="60" value="10"><output id="oR0"></output></div>
+    <div class="row"><label>ช่วงขนาด</label>
+      <input type="range" id="r1" min="0" max="60" value="17"><output id="oR1"></output></div>
+    <div class="row"><label>ความเร็ว ×</label>
+      <input type="range" id="sp" min="0" max="400" value="100"><output id="oSp"></output></div>
+
+    <p class="grp">เงา</p>
+    <div class="row"><label>ความเข้ม</label>
+      <input type="range" id="sh" min="0" max="60" value="13"><output id="oSh"></output></div>
+    <div class="row"><label>เยื้องออกจากขอบ</label>
+      <input type="range" id="so" min="0" max="100" value="34"><output id="oSo"></output></div>
+
+    <p class="grp">แสงพื้นหลัง</p>
+    <div class="row"><label>ฐาน</label>
+      <input type="range" id="li" min="0" max="100" value="30"><output id="oLi"></output></div>
+    <div class="row"><label>ตามดวงอาทิตย์</label>
+      <input type="range" id="lk" min="0" max="100" value="34"><output id="oLk"></output></div>
+
+    <p class="grp">ลมที่ป้อนให้แอป</p>
+    <div class="row"><label>ความเร็ว กม./ชม.</label>
+      <input type="range" id="ws" min="0" max="60" value="18"><output id="oWs"></output></div>
+    <div class="row"><label>ทิศที่ลมมาจาก °</label>
+      <input type="range" id="wd" min="0" max="359" value="225"><output id="oWd"></output></div>
+
+    <div class="tabs">
+      <button id="btnReal">ใช้ลมจริงของเครื่อง</button>
+      <button id="btnNoWind">ไม่รู้ลม (ฝุ่นต้องหาย)</button>
+      <button id="btnTerm">หมุนหาเส้นแบ่งวัน-คืน</button>
+    </div>
+    <div class="tabs">
+      <button id="btnOnlyDust">ดูฝุ่นอย่างเดียว</button>
+      <button id="btnMeasure">วัดว่าเห็นจริงไหม</button>
+    </div>
+
+    <div class="acts">
+      <button id="btnReset">คืนค่าเดิม</button>
+      <button id="btnCopy" class="gold">คัดลอกค่า</button>
+    </div>
+    <p class="note" id="status">กำลังโหลด…</p>
+    <div id="out"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app');
+
+/* ค่าที่แอปใช้อยู่จริง — ปุ่มคืนค่าเดิมกลับมาที่นี่ */
+const BASE = {n:26, a0:75, a1:60, r0:10, r1:17, sp:100, sh:13, so:34, li:30, lk:34, ws:18, wd:225};
+const K = Object.keys(BASE);
+const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
+const cap = k => 'o'+k[0].toUpperCase()+k.slice(1);
+
+let onlyDust=false;
+
+function apply(){
+  const w = app.contentWindow; if(!w) return;
+  const v = V();
+  try{
+    /* ลม — ป้อนตรง ๆ ไม่ต้องรอแคช */
+    w.eval('WIND_HERE='+v.ws+'; WIND_DIR='+v.wd+';');
+
+    /* ฝุ่น — เขียนทับทั้งฟังก์ชัน เพราะค่าพวกนี้ฝังอยู่ในตัวมัน ไม่ได้เป็นตัวแปร */
+    w.eval(`
+      DUST.length = 0;
+      dust = function(ctx,dt){
+        if(WIND_HERE===null || WIND_DIR===null) return;
+        if(!DUST.length)
+          for(let i=0;i<${v.n};i++)
+            DUST.push({x:Math.random(), y:Math.random(),
+                       r:${(v.r0/10).toFixed(2)}+Math.random()*${(v.r1/10).toFixed(2)},
+                       a:.25+Math.random()*.75});
+        const th=(WIND_DIR+180)*RAD;
+        const vx=Math.sin(th), vy=-Math.cos(th);
+        const sp=(.004+clamp(WIND_HERE/45,0,1)*.022)*dt*${(v.sp/100).toFixed(2)};
+        dustT+=dt;
+        ctx.fillStyle='rgba('+SKIN.dust+',1)';
+        DUST.forEach((p,i)=>{
+          p.x+=vx*sp*p.a; p.y+=vy*sp*p.a;
+          if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
+          if(p.y<-.05)p.y=1.05; if(p.y>1.05)p.y=-.05;
+          const a=(${(v.a0/1000).toFixed(4)}+${(v.a1/1000).toFixed(4)}*p.a)*(.72+.28*Math.sin(dustT*.5+i*1.7));
+          ctx.globalAlpha=a;
+          ctx.beginPath(); ctx.arc(p.x*W, p.y*H, p.r, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.globalAlpha=1;
+      };
+    `);
+
+    /* เงา */
+    w.eval(`
+      globeShade = function(ctx){
+        const s=G.pipeV(sunVec());
+        let dx=G.CX-s.x, dy=G.CY-s.y;
+        const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+        const R=G.R, off=R*${(v.so/100).toFixed(3)};
+        const g=ctx.createRadialGradient(G.CX+dx*off, G.CY+dy*off, R*.72,
+                                         G.CX+dx*off, G.CY+dy*off, R*1.42);
+        g.addColorStop(0,   'rgba('+SKIN.shade+',${(v.sh/100).toFixed(3)})');
+        g.addColorStop(.52, 'rgba('+SKIN.shade+',${(v.sh/100*.42).toFixed(4)})');
+        g.addColorStop(1,   'rgba('+SKIN.shade+',0)');
+        ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(G.CX+dx*off, G.CY+dy*off, R*1.42, 0, Math.PI*2); ctx.fill();
+      };
+    `);
+
+    /* แสง */
+    w.eval(`
+      _skyKey='';
+      paintSky = function(){
+        const s=G.pipeV(sunVec());
+        const i = Math.max(0, ${(v.li/100).toFixed(3)} + ${(v.lk/100).toFixed(3)}*s.z);
+        const x=(s.x/W*100), y=(s.y/H*100);
+        const key=x.toFixed(1)+'|'+y.toFixed(1)+'|'+i.toFixed(3);
+        if(key===_skyKey) return;
+        _skyKey=key;
+        const r=document.documentElement.style;
+        r.setProperty('--sun-x', x.toFixed(1)+'%');
+        r.setProperty('--sun-y', y.toFixed(1)+'%');
+        r.setProperty('--sun-i', i.toFixed(3));
+      };
+    `);
+
+    if(onlyDust) w.eval('globeShade=function(){}; G.sphere=function(){};');
+    w.eval('G._key=null; G._nkey=null;');
+    w.renderGlobe();
+  }catch(e){ $('#status').textContent='ปรับไม่ได้: '+e.message; }
+  paintOut();
+}
+
+function paintOut(){
+  const v=V();
+  K.forEach(k => $('#'+cap(k)).textContent = v[k]);
+  $('#out').textContent =
+    'ฝุ่น  n '+v.n+' · a '+(v.a0/1000).toFixed(3)+'-'+((v.a0+v.a1)/1000).toFixed(3)
+    +' · r '+(v.r0/10).toFixed(1)+'-'+((v.r0+v.r1)/10).toFixed(1)+' · sp ×'+(v.sp/100).toFixed(2)
+    +'\nเงา   '+(v.sh/100).toFixed(3)+' · เยื้อง '+(v.so/100).toFixed(2)+'R'
+    +'\nแสง   '+(v.li/100).toFixed(2)+' + '+(v.lk/100).toFixed(2)+'·z'
+    +'\nลม    '+v.ws+' กม./ชม. จากทิศ '+v.wd+'°';
+}
+
+K.forEach(k => $('#'+k).addEventListener('input', apply));
+
+$('#btnMin').addEventListener('click', () => {
+  const p=$('#panel'); p.classList.toggle('min');
+  $('#btnMin').textContent = p.classList.contains('min') ? 'ขยาย' : 'ย่อ';
+});
+
+$('#btnReset').addEventListener('click', () => {
+  K.forEach(k => $('#'+k).value = BASE[k]);
+  onlyDust=false; $('#btnOnlyDust').classList.remove('on');
+  app.src = 'index.html?fresh=' + Date.now();     /* คืน G.sphere ที่ถูกเขียนทับ */
+});
+
+$('#btnCopy').addEventListener('click', async () => {
+  const v=V();
+  const txt =
+    'ฝุ่น: n '+v.n+', alpha '+(v.a0/1000).toFixed(3)+'+'+(v.a1/1000).toFixed(3)+'*a'
+    +', r '+(v.r0/10).toFixed(1)+'+'+(v.r1/10).toFixed(1)+', speed x'+(v.sp/100).toFixed(2)
+    +' | เงา: '+(v.sh/100).toFixed(3)+', off '+(v.so/100).toFixed(2)+'R'
+    +' | แสง: '+(v.li/100).toFixed(2)+'+'+(v.lk/100).toFixed(2)+'z';
+  try{ await navigator.clipboard.writeText(txt); $('#btnCopy').textContent='คัดลอกแล้ว';
+       setTimeout(()=>$('#btnCopy').textContent='คัดลอกค่า',1400); }
+  catch(e){ $('#out').textContent = txt; }
+});
+
+/* ลมจริงของเครื่อง — พิสูจน์ว่าแอปหาลมเจอไหมโดยไม่ต้องเปิดหน้าเขียน */
+$('#btnReal').addEventListener('click', async () => {
+  const w=app.contentWindow;
+  try{
+    w.eval('WIND_HERE=null; WIND_DIR=null;');
+    await w.eval('windHere()');
+    const s = w.eval('[WIND_HERE, WIND_DIR]');
+    if(s[0]===null){
+      $('#status').textContent = '⚠️ แอปหาลมไม่เจอ — ยังไม่ได้ตั้งต้นทาง หรืออยู่นอกกล่องแคชลม';
+    }else{
+      $('#ws').value=Math.round(s[0]); $('#wd').value=Math.round(s[1]||0);
+      $('#status').textContent = 'ลมจริงที่ต้นทางคุณ '+s[0].toFixed(1)+' กม./ชม. จากทิศ '+Math.round(s[1])+'°';
+      apply();
+    }
+  }catch(e){ $('#status').textContent='อ่านลมไม่ได้: '+e.message; }
+});
+
+/* ⛔ ไม่รู้ลม = ต้องไม่มีฝุ่น — กฎเดียวกับกระดาษหายใจ (ข้อ 102.2) */
+$('#btnNoWind').addEventListener('click', () => {
+  const w=app.contentWindow;
+  try{
+    w.eval('WIND_HERE=null; WIND_DIR=null; DUST.length=0;');
+    w.renderGlobe();
+    $('#status').textContent='ตั้งเป็นไม่รู้ลมแล้ว — ฝุ่นต้องหายหมด ถ้ายังเห็นแปลว่าผิดกฎ';
+  }catch(e){}
+});
+
+/* ลูกโลกมักหันซีกกลางวันมาทั้งใบ แล้วจะไม่เห็นความต่างของแสง (ข้อ 129.6) */
+$('#btnTerm').addEventListener('click', () => {
+  try{ app.contentWindow.eval(`(function(){
+    const r0=G.rotY; let best=null;
+    for(let i=0;i<180;i++){ G.rotY=r0+i*Math.PI/90;
+      const z=Math.abs(G.project(G.rotate(sunVec())).z);
+      if(!best||z<best.z) best={z,rot:G.rotY}; }
+    G.rotY=best.rot; G.vY=0;
+  })()`); }catch(e){}
+  apply();
+});
+
+$('#btnOnlyDust').addEventListener('click', () => {
+  onlyDust=!onlyDust;
+  $('#btnOnlyDust').classList.toggle('on', onlyDust);
+  if(onlyDust) apply();
+  else app.src = 'index.html?fresh=' + Date.now();   /* คืน G.sphere ที่ถูกเขียนทับ */
+});
+
+/* ⚠️ "เบามาก" กับ "ไม่มีผลเลย" แยกกันไม่ออกด้วยตา — ต้องวัดจุดเข้มที่สุด ไม่ใช่ค่าเฉลี่ย (ข้อ 150.5) */
+$('#btnMeasure').addEventListener('click', () => {
+  const w=app.contentWindow;
+  try{
+    const r = w.eval(`(function(){
+      const g=w=>document.querySelector('#stage');
+      const full=()=>sctx.getImageData(0,0,W,H).data;
+      const keep=dust; dust=function(){};
+      renderGlobe(); const off=full();
+      dust=keep; for(let i=0;i<30;i++) renderGlobe();
+      const on=full();
+      let max=0,hit=0;
+      for(let i=0;i<off.length;i+=4){ const d=Math.abs(off[i+3]-on[i+3]); if(d>0){hit++; if(d>max)max=d;} }
+      return [max, hit];
+    })()`);
+    const pct = (r[0]/255*100).toFixed(1);
+    $('#status').textContent =
+      'จุดเข้มสุด '+r[0]+'/255 = '+pct+'%  ·  พิกเซลที่มีฝุ่น '+r[1]
+      + (r[0]<10 ? '  ⚠️ ต่ำกว่า 4% = เท่ากับไม่มีอยู่จริง' : '');
+  }catch(e){ $('#status').textContent='วัดไม่ได้: '+e.message; }
+});
+
+app.addEventListener('load', () => {
+  setTimeout(() => {
+    apply();
+    try{
+      const me = app.contentWindow.eval('store.me()');
+      $('#status').textContent = (me && me.lat!=null)
+        ? 'ต้นทาง: '+(me.place||'ไม่ระบุ')+' — กด "ใช้ลมจริงของเครื่อง" เพื่อดูว่าแอปหาลมเจอไหม'
+        : '⚠️ เครื่องนี้ยังไม่ได้ตั้งต้นทาง — ลมจริงจะหาไม่เจอ แต่ปรับด้วยลมสมมติได้';
+    }catch(e){ $('#status').textContent='อ่านสถานะไม่ได้'; }
+  }, 1200);
+});
+
+/* ⚠️ service worker ส่งไฟล์เก่าให้ iframe — ต้องข้ามแคชเสมอ (ข้อ 127.4) */
+navigator.serviceWorker && navigator.serviceWorker.getRegistrations
+  && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+try{
+  localStorage.setItem('lw.v1.intro','1');
+  sessionStorage.setItem('lw.v1.splash','1');
+}catch(e){}
+app.src = 'index.html?fresh=' + Date.now();
+paintOut();
+</script>
+</body>
+</html>
