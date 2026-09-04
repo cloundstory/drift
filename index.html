@@ -393,24 +393,30 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ⓘ ใช้ ::before ไม่เพิ่ม element · ตำแหน่งกับความเข้มมาจากตัวแปรที่ :root
       loop เดียวจึงคุมได้ทั้งหน้าเขียนและหน้าอ่าน
    ⚠️ โผล่เฉพาะโหมดมืด ผูกแกนเดียวกับทุกอย่าง ไม่ดูนาฬิกา (ข้อ 127.1) */
+/* ⛔ ปิดอยู่ชั่วคราว — ต้องมี html.dm ถึงจะทำงาน (ข้อ 136)
+   สวิตช์อยู่ที่ const DARK_MODE ในสคริปต์ ไม่ต้องแก้ CSS ตรงนี้ */
 @media (prefers-color-scheme: dark){
-  #cSheet::before,.ptext::before{
+  html.dm #cSheet::before,
+  html.dm .ptext::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
     background:radial-gradient(128% 94% at var(--cnd-x,50%) var(--cnd-y,-7%),
       rgba(255,206,138,var(--cnd-a,.15)),
       rgba(255,176,96,calc(var(--cnd-a,.15) * .38)) 42%,
       transparent 70%);
   }
-  /* เนื้อหาต้องอยู่เหนือแสง ไม่งั้นตัวหนังสือถูกฉาบจนซีด */
-  #cSheet .ink,.ptext > *{position:relative;z-index:2}
+  html.dm /* เนื้อหาต้องอยู่เหนือแสง ไม่งั้นตัวหนังสือถูกฉาบจนซีด */
+  #cSheet .ink,
+  html.dm .ptext > *{position:relative;z-index:2}
 }
 /* ---------- โหมดมืด (ข้อ 131) ----------
    📌 "แสงน้อยลง" ไม่ใช่ "กลับสี" — แผ่นขาวกลายเป็นแผ่นสว่างบนพื้นเข้ม (ข้อ 127.1)
    ⛔ กระดาษเป็นเกาะของตัวเอง — ทุกอย่างบนกระดาษใช้สีของกระดาษ ไม่ใช่สีของ UI
       กระดาษยังสว่าง หมึกบนมันจึงต้องเข้มเหมือนเดิม (ข้อ 130.3)
    ⚠️ ไม่มีปุ่มสลับในแอป ตั้งใจ — คนที่ชอบมืดตั้งที่ระบบไว้แล้ว (ข้อ 127.1) */
+/* ⛔ ปิดอยู่ชั่วคราว — ต้องมี html.dm ถึงจะทำงาน (ข้อ 136)
+   สวิตช์อยู่ที่ const DARK_MODE ในสคริปต์ ไม่ต้องแก้ CSS ตรงนี้ */
 @media (prefers-color-scheme: dark){
-  :root{
+  html.dm{
     --sheet-rgb: 231,224,207;
     --ink-rgb: 228,226,221;
     --gold-rgb: 208,179,128;
@@ -432,27 +438,39 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     --dim: rgba(var(--ink-rgb),.62);
     --faint: rgba(var(--ink-rgb),.42);
   }
-  /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก */
+  html.dm /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก */
   .btn{background:rgba(var(--sheet-rgb),.13)}
-  .btn:active,.chip.sel{background:rgba(var(--sheet-rgb),.26)}
-  .pbtn{background:rgba(var(--sheet-rgb),.17)}
-  .chip,.fc,.pick,.link,.addr,.shade{background:rgba(var(--sheet-rgb),.10)}
-  .pick.on{background:rgba(var(--sheet-rgb),.20)}
-  .hit,#cHits .hit{background:rgba(var(--sheet-rgb),.10)}
-  .hit:active{background:rgba(var(--sheet-rgb),.22)}
-  input,textarea{background:rgba(var(--sheet-rgb),.10)}
-  input:focus,textarea:focus{background:rgba(var(--sheet-rgb),.16)}
-  #toast{background:rgba(var(--sheet-rgb),.94);color:var(--bg-a)}
-  #splash{background:var(--bg-a)}
-
-  /* ---- กระดาษเป็นเกาะ (ข้อ 130.3) ----
+  html.dm .btn:active,
+  html.dm .chip.sel{background:rgba(var(--sheet-rgb),.26)}
+  html.dm .pbtn{background:rgba(var(--sheet-rgb),.17)}
+  html.dm .chip,
+  html.dm .fc,
+  html.dm .pick,
+  html.dm .link,
+  html.dm .addr,
+  html.dm .shade{background:rgba(var(--sheet-rgb),.10)}
+  html.dm .pick.on{background:rgba(var(--sheet-rgb),.20)}
+  html.dm .hit,
+  html.dm #cHits .hit{background:rgba(var(--sheet-rgb),.10)}
+  html.dm .hit:active{background:rgba(var(--sheet-rgb),.22)}
+  html.dm input,
+  html.dm textarea{background:rgba(var(--sheet-rgb),.10)}
+  html.dm input:focus,
+  html.dm textarea:focus{background:rgba(var(--sheet-rgb),.16)}
+  html.dm #toast{background:rgba(var(--sheet-rgb),.94);color:var(--bg-a)}
+  html.dm #splash{background:var(--bg-a)}
+  html.dm /* ---- กระดาษเป็นเกาะ (ข้อ 130.3) ----
      ⛔ อย่าให้กฎข้างบนทับตรงนี้ — ตัวหนังสือจะหายไปกับกระดาษ */
-  #cSheet input,#cSheet textarea,#cWho .who{background:transparent;color:rgba(var(--paper-ink-rgb),.92)}
-  #cSheet input:focus,#cSheet textarea:focus{background:transparent}
-  #cSheet input::placeholder,#cSheet textarea::placeholder{color:rgba(var(--paper-ink-rgb),.38)}
-  .wline .lb{color:rgba(var(--paper-ink-rgb),.9)}
-  .ptext{color:rgba(var(--paper-ink-rgb),.9)}
-  .sig{color:rgba(var(--paper-ink-rgb),.6)}
+  #cSheet input,
+  html.dm #cSheet textarea,
+  html.dm #cWho .who{background:transparent;color:rgba(var(--paper-ink-rgb),.92)}
+  html.dm #cSheet input:focus,
+  html.dm #cSheet textarea:focus{background:transparent}
+  html.dm #cSheet input::placeholder,
+  html.dm #cSheet textarea::placeholder{color:rgba(var(--paper-ink-rgb),.38)}
+  html.dm .wline .lb{color:rgba(var(--paper-ink-rgb),.9)}
+  html.dm .ptext{color:rgba(var(--paper-ink-rgb),.9)}
+  html.dm .sig{color:rgba(var(--paper-ink-rgb),.6)}
 }
 </style>
 </head>
@@ -5382,7 +5400,7 @@ const BARMARK_D='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAYAAACoh
    driftMark ยังอยู่ในไฟล์เผื่ออยากกลับไปใช้ — ไม่มีที่ไหนเรียกแล้ว */
 function paintIntroMark(){
   const el=$('#introMark'); if(!el) return;
-  const want = matchMedia('(prefers-color-scheme: dark)').matches ? INTROMARK_D : INTROMARK;
+  const want = (DARK_MODE && SCHEME.matches) ? INTROMARK_D : INTROMARK;
   if(el.getAttribute('src')!==want) el.src=want;
 }
 
@@ -5407,7 +5425,7 @@ function startSplash(){
   const im=$('#spMark');
   im.addEventListener('load', ()=>{ im.classList.add('on'); setTimeout(hideSplash, SPLASH_MS); });
   im.addEventListener('error', ()=>{ setTimeout(hideSplash, SPLASH_MS); });
-  im.src = matchMedia('(prefers-color-scheme: dark)').matches ? INTROMARK_D : INTROMARK;
+  im.src = (DARK_MODE && SCHEME.matches) ? INTROMARK_D : INTROMARK;
   /* แตะข้ามได้ — คนที่รีบไม่ควรถูกบังคับให้รอ */
   ['pointerdown','keydown'].forEach(ev=>addEventListener(ev, hideSplash, {once:true}));
 }
@@ -6135,7 +6153,7 @@ function candleSet(x,y,a){
   r.setProperty('--cnd-a', a.toFixed(3));
 }
 function candleStep(){
-  if(!SCHEME.matches || (sheetOpen!=='compose' && sheetOpen!=='read')){ cndRaf=null; return; }
+  if(!DARK_MODE || !SCHEME.matches || (sheetOpen!=='compose' && sheetOpen!=='read')){ cndRaf=null; return; }
   cndRaf=requestAnimationFrame(candleStep);
   if(WIND_HERE===null){ candleSet(50,-7,.15); return; }   /* ไม่รู้ลม = เปลวนิ่ง */
   const w=clamp(WIND_HERE/45,0,1);
@@ -7445,12 +7463,19 @@ function applyScheme(dark){
   try{ renderGlobe(); }catch(e){}
   try{ repaintPaper(); }catch(e){}
 }
+/* ⛔ โหมดมืดปิดอยู่ชั่วคราว (ข้อ 136) — โค้ดทั้งหมดยังอยู่ครบ
+   เปลี่ยนเป็น true แล้วเปิดกลับได้ทันที ไม่ต้องแตะอย่างอื่นเลย
+   ⓘ ปิดแล้วแอปเป็นโหมดสว่างเสมอ ไม่ว่าเครื่องจะตั้งไว้ยังไง */
+const DARK_MODE = false;
+
 const SCHEME = matchMedia('(prefers-color-scheme: dark)');
 let schemeNow = null;
 function syncScheme(){
-  if(SCHEME.matches === schemeNow) return;   /* ไม่วาดใหม่ถ้าไม่ได้เปลี่ยนจริง */
-  schemeNow = SCHEME.matches;
-  applyScheme(schemeNow);
+  const on = DARK_MODE && SCHEME.matches;
+  if(on === schemeNow) return;   /* ไม่วาดใหม่ถ้าไม่ได้เปลี่ยนจริง */
+  schemeNow = on;
+  document.documentElement.classList.toggle('dm', on);
+  applyScheme(on);
 }
 SCHEME.addEventListener('change', syncScheme);
 /* ⚠️ event เดียวไม่พอ — คนสลับโหมดนอกแอปแล้วค่อยกลับมา
