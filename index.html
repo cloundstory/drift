@@ -301,7 +301,6 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #qrWrap{display:flex;justify-content:center;margin:18px 0 8px}
 #qrWrap canvas{display:block;border-radius:10px;padding:12px;background:#fff;
   box-shadow:0 1px 14px rgba(var(--ink-rgb),.10)}
-#qrHint{text-align:center;margin:0}
 #mCode{width:100%;min-height:74px;font-family:ui-monospace,Menlo,monospace;font-size:12px;
   line-height:1.5;padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px;
   background:rgba(var(--sheet-rgb),.5);color:inherit;resize:none}
@@ -312,13 +311,30 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #mine .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
   padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
 
+/* ---------- ทดลอง: ระบบขนาดตัวอักษร เฉพาะหน้า drift port (ข้อ 145) ----------
+   ⚠️ ปัญหาที่วัดได้ทั้งแอป: ใช้ขนาดต่างกัน **16 ขนาด** ในช่วง 10-21px
+      10/10.5 · 11/11.5 · 12/12.5 · 13/13.5 · 14/14.5 · 15/15.5 — ตาแยกไม่ออกสักคู่
+      แต่ทำให้ไม่มีระบบ ค่าถูกเลือกทีละจุดตามความรู้สึกตอนนั้น
+   📌 ห้าขนาดที่ห่างกันจริง ดีกว่าสิบหกขนาดที่ไม่มีใครเห็นความต่าง
+   ⓘ ยังไม่ขยายไปทั้งแอป — ทดลองหน้าเดียวก่อน */
+#porthome h2{font-size:22px;letter-spacing:.01em;margin-bottom:3px}
+#porthome .sub{font-size:12.5px;margin-bottom:30px}
+#porthome .mrow b{font-size:15px}
+#porthome .mrow em{font-size:11.5px}
+
 /* ---------- หน้า drift port — ลำดับชั้นทางสายตา (ข้อ 143) ----------
    ⚠️ ปัญหาที่วัดได้: หัวเรื่อง 15px แต่ทุกแถว 14.5px — ต่างกัน 0.5px
       หกแถวสูง 57px เท่ากันเป๊ะเรียงติดกัน 342px ตาไม่มีที่เกาะ
       และหัวกลุ่ม 10px จาง .38 *เบากว่าเนื้อหา* ทั้งที่มันคือตัวแบ่ง */
 #porthome .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
-  margin:26px 0 4px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
-#porthome .grp:first-child{margin-top:14px}
+  margin:0 0 4px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+/* ⚠️ หัวกลุ่มทั้งสองเป็น :first-child ของ container ตัวเอง (#phLetters / #phPorts)
+      กฎ :first-child จึงกินทั้งคู่ ระยะเลยเท่ากันหมดทั้งที่ตั้ง 26px ไว้ — วัดได้ 14/14
+   📌 ระยะที่ต่างกันต้องมี *เหตุผล* ไม่ใช่บังเอิญ:
+      กลุ่มแรกต่อจากหัวเรื่อง ระยะสั้นได้เพราะยังเป็นเรื่องเดียวกัน
+      กลุ่มที่สองต้องห่างกว่า เพราะมันบอกว่า "จบเรื่องจดหมาย ขึ้นเรื่องคน" */
+#phLetters .grp{margin-top:6px}
+#phPorts .grp{margin-top:38px}
 /* จุดทองหน้าแถวที่รออยู่ — ตาจับได้ทันทีว่าต้องมองตรงไหน (จุดเดียวกับทั้งแอป ข้อ 106) */
 #porthome .mrow{position:relative;padding-left:15px}
 #porthome .mrow.on::before{content:'';position:absolute;left:1px;top:50%;
@@ -686,8 +702,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
             ที่อยู่ drift เป็น URL — กล้องของ iOS/Android เปิดลิงก์ให้เองอยู่แล้ว
             ต่างจาก LINE ID ที่ไม่ใช่ URL จึงต้องมีสแกนเนอร์ในตัว
             และ BarcodeDetector ไม่มีบน iOS Safari ปุ่มจะตายครึ่งหนึ่งของผู้ใช้ -->
+    <!-- ⓘ ไม่มีคำบรรยายใต้ QR — QR ตัวใหญ่กลางหน้าบอกตัวเองว่าให้เอาไปส่อง (ข้อ 144) -->
     <div id="qrWrap"><canvas id="myQR"></canvas></div>
-    <p class="note faint" id="qrHint">ให้เขาส่องด้วยกล้องมือถือ</p>
     <div class="row" style="margin-top:14px">
       <button class="btn" id="btnMyCopy">คัดลอก</button>
       <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
