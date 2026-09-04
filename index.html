@@ -103,7 +103,16 @@ body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;trans
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{
-  background:linear-gradient(165deg,var(--bg-a),var(--bg-b));
+  /* ---------- แสงพื้นหลังมาจากดวงอาทิตย์จริง (ข้อ 150) ----------
+     ⚠️ เดิมเป็น linear-gradient 165deg ตายตัว — ชิ้นเดียวในแอปที่ไม่รู้อะไรเลย
+        ทั้งที่ลม อากาศ เวลา และเส้นแบ่งวัน-คืน มาจากของจริงหมด
+     ⓘ --sun-x/-y มาจาก G.pipeV(sunVec()) คือจุดที่ดวงอาทิตย์อยู่เหนือศีรษะพอดี
+        --sun-i คือความแรง — 0 เมื่อดวงอาทิตย์อยู่อีกซีกของโลก
+     📌 ค่าตั้งต้นคือกลางบนของจอ เผื่อ JS ยังไม่ทำงาน หน้าจะได้ไม่ดำ */
+  background:
+    radial-gradient(90% 70% at var(--sun-x,50%) var(--sun-y,-10%),
+      rgba(255,252,244,var(--sun-i,0)), rgba(255,252,244,0) 62%),
+    linear-gradient(165deg,var(--bg-a),var(--bg-b));
   color:var(--txt);
   font-family:"Noto Serif Thai",Georgia,"Times New Roman",serif;
   font-size:var(--t-body);line-height:1.8;
@@ -3279,6 +3288,11 @@ const SKIN = {
      ถูกตามฟิสิกส์ แต่ในโหมดมืดมันจมหายเพราะฐานต่ำอยู่แล้ว จึงต้องมีพื้นให้ยืน */
   dayEdge: 0.06,
 
+  /* ---- ชั้นหลังลูกโลก (ข้อ 150) ----
+     เงา = ความมืดที่เบียดออกจากขอบฝั่งตรงข้ามดวงอาทิตย์ · ฝุ่น = อากาศที่ลอยตามลมจริง */
+  shade: '96,102,116',
+  dust:  '120,126,138',
+
   /* ---- อากาศบนลูกโลก (ข้อ 135) ----
      ⚠️ ทั้งหมดเป็นสีเข้มที่วาดทับผิวโลก — ได้ผลตอนผิวสว่าง
         พอโหมดมืดหรี่ผิวลง ความต่างก็หายตาม (เมฆ 27 → 5.6)
@@ -5190,9 +5204,85 @@ function seedOf(id){
 const llOf = p => ({lat:p.la, lng:p.lo});
 
 /* ---------- โลก ---------- */
+/* ---------- พื้นหลังที่รู้ว่าแสงมาจากไหน (ข้อ 150) ----------
+   ⚠️ อัปเดตเฉพาะตอนค่าขยับจริง — ตั้ง CSS variable ทุกเฟรมบังคับให้เบราว์เซอร์
+      วาดพื้นหลังใหม่ทั้งจอ ซึ่งแพงกว่าตัวลูกโลกเสียอีก
+   ⓘ ดวงอาทิตย์ขยับช้ามาก (SUN_BUCKET 5 นาที) แต่ *การหมุนลูกโลก* ทำให้จุดนี้เลื่อน
+      จึงต้องตามการหมุนด้วย ไม่ใช่ตามเวลาอย่างเดียว */
+let _skyKey='';
+function paintSky(){
+  const s=G.pipeV(sunVec());
+  /* z<0 = ดวงอาทิตย์อยู่อีกซีก แสงจึงอ่อนลงตามความลึก ไม่ใช่ดับทันที */
+  const i = s.z>0 ? .30+.34*s.z : Math.max(0, .30+.34*s.z);
+  const x = (s.x/W*100), y=(s.y/H*100);
+  const key = x.toFixed(1)+'|'+y.toFixed(1)+'|'+i.toFixed(3);
+  if(key===_skyKey) return;
+  _skyKey=key;
+  const r=document.documentElement.style;
+  r.setProperty('--sun-x', x.toFixed(1)+'%');
+  r.setProperty('--sun-y', y.toFixed(1)+'%');
+  r.setProperty('--sun-i', i.toFixed(3));
+}
+
+/* ---------- เงาที่ทำให้ลูกโลกลอยขึ้นจากพื้น (ข้อ 150) ----------
+   ⛔ ไม่ใช่เงาตกบนพื้น เพราะฉากนี้ไม่มีพื้น — ลูกโลกลอยอยู่ในที่ว่าง
+      เงาจึงเป็นความมืดที่ *เบียดออกจากขอบ* ฝั่งตรงข้ามดวงอาทิตย์
+      ทำให้ตาอ่านว่าลูกโลกมีปริมาตรและอยู่หน้าพื้นหลัง ไม่ใช่พิมพ์ติดอยู่บนนั้น */
+function globeShade(ctx){
+  const s=G.pipeV(sunVec());
+  let dx=G.CX-s.x, dy=G.CY-s.y;                 /* ทิศตรงข้ามดวงอาทิตย์ */
+  const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+  const R=G.R, off=R*.34;
+  const g=ctx.createRadialGradient(G.CX+dx*off, G.CY+dy*off, R*.72,
+                                   G.CX+dx*off, G.CY+dy*off, R*1.42);
+  g.addColorStop(0,   'rgba('+SKIN.shade+',.13)');
+  g.addColorStop(.52, 'rgba('+SKIN.shade+',.055)');
+  g.addColorStop(1,   'rgba('+SKIN.shade+',0)');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.arc(G.CX+dx*off, G.CY+dy*off, R*1.42, 0, Math.PI*2); ctx.fill();
+}
+
+/* ---------- ฝุ่นที่ลอยตามลมจริงที่ต้นทางของผู้ใช้ (ข้อ 150) ----------
+   ⚠️ ไม่รู้ลม = ไม่มีฝุ่น — กฎเดียวกับกระดาษหายใจ (ข้อ 102.2) และแสงเทียน (ข้อ 134)
+      ของประดับที่ขยับเองโดยไม่อ้างอิงอะไรคือสิ่งที่แอปนี้ไม่ทำ
+   ⓘ 22 จุด ความทึบสูงสุด .07 — ต้องอ่านเป็น "อากาศ" ไม่ใช่ "ฝุ่นบนหน้าจอ" */
+const DUST=[];
+let dustT=0;
+function dust(ctx,dt){
+  if(WIND_HERE===null || WIND_DIR===null) return;
+  if(!DUST.length)
+    for(let i=0;i<26;i++)
+      DUST.push({x:Math.random(), y:Math.random(), r:1+Math.random()*1.7, a:.25+Math.random()*.75});
+  /* dir = ทิศที่ลม *มาจาก* — ที่ฝุ่นเคลื่อนไปคือด้านตรงข้าม */
+  const th=(WIND_DIR+180)*RAD;
+  const vx=Math.sin(th), vy=-Math.cos(th);
+  const sp=(.004+clamp(WIND_HERE/45,0,1)*.022)*dt;
+  dustT+=dt;
+  ctx.fillStyle='rgba('+SKIN.dust+',1)';
+  DUST.forEach((p,i)=>{
+    p.x+=vx*sp*p.a; p.y+=vy*sp*p.a;
+    if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
+    if(p.y<-.05)p.y=1.05; if(p.y>1.05)p.y=-.05;
+    /* หายใจช้า ๆ ไม่พร้อมกัน — ฝุ่นจริงไม่กะพริบเป็นจังหวะเดียว */
+    /* ⚠️ วัดแล้ว: .030-.070 ให้จุดเข้มสุดแค่ 7/255 = 2.7% ซึ่งเท่ากับไม่มีอยู่จริง
+       .075-.135 ได้ราว 25/255 = เห็นว่าอากาศมีอะไรลอยอยู่ แต่ไม่แย่งสายตาจากลูกโลก */
+    const a=(.075+.060*p.a)*(.72+.28*Math.sin(dustT*.5+i*1.7));
+    ctx.globalAlpha=a;
+    ctx.beginPath(); ctx.arc(p.x*W, p.y*H, p.r, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+}
+
+let _lastFrame=0;
 function renderGlobe(){
   sctx.clearRect(0,0,W,H);
   G.step();
+  paintSky();
+  /* ⚠️ ชั้นหลังลูกโลก วาดก่อนเสมอ — ฝุ่นอยู่ไกลสุด แล้วเงา แล้วค่อยลูกโลกทับ */
+  const now=performance.now();
+  const dt=Math.min(.05,(now-_lastFrame)/1000)||0; _lastFrame=now;
+  dust(sctx,dt);
+  globeShade(sctx);
   const list=store.letters();
   /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
   if(PREVIEW){
@@ -6447,7 +6537,7 @@ $('#cBody').addEventListener('input',()=>{
 });
 
 /* ---------- องก์ Write — กระดาษหายใจ และคีย์บอร์ดมือถือ (ข้อ 63) ---------- */
-let penDown=false, wTick=0, wRaf=null, WIND_HERE=null;
+let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null;
 
 function paintWritePaper(tries){
   const cv=$('#cPaper'), box=$('#cSheet');
@@ -6552,6 +6642,8 @@ async function windHere(){
      บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
   const w=await wxAt(me.lat,me.lng);
   if(w && typeof w.spd==='number') WIND_HERE=w.spd;
+  /* ⓘ wxAt คืนทิศมาด้วยตลอด แค่ไม่เคยมีใครเก็บ — ฝุ่นในพื้นหลังต้องใช้ (ข้อ 150) */
+  if(w && typeof w.dir==='number') WIND_DIR=w.dir;
 }
 
 /* วางปากกา = เลิกพิมพ์ ไม่ใช่กดปุ่ม — จับจาก focus/blur ของช่องบนกระดาษ */
@@ -7817,6 +7909,8 @@ const DARK_SKIN = {
   dayA:3.2, nightA:3.0,
   nightBg:'18,21,32', nightG0:'15,18,29', nightG1:'17,20,31', nightG2:'19,22,33',
   nightGrid:'108,117,129', nightCoast:'118,123,131', termLine:'121,113,99',
+  /* กลับขั้ว: พื้นมืดแล้ว เงาที่มืดกว่าอ่านไม่ออก · ฝุ่นต้องสว่างขึ้นถึงจะเห็น (ข้อ 150) */
+  shade:'8,10,16', dust:'214,220,232',
   /* กลับขั้ว: ผิวโลกหรี่ลงแล้ว อากาศจึงต้องสว่างขึ้นถึงจะยังอ่านออก (ข้อ 135)
      ⓘ iceDot สว่างอยู่แล้วทั้งสองโหมด ไม่ต้องเปลี่ยน */
   cloud:'214,220,232', rain:'224,230,242', ice:'218,226,240',
