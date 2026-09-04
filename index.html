@@ -232,24 +232,32 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 /* ---------- ปุ่ม drift port บนแถบ (ข้อ 140.6) ----------
    ⚠️ margin ลบเท่ากับ .mbtn เป๊ะ ๆ ไม่งั้นแถบสูงขึ้นและดันลูกโลกลง
       ปุ่ม 44px กินความสูงจริงแค่ 28px เท่าโลโก้ (คอมเมนต์ที่ .brand img) */
-.bar-r{display:flex;align-items:center;gap:2px}
+.bar-r{display:flex;align-items:center;gap:0}
+/* ⚠️ พื้นที่แตะต้องเหลือ 44px เต็ม ห้ามย่อ — ขยับ *ไอคอน* ไปชิดขวาในปุ่มแทน
+      แล้วปุ่มสองอันก็ไม่ทับกัน กดผิดไม่ได้ (ต้องการโดยกอล์ฟ: ให้ใกล้ 3 ขีดอีกหน่อย) */
 .pbtn2{position:relative;width:44px;height:44px;margin:-8px 0;display:flex;
-  align-items:center;justify-content:center;padding:0}
+  align-items:center;justify-content:flex-end;padding:0 2px 0 0}
 .pbtn2[hidden]{display:none}
 .pbtn2 svg{width:23px;height:23px;display:block;overflow:visible}
-/* กระดาษ: พื้นทึบพอให้อ่านออกบนแถบ · เส้นหนา 1.5 เท่าขีดของ .mbtn (ข้อ 124.5) */
-.pbtn2 .pg{fill:rgba(var(--sheet-rgb),.92);stroke:rgba(var(--ink-rgb),.62);
-  stroke-width:1.5;stroke-linejoin:round}
-.pbtn2 .pl{fill:none;stroke:rgba(var(--ink-rgb),.42);stroke-width:1.4;stroke-linecap:round}
-/* ---- จุดทองทำหน้าที่บอกสถานะเอง ----
+/* วงแหวน = ท่า — หนา 1.7 ไม่ใช่เส้นบาง ไม่งั้นจางหายที่ขนาดจริง (ข้อ 124.5) */
+.pbtn2 .pr{fill:none;stroke:rgba(var(--ink-rgb),.74);stroke-width:1.7}
+/* ---- จุดทองกลางวงทำหน้าที่บอกสถานะ ----
    ⛔ ลองใส่ตัวเลขข้างไอคอนแล้ว **ไม่เอา** — ที่ 24px ไม่มีที่ให้มันยืน
-      วางมุมปุ่มก็ลอยห่างจนดูไม่เกี่ยวกัน (วัดได้ 9.5px) · ขยับเข้ามาก็ชนจุดทองพอดี
+      วางมุมปุ่มก็ลอยห่างจนดูไม่เกี่ยวกัน (วัดได้ 9.5px) · ขยับเข้ามาก็ชนจุดพอดี
    📌 และแอปนี้ไม่มีตัวเลขเร่งเร้าที่ไหนเลยสักจุด — จำนวนไปบอกในหน้า drift port ได้
-   ⓘ จาง = มีจดหมาย (identity ข้อ 106) · เต็ม = มีฉบับที่ยังไม่ได้เปิด
+   ⓘ จาง = ท่ายังอยู่แต่ไม่มีอะไรใหม่ · ทอง + วงแสง = มีฉบับที่ยังไม่ได้เปิด
       หลักเดียวกับ .mrow.on ที่ใช้สีทองบอก "ยังไม่ได้เปิด" อยู่แล้ว */
 .pbtn2 .pd{fill:rgba(var(--ink-rgb),.30);transition:fill .3s}
 .pbtn2.new .pd{fill:var(--gold)}
-.pbtn2:active .pg{stroke:rgba(var(--ink-rgb),.85)}
+/* วงแสงรอบจุด — ลอกจาก node() ที่วาดบนลูกโลกจริง (createRadialGradient สามสต็อป)
+   ⓘ โผล่เฉพาะตอนมีของใหม่ จึงเป็นตัวบอกสถานะ ไม่ใช่ของประดับที่ติดอยู่ตลอด */
+.pbtn2 .h0,.pbtn2 .h1,.pbtn2 .h2{stop-color:var(--gold)}
+.pbtn2 .h0{stop-opacity:0}
+.pbtn2 .h1{stop-opacity:0}
+.pbtn2 .h2{stop-opacity:0}
+.pbtn2.new .h0{stop-opacity:.30}
+.pbtn2.new .h1{stop-opacity:.14}
+.pbtn2:active .pr{stroke:rgba(var(--ink-rgb),.92)}
 
 .mbtn{width:44px;height:44px;margin:-8px -10px -8px 0;display:flex;flex-direction:column;
   align-items:flex-end;justify-content:center;gap:4.5px;padding:0 10px 0 0}
@@ -504,21 +512,27 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 <div class="veil">
   <header class="bar">
     <div class="brand"><img id="brandMark" alt=""><span>drift</span></div>
-    <!-- ปุ่ม drift port (ข้อ 140.6)
-         ⛔ ห้ามใช้ซองจดหมาย (ข้อ 60 · 107.3) ซึ่งเป็นสัญลักษณ์ที่คนคุ้นที่สุดพอดี
-         ⚠️ กระดาษต้อง *ตั้ง* ไม่ใช่นอนราบ — ทรงที่มี perspective เหลือหนา 3-4px
-            แล้วเบลอเป็นก้อนที่ขนาดจริง (บทเรียนซ้ำข้อ 124.5)
-         ⓘ จุดทอง = จดหมาย ตามที่ข้อ 106 นิยามไว้แล้ว · วงกลมตันไม่จางที่ขนาดเล็ก
+    <!-- ปุ่ม drift port (ข้อ 142)
+         📌 วงกลม = คน = ท่า — เป็นคำที่แอปสร้างไว้เองแล้ว ไม่ได้ยืมของใครมา
+            G.node() วาดปลายทางของทุกฉบับเป็นวงกลมกลวง + วงแสงรอบ
+            คอมเมนต์ตรงนั้นเขียนไว้เองว่า "มันคือคนสองคนในเรื่อง"
+         ⛔ ห้ามกลับไปใช้กระดาษ — กระดาษแปลว่า *จดหมาย* แต่หน้านี้คือ *ท่าเรือ*
+            และมันซ้ำกับตัวจดหมายเองซึ่งเป็นของคนละอย่างกัน
+         ⛔ ห้ามใช้ซองจดหมาย (ข้อ 60 · 107.3)
          ⚠️ โผล่เฉพาะเมื่อมีอะไรให้ดู — ห้ามมีปุ่มที่กดแล้วว่าง -->
     <div class="bar-r">
       <button class="pbtn2" id="btnPort" aria-label="drift port" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <g transform="rotate(-9 12 12)">
-            <path class="pg" d="M6.4 4.2h7.4l3.4 3.4V19.6H6.4z"/>
-            <path class="pl" d="M13.8 4.2v3.4h3.4"/>
-            <path class="pl" d="M8.9 12.1h6.1M8.9 15.4h4.2"/>
-          </g>
-          <circle class="pd" cx="18.1" cy="5.2" r="3.05"/>
+          <defs>
+            <radialGradient id="portHalo">
+              <stop class="h0" offset="0"/>
+              <stop class="h1" offset=".55"/>
+              <stop class="h2" offset="1"/>
+            </radialGradient>
+          </defs>
+          <circle class="ph" cx="12" cy="12" r="11.6" fill="url(#portHalo)"/>
+          <circle class="pr" cx="12" cy="12" r="6.2"/>
+          <circle class="pd" cx="12" cy="12" r="2.6"/>
         </svg>
       </button>
       <button class="mbtn" id="btnMenu" aria-label="ตั้งค่า"><i></i><i></i><i></i></button>
