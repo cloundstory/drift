@@ -308,8 +308,9 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   color:rgba(var(--ink-rgb),.34)}
 #mCode:focus{outline:0;border-color:rgba(var(--gold-rgb),.55)}
 #mine .btn.wide{margin-top:8px}
-#mine .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
-  padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+/* หัวข้อรองชุดเดียวกับหน้า drift port — ต้องตรงกัน ไม่งั้นสองหน้าพูดคนละภาษา (ข้อ 146) */
+#mine .grp{font-size:17px;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
+  padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
 
 /* ---------- ทดลอง: ระบบขนาดตัวอักษร เฉพาะหน้า drift port (ข้อ 145) ----------
    ⚠️ ปัญหาที่วัดได้ทั้งแอป: ใช้ขนาดต่างกัน **16 ขนาด** ในช่วง 10-21px
@@ -326,8 +327,13 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ⚠️ ปัญหาที่วัดได้: หัวเรื่อง 15px แต่ทุกแถว 14.5px — ต่างกัน 0.5px
       หกแถวสูง 57px เท่ากันเป๊ะเรียงติดกัน 342px ตาไม่มีที่เกาะ
       และหัวกลุ่ม 10px จาง .38 *เบากว่าเนื้อหา* ทั้งที่มันคือตัวแบ่ง */
-#porthome .grp{font-size:11px;letter-spacing:.14em;color:var(--dim);
-  margin:0 0 4px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+/* ⚠️ เดิมตั้ง 11px .14em — **ผิดสองอย่างพร้อมกัน** (ข้อ 146)
+   1. หัวข้อรองเล็กกว่าของที่มันครอบ 27% (11 vs 15) — สิ่งที่ครอบต้องไม่เล็กกว่าสิ่งที่ถูกครอบ
+      เผลอหยิบ pattern "label ตัวจิ๋ว ช่องไฟกว้าง" มาใช้ ทั้งที่นี่คือ *หัวข้อ* ไม่ใช่ label
+   2. .14em กับข้อความไทย ละเมิดข้อ 110.1 ที่ตั้งไว้เองว่า **ไทยไม่เกิน .04em**
+      สระลอยกับวรรณยุกต์หลุดจากพยัญชนะ — "จดหมาย" แตกเป็นชิ้น */
+#porthome .grp{font-size:17px;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
+  margin:0 0 6px;padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
 /* ⚠️ หัวกลุ่มทั้งสองเป็น :first-child ของ container ตัวเอง (#phLetters / #phPorts)
       กฎ :first-child จึงกินทั้งคู่ ระยะเลยเท่ากันหมดทั้งที่ตั้ง 26px ไว้ — วัดได้ 14/14
    📌 ระยะที่ต่างกันต้องมี *เหตุผล* ไม่ใช่บังเอิญ:
