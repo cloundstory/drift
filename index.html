@@ -385,6 +385,15 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 /* แถวที่อยู่ของเรา — เงียบกว่าทุกอย่าง เพราะใช้นาน ๆ ครั้ง */
 #porthome .mrow.quiet b{color:var(--dim);font-size:var(--t-sub)}
 
+/* การ์ดเริ่มต้นสำหรับคนที่ยังไม่มีอะไรเลย (ข้อ 149)
+   ⓘ ใช้ .fc ที่มีอยู่แล้ว ไม่สร้างหน้าตาใหม่ — แค่ทำให้กดได้และเป็นของชิ้นเดียวในหน้า */
+#phStart{display:block;width:100%;text-align:left;padding:18px 18px 20px;margin:6px 0 0}
+#phStart[hidden]{display:none}
+#phStart b{display:block;font-weight:700;font-size:var(--t-head);
+  letter-spacing:.03em;margin-bottom:6px}
+#phStart span{display:block;font-size:var(--t-sub);color:var(--dim);line-height:1.85}
+#phStart:active{background:rgba(var(--sheet-rgb),.72)}
+
 
 /* ---------- องก์ Write — กระดาษจริง (ข้อ 63) ----------
    ฟอร์มหายไป กลายเป็นส่วนต่าง ๆ ของจดหมายเอง — ชื่อผู้รับอยู่ตรงที่มันควรอยู่บนจดหมาย
@@ -736,8 +745,16 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
             ต่างจาก LINE ID ที่ไม่ใช่ URL จึงต้องมีสแกนเนอร์ในตัว
             และ BarcodeDetector ไม่มีบน iOS Safari ปุ่มจะตายครึ่งหนึ่งของผู้ใช้ -->
     <!-- ⓘ ไม่มีคำบรรยายใต้ QR — QR ตัวใหญ่กลางหน้าบอกตัวเองว่าให้เอาไปส่อง (ข้อ 144) -->
+    <!-- ⚠️ ที่อยู่ที่ยังไม่มีต้นทาง = ลิงก์ที่ปลายทางปฏิเสธเงียบ ๆ (ข้อ 149.2)
+         ต้องกันไว้ตรงนี้ ไม่ใช่ปล่อยให้ส่งไปแล้วสองฝ่ายงงว่าทำไมไม่ได้ -->
+    <div class="fc" id="needOrigin" hidden style="padding:16px 18px 18px">
+      <b style="display:block;font-weight:700;font-size:var(--t-head);margin-bottom:6px">ยังให้ที่อยู่ไม่ได้</b>
+      <span style="display:block;font-size:var(--t-sub);color:var(--dim);line-height:1.85;margin-bottom:14px">
+        จดหมายเดินทางตามลมจากที่ที่คุณอยู่ — ถ้ายังไม่บอกว่าอยู่ไหน ลมก็ไม่รู้จะพัดมาจากทางไหน</span>
+      <button class="btn wide gold" id="btnNeedOrigin">บอกต้นทางของคุณ</button>
+    </div>
     <div id="qrWrap"><canvas id="myQR"></canvas></div>
-    <div class="row" style="margin-top:14px">
+    <div class="row" id="myShareRow" style="margin-top:14px">
       <button class="btn" id="btnMyCopy">คัดลอก</button>
       <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
     </div>
@@ -814,11 +831,17 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   <div class="wrap">
     <h2>drift port</h2>
     <p class="sub" id="phSub"></p>
+    <!-- ⭐ คนใหม่เห็นอันนี้แทน — ที่อยู่ตัวเองคือ *สิ่งเดียว* ที่เขาทำได้ตอนนี้ (ข้อ 149)
+         ⛔ อย่าเอาไปไว้ล่างสุดเหมือนของคนที่ใช้แล้ว มันกลับหัวกลับหางสำหรับคนเพิ่งเปิด -->
+    <button class="fc start" id="phStart" hidden>
+      <b>ที่อยู่ของฉัน</b>
+      <span>ให้ที่อยู่นี้กับใครสักคน แล้วเขาจะเขียนถึงคุณได้ตลอดไป</span>
+    </button>
     <div id="phLetters"></div>
     <div id="phPorts"></div>
     <p class="note faint" id="phNote"></p>
     <!-- รหัสอยู่ล่างสุด — ของที่ให้ครั้งเดียวแล้วจบ ไม่ใช่ของที่กลับมาดูทุกวัน (ข้อ 143) -->
-    <div class="rule"></div>
+    <div class="rule" id="phRule"></div>
     <button class="mrow quiet" id="phMine"><b>ที่อยู่ของฉัน</b><em>ให้ใครสักคน</em></button>
   </div>
 </section>
@@ -5556,12 +5579,23 @@ function fillPortHome(list,now){
       pb.appendChild(b);
     });
   }
-  /* โผล่เฉพาะตอนยังไม่มีใคร — คนที่มีรายชื่อแล้วไม่ต้องอ่านซ้ำทุกครั้ง (ข้อ 144) */
-  $('#phNote').textContent = ports.length ? '' : 'ให้ที่อยู่ของคุณกับใครสักคนก่อน';
+  /* ---- หน้าเปลี่ยนตามว่าคนนี้เพิ่งเริ่มหรือใช้อยู่แล้ว (ข้อ 149) ----
+     ⓘ ลำดับที่ถูกของสองกลุ่มนี้ไม่เหมือนกัน และนั่นมีเหตุผล ไม่ใช่ความไม่สม่ำเสมอ
+        คนใหม่: ที่อยู่ตัวเองคือสิ่งเดียวที่ทำได้ → ขึ้นบนสุดเป็นการ์ด
+        คนที่ใช้แล้ว: ที่อยู่คือของที่ให้ครั้งเดียวแล้วจบ → ลงล่างสุดแบบเงียบ */
+  const blank = !list.length && !ports.length;
+  $('#phStart').hidden = !blank;
+  $('#phMine').hidden   = blank;
+  $('#phRule').hidden   = blank;
+  /* โผล่เฉพาะตอนมีจดหมายแต่ยังไม่มีใครในรายชื่อ — คนใหม่มีการ์ดบอกอยู่แล้ว ไม่ต้องพูดซ้ำ */
+  $('#phNote').textContent = (ports.length || blank) ? '' : 'ให้ที่อยู่ของคุณกับใครสักคนก่อน';
 
-  /* ปุ่มบนแถบ: มีของให้ดูถึงจะโผล่ (ข้อ 140.6)
-     ⓘ ครั้งแรกที่ปุ่มโผล่ = ครั้งแรกที่เขาเพิ่งเห็นจุดทองบนลูกโลก ความหมายจึงสอนตัวเอง */
-  $('#btnPort').hidden = !(list.length || ports.length);
+  /* ⛔ ปุ่มนี้ **ต้องโผล่เสมอ** — ห้ามใส่เงื่อนไขซ่อนกลับเข้ามาอีก (ข้อ 149)
+     ⚠️ เคยตั้งให้ซ่อนตอนยังไม่มีจดหมายและไม่มีรายชื่อ โดยอ้างกฎ "ห้ามมีปุ่มที่กดแล้วว่าง"
+        ผลคือ **ต้องมีเพื่อนก่อน ถึงจะเห็นปุ่มที่ใช้หาเพื่อน**
+        เพราะรหัส port ของเราอยู่ในหน้านี้ ซึ่งเป็นสิ่งแรกที่คนใหม่ต้องใช้
+     📌 กฎนั้นใช้ไม่ได้ที่นี่ เพราะหน้านี้ **ไม่เคยว่าง** — มีที่อยู่ของเราอยู่เสมอ */
+  $('#btnPort').hidden = false;
   $('#btnPort').classList.toggle('new', !!unread);
 }
 /* ============================================================
@@ -5819,6 +5853,12 @@ async function openMine(){
   $('#myAddr').textContent=pidPretty(myPid());
   $('#myWho').textContent=me.name||'ยังไม่ได้ตั้งชื่อ';
   $('#mySub').textContent=me.place||'ยังไม่ได้ตั้งต้นทาง';
+  /* ⚠️ ไม่มีพิกัด = ลิงก์ที่ sanitizePort ปฏิเสธ — ต้องกันก่อนส่ง ไม่ใช่หลังส่ง (ข้อ 149.2)
+     ⛔ ห้ามโชว์ QR หรือปุ่มแบ่งปันตอนนี้ มันคือการยื่นของที่ใช้ไม่ได้ให้คนอื่น */
+  const ready = me.lat!=null && me.lng!=null;
+  $('#needOrigin').hidden = ready;
+  $('#qrWrap').hidden     = !ready;
+  $('#myShareRow').hidden = !ready;
   /* ⓘ ตัวนับรายชื่อถูกเอาออกจากหน้านี้ (ข้อ 144) — หน้า drift port แสดงชื่อคนจริง ๆ อยู่แล้ว
      ตัวเลขที่ซ้ำกับของที่เห็นได้ด้วยตาคือความรก ไม่ใช่ข้อมูล */
   openSheet('mine');
@@ -6010,6 +6050,9 @@ $('#mInstall').onclick=openInstall;
    ⚠️ ล้างตัวกรองทุกครั้งที่เข้าท่า ไม่งั้นเปิดจากหน้าคนหนึ่งแล้วกลับมาจะเห็นของเก่าค้าง */
 $('#btnPort').onclick=()=>{ inboxPort=null; inboxMode=null; refreshDock(); openSheet('porthome'); };
 $('#phMine').onclick=openMine;
+$('#phStart').onclick=openMine;   /* การ์ดของคนใหม่ ไปที่เดียวกัน (ข้อ 149) */
+/* ตั้งต้นทางเสร็จแล้วพากลับมาหน้าเดิม ไม่ใช่ทิ้งไว้กลางทาง (หลักเดียวกับข้อ 99.10ซ) */
+$('#btnNeedOrigin').onclick=()=>openOrigin(()=>openMine());
 /* ช่องรับที่อยู่ในหน้าแลก — ใช้ ingestPort ตัวเดียวกับที่ #vCode ใช้ (ข้อ 143.4)
    ⚠️ ที่นี่รับ *ที่อยู่* อย่างเดียว ต่างจาก #vCode ที่รับจดหมายด้วย
       แต่คนวางมาไม่รู้ว่ามันคนละชนิด จึงต้องรับทั้งสองแบบแล้วบอกให้ถูกว่าได้อะไรมา */
