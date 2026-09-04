@@ -687,15 +687,16 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
             ต่างจาก LINE ID ที่ไม่ใช่ URL จึงต้องมีสแกนเนอร์ในตัว
             และ BarcodeDetector ไม่มีบน iOS Safari ปุ่มจะตายครึ่งหนึ่งของผู้ใช้ -->
     <div id="qrWrap"><canvas id="myQR"></canvas></div>
-    <p class="note faint" id="qrHint">ให้เขาส่องด้วยกล้องมือถือ — กล้องจะเปิดให้เอง ไม่ต้องลงแอป</p>
+    <p class="note faint" id="qrHint">ให้เขาส่องด้วยกล้องมือถือ</p>
     <div class="row" style="margin-top:14px">
       <button class="btn" id="btnMyCopy">คัดลอก</button>
       <button class="btn gold" id="btnMyShare">แบ่งปัน…</button>
     </div>
 
+    <!-- ⓘ ไม่มีคำอธิบายใต้หัวข้อ — หัวข้อบอกว่าทำอะไร placeholder บอกว่าวางอะไร
+         สามชั้นสำหรับเรื่องเดียวคือความรก (ข้อ 144) -->
     <div class="grp" style="margin-top:26px">รับที่อยู่ที่เขาให้มา</div>
-    <p class="note faint" style="margin:2px 0 8px">วางลิงก์ที่เขาส่งมาทางแชท — ใช้ตอนแชทตัดลิงก์ขาด หรือกดแล้วไม่เปิด</p>
-    <textarea id="mCode" placeholder="วางลิงก์ทั้งอัน หรือเฉพาะรหัสหลัง # ก็ได้"></textarea>
+    <textarea id="mCode" placeholder="วางลิงก์ที่เขาส่งมา"></textarea>
     <button class="btn wide" id="btnMCode">รับที่อยู่</button>
 
     <div class="grp" style="margin-top:26px">ที่อยู่ของฉัน</div>
@@ -705,9 +706,11 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <tr><td style="padding:6px 0">ต้นทาง</td><td id="mySub" style="text-align:right;color:var(--dim)"></td></tr>
     </table>
     <div class="rule"></div>
-    <p class="note faint" id="myCount"></p>
-    <p class="note faint" style="margin-top:8px">ที่อยู่นี้เดาไม่ได้ และไม่มีสมุดรายชื่อ<br>
-    ไม่มีใครหาคุณเจอ ถ้าคุณไม่ให้เอง</p>
+    <!-- ⛔ ห้ามตัดบรรทัดนี้ — เป็นสัญญาหลักของแอป ที่คนเดาเองไม่ได้ (ข้อ 144)
+         ⓘ ครึ่งแรกเดิมอธิบาย *กลไก* (เดาไม่ได้ · ไม่มีสมุดรายชื่อ) ตัดออกแล้ว
+            เหลือแต่ *ผล* ซึ่งเป็นสิ่งที่คนต้องรู้จริง ๆ
+         ⓘ "มีคนอยู่ในรายชื่อคุณ N คน" ย้ายออก — หน้า drift port แสดงรายชื่อนั้นอยู่แล้ว -->
+    <p class="note faint">ไม่มีใครหาคุณเจอ ถ้าคุณไม่ให้เอง</p>
   </div>
 </section>
 
@@ -5372,9 +5375,11 @@ function fillInbox(list,now){
   const pt=inboxPort;
   const shown = pt ? withPort(list,pt) : list;
   $('#inboxTitle').textContent = pt ? safeName(pt.n) : 'กล่องจดหมาย';
+  /* ⓘ ตัด "แตะฉบับที่ถึงแล้วเพื่ออ่าน" ออก — แตะแถวแล้วเปิดคือสิ่งที่คนเดาได้เอง (ข้อ 144)
+     ⛔ ครึ่งหลังห้ามตัด — "พาไปดูบนลูกโลก" คาดเดาไม่ได้ และเป็นของที่แอปนี้มีอยู่คนเดียว */
   $('#inboxSub').textContent = pt
     ? 'จดหมายที่เขียนถึงกันกับ '+safeName(pt.n)
-    : 'แตะฉบับที่ถึงแล้วเพื่ออ่าน · ฉบับที่ยังเดินทางอยู่จะพาไปดูบนลูกโลก';
+    : 'ฉบับที่ยังเดินทางอยู่ แตะแล้วจะพาไปดูบนลูกโลก';
   const rows=shown.map(L=>({L,st:letterState(L,now)}));
   const grp=[
     ['กำลังมา',  rows.filter(x=>x.L.dir==='in'&&!x.st.arrived&&!x.st.gone)],
@@ -5453,8 +5458,8 @@ function fillPortHome(list,now){
       pb.appendChild(b);
     });
   }
-  $('#phNote').textContent = ports.length ? ''
-    : 'ยังไม่มีใครในรายชื่อ — ให้ที่อยู่ของคุณกับใครสักคน แล้วขอของเขากลับมา';
+  /* โผล่เฉพาะตอนยังไม่มีใคร — คนที่มีรายชื่อแล้วไม่ต้องอ่านซ้ำทุกครั้ง (ข้อ 144) */
+  $('#phNote').textContent = ports.length ? '' : 'ให้ที่อยู่ของคุณกับใครสักคนก่อน';
 
   /* ปุ่มบนแถบ: มีของให้ดูถึงจะโผล่ (ข้อ 140.6)
      ⓘ ครั้งแรกที่ปุ่มโผล่ = ครั้งแรกที่เขาเพิ่งเห็นจุดทองบนลูกโลก ความหมายจึงสอนตัวเอง */
@@ -5716,8 +5721,8 @@ async function openMine(){
   $('#myAddr').textContent=pidPretty(myPid());
   $('#myWho').textContent=me.name||'ยังไม่ได้ตั้งชื่อ';
   $('#mySub').textContent=me.place||'ยังไม่ได้ตั้งต้นทาง';
-  const n=store.ports().length;
-  $('#myCount').textContent = n ? 'มีคนอยู่ในรายชื่อคุณ '+n+' คน' : 'ยังไม่มีใครอยู่ในรายชื่อคุณ';
+  /* ⓘ ตัวนับรายชื่อถูกเอาออกจากหน้านี้ (ข้อ 144) — หน้า drift port แสดงชื่อคนจริง ๆ อยู่แล้ว
+     ตัวเลขที่ซ้ำกับของที่เห็นได้ด้วยตาคือความรก ไม่ใช่ข้อมูล */
   openSheet('mine');
   const url=await myPortLink();
   $('#btnMyCopy').onclick=async()=>{
