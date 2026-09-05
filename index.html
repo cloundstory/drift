@@ -185,15 +185,6 @@ button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
   background:rgba(var(--sheet-rgb),.62);backdrop-filter:blur(7px);padding:8px 16px;font-size:var(--t-sub);letter-spacing:.015em}
 .ptime{flex:0 0 auto;min-width:78px;text-align:right;font-size:var(--t-tiny);color:var(--dim);
   font-family:ui-monospace,Menlo,monospace}
-.chip{flex:0 0 auto;border:1px solid var(--line-soft);border-radius:13px;background:rgba(var(--sheet-rgb),.5);backdrop-filter:blur(7px);padding:8px 13px;min-width:130px;max-width:210px;text-align:left}
-.chip .who{font-size:var(--t-sub);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chip .eta{font-size:var(--t-tiny);color:var(--dim);letter-spacing:.02em;white-space:nowrap}
-.chip.sel{background:rgba(var(--sheet-rgb),.92)}
-.chip.here{border-color:rgba(var(--gold-rgb),.5)}
-.chip.here .eta{color:var(--gold-ink)}
-.chip.gone{opacity:.55}
-
-.hint{position:fixed;left:0;right:0;top:68%;transform:translateY(-50%);text-align:center;font-size:var(--t-sub);letter-spacing:.03em;color:var(--faint);line-height:2.2;pointer-events:none;transition:opacity .6s}
 
 /* ---------- sheets ---------- */
 .sheet{position:fixed;inset:0;z-index:20;display:none;background:linear-gradient(165deg,rgba(var(--sheet-a),.975),rgba(var(--sheet-b),.975));backdrop-filter:blur(12px);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 46px) 18px calc(env(safe-area-inset-bottom) + 34px)}
@@ -606,10 +597,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   }
   html.dm /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก */
   .btn{background:rgba(var(--sheet-rgb),.13)}
-  html.dm .btn:active,
-  html.dm .chip.sel{background:rgba(var(--sheet-rgb),.26)}
+  html.dm .btn:active{background:rgba(var(--sheet-rgb),.26)}
   html.dm .pbtn{background:rgba(var(--sheet-rgb),.17)}
-  html.dm .chip,
   html.dm .fc,
   html.dm .pick,
   html.dm .link,
@@ -1842,12 +1831,6 @@ function simulate(cpts, cwx, dist, ct, seedId){
            travelled:run.travelled, direct:run.direct, ratio:run.ratio, wf:wfRaw };
 }
 const r2 = v => Math.round(v*100)/100;
-
-function routePoints(from,to){
-  const pts=[];
-  for(let i=0;i<=CFG.SEGS;i++) pts.push(slerpLL(from,to,i/CFG.SEGS));
-  return pts;
-}
 
 /* ---------- drift — ลมพัดพาจดหมายจริง (ข้อ 9-12, 30) ----------
    เฟส 1 ไม่มี backend ผู้รับเปิดลิงก์ทีหลังแล้วดึงพยากรณ์ซ้ำไม่ได้ (และพยากรณ์เก่าก็หมดอายุไปแล้ว)
@@ -3267,11 +3250,6 @@ function sunVec(){
   if(_sun&&_sunK===k) return _sun;
   _sunK=k;
   return (_sun=sunAt(sunMs()));
-}
-/* มุมดวงอาทิตย์ที่พิกัดหนึ่ง ณ เวลาหนึ่ง — มากกว่า 0 คือกลางวัน */
-function sunDot(lat,lng,ms){
-  const s=sunAt(ms), v=toXYZ(lat,lng);
-  return v.x*s.x+v.y*s.y+v.z*s.z;
 }
 /* ความนุ่มของรอยต่อกลางวัน-กลางคืน (ข้อ 39) — 0 = คมแบบเดิม · 1 = นุ่มสุด
    0.9 มาจากการเลือกด้วยตา ไม่ใช่ตัวเลข: ที่ค่านี้เงาทำหน้าที่เหมือนแรเงาให้ลูกโลกดูกลม */
