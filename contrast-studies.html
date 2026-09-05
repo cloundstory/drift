@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2233">
-<title>drift — แบบศึกษา contrast โหมดสว่าง</title>
+<title>drift — แบบศึกษา contrast</title>
 <style>
-/* แบบศึกษา contrast ของโหมดสว่าง (ข้อ 170)
+/* แบบศึกษา contrast ทั้งสองโหมด (ข้อ 170 · 173)
    ⚠️ ไม่คัดลอก UI ของแอปมาเลย — iframe ตัวจริงแล้วยัด token ทับ
       หลักเดียวกับ dark-studies.html และ lost-studies.html
    ⛔ สิ่งที่จะตัดสินคือ "อ่านออกไหม" ซึ่งขึ้นกับ *ขนาดจริง* บนมือถือ
@@ -34,7 +34,7 @@ button{background:rgba(232,227,216,.1);border:0;color:inherit;font:inherit;font-
 button.on{background:rgba(232,227,216,.28)}
 #bar .sep{flex:1}
 #bar .grp{display:flex;align-items:center;gap:7px}
-#pages,#sets{display:flex;align-items:center;gap:7px}
+#pages,#sets,#modes{display:flex;align-items:center;gap:7px}
 
 #deck{flex:1;min-height:0;display:flex;gap:10px;padding:10px;overflow:auto;
   -webkit-overflow-scrolling:touch;align-items:stretch}
@@ -67,6 +67,7 @@ iframe{width:100%;height:100%;border:0;display:block;background:#e8e6e0}
 <div id="wrap">
 
   <div id="bar">
+    <div class="grp"><b>โหมด</b><span id="modes"></span></div>
     <div class="grp"><b>หน้า</b><span id="pages"></span></div>
     <span class="sep"></span>
     <div class="grp" id="setGrp" style="display:none"><b>ค่า</b><span id="sets"></span></div>
@@ -80,8 +81,10 @@ iframe{width:100%;height:100%;border:0;display:block;background:#e8e6e0}
   </div>
 
   <div id="note">
-    เทียบกับพื้นที่เข้มที่สุดของแอป (<code>--bg-a #dfe2e6</code>) ซึ่งเป็นกรณีแย่ที่สุด ·
-    บนพื้นอุ่น <code>#eee9de</code> ทุกค่าจะสูงขึ้นราว .05–.30 ·
+ตัวเลขคิดจาก<b>พื้นที่แย่ที่สุดของโหมดนั้น</b> ซึ่งกลับด้านกัน —
+    โหมดสว่างคือแผ่นที่<b>เข้ม</b>ที่สุด <code>219,214,207</code> ·
+    โหมดมืดคือแผ่นที่<b>สว่าง</b>ที่สุด <code>66,72,76</code>
+    (ชุด ค. หรี่แผ่นลงเหลือ <code>56,63,68</code>) ·
     เกณฑ์ WCAG: ตัวปกติ 4.5:1 · ตัวใหญ่หรือหนา 3:1
   </div>
 </div>
@@ -92,13 +95,32 @@ const $=s=>document.querySelector(s);
 /* ---------- ค่าที่จะเทียบ ----------
    ⚠️ NEXT.md เสนอ dim .92 / faint .92 ซึ่งทำให้สองระดับเท่ากันพอดี
       ลำดับชั้นของตัวหนังสือหายไปทั้งแอป จึงใส่ทางที่ *คงลำดับชั้น* มาเทียบด้วย */
-const SETS=[
-  {id:'now',  name:'วันนี้',        dim:.55, faint:.38, gold:'#8b6a33', gold2:'#7d5f2e'},
-  {id:'c3',   name:'เกณฑ์ 3:1',     dim:.84, faint:.72, gold:'#8b6a33', gold2:'#7d5f2e'},
-  {id:'c45',  name:'เกณฑ์ 4.5:1',   dim:1,   faint:.92, gold:'#7a5c2a', gold2:'#6f5426'},
-  {id:'flat', name:'4.5:1 แบบแบน',  dim:.92, faint:.92, gold:'#7a5c2a', gold2:'#6f5426'}
+/* ⛔ ลด alpha ของแผ่นสว่างทั้งชุดในโหมดมืด — พื้นเข้มลง contrast ขึ้นโดยไม่ต้องเพิ่มแสงของหมึก
+      ซึ่งตรงกับหลักของโหมดมืด "แสงน้อยลง ไม่ใช่กลับสี" (ข้อ 127.1) มากกว่าการดันหมึกอย่างเดียว */
+const PLATE_DIM = `
+html.dm .btn{background:rgba(var(--sheet-rgb),.08)}
+html.dm .btn:active{background:rgba(var(--sheet-rgb),.16)}
+html.dm .pbtn{background:rgba(var(--sheet-rgb),.11)}
+html.dm .fc,html.dm .pick,html.dm .link,html.dm .addr,html.dm .shade{background:rgba(var(--sheet-rgb),.06)}
+html.dm .pick.on{background:rgba(var(--sheet-rgb),.12)}
+html.dm .hit,html.dm #cHits .hit{background:rgba(var(--sheet-rgb),.06)}
+html.dm .hit:active{background:rgba(var(--sheet-rgb),.14)}`;
+
+/* หมึกของแต่ละโหมดคนละตัว — สว่างใช้ --ink-rgb เข้มบนพื้นครีม · มืดใช้ --ink-rgb สว่างบนพื้นเข้ม */
+const SETS_LIGHT=[
+  {id:'l-was',  name:'ก่อนแก้',      dim:.55, faint:.38, head2:.86, gold:'#8b6a33', gold2:'#7d5f2e'},
+  {id:'l-now',  name:'วันนี้',       dim:1,   faint:.92, head2:1,   gold:'#7a5c2a', gold2:'#6f5426'},
+  {id:'l-gold', name:'ทองเข้มอีกขั้น',dim:1,   faint:.92, head2:1,   gold:'#6f5426', gold2:'#654c22'}
 ];
-const DECK=['now','c3','c45'];          /* คอลัมน์ที่วางข้างกันบนจอกว้าง */
+const SETS_DARK=[
+  {id:'d-now',  name:'วันนี้',            dim:.62, faint:.42, head2:.86, gold:'#d8bb88', gold2:'#c9a878'},
+  {id:'d-ink',  name:'ข. ดันหมึกอย่างเดียว',dim:.85, faint:.71, head2:.92, gold:'#e2c99e', gold2:'#d6bb8e'},
+  {id:'d-mix',  name:'ค. ผสม พื้นมืดลง',  dim:.78, faint:.65, head2:.88, gold:'#e2c99e', gold2:'#d6bb8e', plate:true}
+];
+let MODE='dark';                        /* งานที่เหลือคือโหมดมืด จึงเปิดมาที่โหมดนี้ */
+const sets = () => MODE==='dark' ? SETS_DARK : SETS_LIGHT;
+const SETS = new Proxy({}, {get:(_,k)=> k==='find' ? (fn=>sets().find(fn)) : sets()[k]});
+const DECK = null;                      /* วางข้างกันทั้งสามชุดของโหมดที่เลือกอยู่ */
 
 const PAGES=[
   {id:'vault',    name:'บัญชี'},
@@ -107,10 +129,17 @@ const PAGES=[
   {id:'porthome', name:'drift port'},
   {id:'home',     name:'หน้าแรก'}
 ];
-let page='vault', solo='now';
+let page='vault', solo='d-now';
 
 /* ---------- contrast ---------- */
-const INK=[84,90,104], BG=[223,226,230];        /* --ink-rgb บน --bg-a */
+/* ⚠️ ฐานของสองโหมดคนละคู่ และ "กรณีแย่ที่สุด" กลับด้านกัน
+      สว่าง: หมึกเข้มบนพื้นครีม → พื้นที่เข้มที่สุดคือแย่สุด
+      มืด:   หมึกสว่างบนพื้นเข้ม → พื้นที่ *สว่าง* ที่สุดคือแย่สุด (ข้อ 173) */
+const BASE={
+  light:{ink:[84,90,104],  bg:[223,226,230], worst:[219,214,207]},
+  dark: {ink:[228,226,221], bg:[41,49,56],   worst:[66,72,76]}
+};
+const INK=[84,90,104], BG=[223,226,230];
 const lin=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
 const lum=([r,g,b])=>.2126*lin(r)+.7152*lin(g)+.0722*lin(b);
 const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
@@ -120,7 +149,10 @@ const cls=r=>r>=4.5?'ok':r>=3?'mid':'bad';
 const f2=r=>r.toFixed(2)+':1';
 
 function numsHTML(S){
-  const d=ratio(over(INK,S.dim,BG),BG), f=ratio(over(INK,S.faint,BG),BG), g=ratio(hex(S.gold),BG);
+  const B=BASE[MODE];
+  /* พื้นแย่สุดของชุด ค. เข้มลงเพราะแผ่นถูกหรี่ — ต้องคิดจากพื้นของชุดนั้นเอง */
+  const w = (MODE==='dark' && S.plate) ? [56,63,68] : B.worst;
+  const d=ratio(over(B.ink,S.dim,w),w), f=ratio(over(B.ink,S.faint,w),w), g=ratio(hex(S.gold),w);
   return `<span>dim <b class="${cls(d)}">${f2(d)}</b></span>`
        + `<span>faint <b class="${cls(f)}">${f2(f)}</b></span>`
        + `<span>ทอง <b class="${cls(g)}">${f2(g)}</b></span>`;
@@ -131,11 +163,15 @@ function numsHTML(S){
    (ใช้ html{} ไม่ได้ — specificity ต่ำกว่า :root) */
 function paint(fr,S){
   const w=fr.contentWindow, d=fr.contentDocument; if(!w||!d||!d.head) return false;
-  try{ w.eval("setSchemePref('light')"); }catch(e){}
+  try{ w.eval("setSchemePref('"+MODE+"')"); }catch(e){}
   let st=d.getElementById('__contrast');
   if(!st){ st=d.createElement('style'); st.id='__contrast'; d.head.appendChild(st); }
-  st.textContent=`:root{--dim:rgba(var(--ink-rgb),${S.dim});--faint:rgba(var(--ink-rgb),${S.faint});`
-                +`--gold-ink:${S.gold};--gold-ink-2:${S.gold2}}`
+  /* ⚠️ โหมดมืดต้องยัดที่ html.dm ไม่ใช่ :root — บล็อกมืดของแอปมี specificity สูงกว่า
+        ยัดที่ :root แล้วจะถูกทับ และเราจะนึกว่าโค้ดไม่ทำงาน (ข้อ 162 ในบริบทที่สอง) */
+  const sel = MODE==='dark' ? 'html.dm' : ':root';
+  st.textContent=`${sel}{--dim:rgba(var(--ink-rgb),${S.dim});--faint:rgba(var(--ink-rgb),${S.faint});`
+                +`--head2:rgba(var(--ink-rgb),${S.head2});--gold-ink:${S.gold};--gold-ink-2:${S.gold2}}`
+                +(S.plate?PLATE_DIM:'')
                 +`#splash{display:none!important}.veil{display:none!important}`;
   return true;
 }
@@ -168,8 +204,7 @@ const narrow=()=>innerWidth<900;
 function buildDeck(){
   const deck=$('#deck'); deck.innerHTML='';
   if(narrow()) return;
-  DECK.forEach(id=>{
-    const S=SETS.find(s=>s.id===id);
+  sets().forEach(S=>{
     const col=document.createElement('div'); col.className='col';
     col.innerHTML=`<h2>${S.name} <i>dim ${S.dim} · faint ${S.faint}</i></h2>`
                  +`<div class="frame"><iframe></iframe></div>`
@@ -182,7 +217,9 @@ function buildDeck(){
 function buildBars(){
   $('#pages').innerHTML=PAGES.map(p=>
     `<button data-page="${p.id}"${p.id===page?' class="on"':''}>${p.name}</button>`).join('');
-  $('#sets').innerHTML=SETS.map(s=>
+  $('#modes').innerHTML=[['light','สว่าง'],['dark','มืด']].map(([id,n])=>
+    `<button data-mode="${id}"${id===MODE?' class="on"':''}>${n}</button>`).join('');
+  $('#sets').innerHTML=sets().map(s=>
     `<button data-set="${s.id}"${s.id===solo?' class="on"':''}>${s.name}</button>`).join('');
   $('#setGrp').style.display = narrow() ? '' : 'none';
 }
@@ -202,6 +239,12 @@ $('#bar').addEventListener('click',e=>{
     [...$('#pages').children].forEach(x=>x.classList.toggle('on',x===b));
     document.querySelectorAll('#deck iframe').forEach(goto);
     if(narrow()) goto($('#solo'));
+  }
+  if(b.dataset.mode && b.dataset.mode!==MODE){
+    MODE=b.dataset.mode;
+    solo=sets()[0].id;
+    document.body.style.background = MODE==='dark' ? '#0f1420' : '#1c1f26';
+    buildBars(); buildDeck(); soloRefresh(true);
   }
   if(b.dataset.set){
     solo=b.dataset.set;
