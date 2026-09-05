@@ -1104,7 +1104,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ⛔ ไม่ส่งไปไหนทั้งสิ้น — ไม่มีเซิร์ฟเวอร์ และถึงมีก็จะไม่ส่ง
       เก็บไว้ในเครื่องให้ผู้ใช้ *เลือกเอง* ว่าจะคัดลอกไปบอกเราไหม
       เพราะข้อความผิดพลาดพ่วงชื่อฟังก์ชันและบางครั้งพ่วงข้อมูลผู้ใช้มาด้วย */
-const APP_VER='2026-08-29';
+const APP_VER='2026-09-05';
 const K_ERR='drift.err';
 let ERR_SHOWN=false;
 function logErr(kind,msg,where){
@@ -6505,6 +6505,12 @@ function bugText(){
     'เก็บข้อมูลได้: '+(LS_OK?'ได้':'ไม่ได้'),
     'จดหมายในเครื่อง '+store.letters().length+' ฉบับ · รายชื่อ '+store.ports().length+' คน',
     'แหล่งอากาศล่าสุด: '+(WX_SRC||'ยังไม่ได้ใช้'),
+    /* ⛔ อย่าตั้งชื่อ helper ว่า r1 — ชนกับตัวแปรท้องถิ่นสามที่ใน G (ข้อ 103.5) · r2 มีอยู่แล้ว */
+    'ลม ณ ต้นทาง: '+WH_NOTE+(WIND_HERE===null ? '' :
+      ' · '+r2(WIND_HERE)+' กม./ชม. · กระโชก '+(WIND_GUST==null?'—':r2(WIND_GUST))
+      +' · ฝน '+(RAIN_HERE==null?'—':r2(RAIN_HERE))+' มม.'),
+    'ฉากหลัง: '+(WIND_HERE===null ? 'ว่าง เพราะไม่รู้ลม'
+      : (RAIN_HERE>0 ? 'ฝน (ฝุ่นถูกกดตามกฎข้อ 155)' : 'ฝุ่น '+DUST.length+' เม็ด')),
     navigator.userAgent
   ];
   L.push('', errs.length ? 'ข้อผิดพลาดล่าสุด' : 'ไม่มีข้อผิดพลาดที่บันทึกไว้');
@@ -6662,6 +6668,10 @@ $('#cBody').addEventListener('input',()=>{
 
 /* ---------- องก์ Write — กระดาษหายใจ และคีย์บอร์ดมือถือ (ข้อ 63) ---------- */
 let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null, WIND_GUST=null, RAIN_HERE=null;
+/* ⚠️ windHere() ล้มเหลวได้สี่ทางและทุกทางเงียบสนิท — ฝุ่น ฝน กระดาษหายใจ เปลวเทียน
+      หายพร้อมกันโดยไม่มีอะไรฟ้อง (ตระกูลเดียวกับข้อ 104.5)
+   ⓘ ค่านี้ไปโผล่ในหน้าแจ้งปัญหา เพื่อให้ตรวจจากมือถือได้โดยไม่ต้องเปิด console */
+let WH_NOTE='ยังไม่ได้เรียก';
 
 function paintWritePaper(tries){
   const cv=$('#cPaper'), box=$('#cSheet');
@@ -6759,12 +6769,16 @@ function candleOn(){
 /* ลม ณ ต้นทาง — อ่านจากแคชลมก้อนเดิมที่แอปโหลดอยู่แล้ว ไม่ใช่คำขอใหม่
    ต้นทางอยู่ในกล่องแคช = ราคา 0 · อยู่นอกกล่อง = ไม่รู้ แล้วกระดาษก็นิ่ง ซึ่งซื่อสัตย์กว่าเดา */
 async function windHere(){
-  if(WIND_HERE!==null) return;
-  const me=store.me(); if(!me||me.lat==null) return;
+  if(WIND_HERE!==null){ return; }
+  const me=store.me();
+  if(!me){ WH_NOTE='ยังไม่มีข้อมูลตัวเอง'; return; }
+  if(me.lat==null){ WH_NOTE='ตั้งต้นทางแล้วแต่ไม่มีพิกัด'; return; }
   /* ⚠️ ของเดิมอ่าน s[0].spd ทั้งที่ wcSeries คืน {hourly:{...}} ไม่ใช่อาร์เรย์
      เงื่อนไขจึงเป็นเท็จเสมอ และกระดาษไม่เคยหายใจเลยตั้งแต่ข้อ 102
      บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
   const w=await wxAt(me.lat,me.lng);
+  if(!w){ WH_NOTE='ต้นทางมีพิกัดแต่แคชลมให้ค่าไม่ได้'; return; }
+  WH_NOTE='รู้ลมแล้ว';
   if(w && typeof w.spd==='number') WIND_HERE=w.spd;
   /* ⓘ wxAt คืนสี่ค่ามาตลอด แต่แอปเคยใช้แค่ spd — อีกสามตัวมีข้อมูลจริงและอยู่ในแคชก้อนเดียวกัน
      วัดที่ฉะเชิงเทรา: ลมต่อเนื่อง 5.7-20.9 · กระโชก 10.6-41.2 · ฝนตก 15 ใน 24 ชั่วโมง (ข้อ 152) */
