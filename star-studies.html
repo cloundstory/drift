@@ -60,11 +60,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>จำนวน</label><input type="range" id="n"    min="0"  max="260" value="55"><output></output></div>
     <div class="row"><label>ความสว่าง</label><input type="range" id="a" min="0"  max="100" value="60"><output></output></div>
     <div class="row"><label>ขนาด</label><input type="range" id="size"  min="20" max="200" value="60"><output></output></div>
-    <div class="row"><label>กระพริบ</label><input type="range" id="twk" min="0"  max="100" value="45"><output></output></div>
+    <div class="row"><label>กระพริบแรง</label><input type="range" id="twk" min="0" max="100" value="70"><output></output></div>
+    <div class="row"><label>กระพริบเร็ว</label><input type="range" id="rate" min="20" max="300" value="100"><output></output></div>
     <div class="row"><label>หลบขอบโลก</label><input type="range" id="halo" min="0" max="60" value="18"><output></output></div>
     <div class="row"><label>จางใกล้ตะวัน</label><input type="range" id="sunf" min="0" max="100" value="70"><output></output></div>
     <div class="row"><label>สว่าง-จางถ่าง</label><input type="range" id="rng" min="0" max="100" value="70"><output></output></div>
-    <div class="row"><label>แฉกดาวสว่าง</label><input type="range" id="spike" min="0" max="100" value="35"><output></output></div>
+    <div class="row"><label>แฉกดาวสว่าง</label><input type="range" id="spike" min="0" max="100" value="45"><output></output></div>
     <div class="row"><label>โทนสี เย็น→อุ่น</label><input type="range" id="tone" min="0" max="100" value="45"><output></output></div>
 
     <div class="grp">ดาวตก</div>
@@ -96,7 +97,7 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 let dark=true, W=null;
 
-const K=['n','a','size','twk','halo','sunf','rng','spike','tone','every','spd','tail','sha'];
+const K=['n','a','size','twk','rate','halo','sunf','rng','spike','tone','every','spd','tail','sha'];
 const V=()=>{ const o={}; K.forEach(k=>o[k]=+$('#'+k).value); return o; };
 
 /* ---------- ชั้นดาว: ยัดเข้าไปในลูปวาดของแอปจริง ----------
@@ -107,8 +108,8 @@ const V=()=>{ const o={}; K.forEach(k=>o[k]=+$('#'+k).value); return o; };
 const INJECT = `(function(){
   if(window.__starOn) return 'already';
   window.__starOn = 1;
-  const S = window.__STAR = {on:1,auto:1,n:55,a:60,size:60,twk:45,halo:18,sunf:70,
-                             rng:70,spike:35,tone:45,
+  const S = window.__STAR = {on:1,auto:1,n:55,a:60,size:60,twk:70,rate:100,halo:18,sunf:70,
+                             rng:70,spike:45,tone:45,
                              every:55,spd:100,tail:120,sha:75,dir:0};
   const P=[]; let last=performance.now(), tt=0, next=4, SH=null;
 
@@ -125,8 +126,12 @@ const INJECT = `(function(){
       P.push({
         x:Math.random(), y:Math.random(),
         r:.30+b*.85,                     /* ดวงที่สว่างกว่าคือดวงที่ใหญ่กว่าด้วย */
-        b, ph:Math.random()*6.283, sp:.5+Math.random()*1.2,
-        h:Math.random()                  /* สีประจำดวง — ดาวจริงมีทั้งขาวอมฟ้าและอมส้ม */
+        b, h:Math.random(),              /* สีประจำดวง — ดาวจริงมีทั้งขาวอมฟ้าและอมส้ม */
+        /* ⛔ คลื่นเดียวทำให้ทั้งฟ้าเต้นเป็นจังหวะเดียวกัน อ่านเป็นไฟกะพริบ ไม่ใช่ดาว
+              สองคลื่นที่คาบไม่ลงตัวกัน จังหวะจึงไม่ซ้ำรอยเดิมให้จับได้
+              หลักเดียวกับระลอกลมของฝุ่น (ข้อ 152) */
+        ph:Math.random()*6.283, ph2:Math.random()*6.283,
+        sp:1.0+Math.random()*1.8, sp2:.37+Math.random()*.9
       });
     }
   }
@@ -168,6 +173,7 @@ const INJECT = `(function(){
     const cx = (typeof G!=='undefined') ? G.CX : W/2, cy = (typeof G!=='undefined') ? G.CY : H/2;
     const keep = R*(1+S.halo/100);            /* ไม่วางดาวใกล้ขอบโลกกว่านี้ */
     const twk = S.twk/100, sunf=S.sunf/100, base=S.a/100, sz=S.size/100;
+    const rate = S.rate/100;              /* จังหวะกระพริบ — คูณคาบของทุกดวงพร้อมกัน */
     const diag = Math.hypot(W,H)||1;
 
     ctx.fillStyle='rgba('+col+',1)';
@@ -182,7 +188,12 @@ const INJECT = `(function(){
         fade = 1 - sunf*si*Math.max(0, 1-ds*1.9);
       }
       if(fade<=.02) continue;
-      const tw = 1 - twk*.55*(0.5+0.5*Math.sin(tt*p.sp+p.ph));
+      /* ⚠️ ที่ขนาด 0.3–1.1 px การหรี่ alpha อย่างเดียวมองไม่เห็นเลย
+            การกระพริบจึงต้องไปโดน *แฉก* ด้วย ซึ่งเป็นส่วนที่ตากวาดเจอ (ข้อ 174.6)
+         ⓘ w1 เร็ว = ประกายวูบ · w2 ช้า = ความสว่างโดยรวมที่ค่อย ๆ ขึ้นลง */
+      const w1 = .5+.5*Math.sin(tt*p.sp*rate + p.ph);
+      const w2 = .5+.5*Math.sin(tt*p.sp2*rate + p.ph2);
+      const tw = 1 - twk*.85*(w1*.68 + w2*.32);
       /* rng ถ่างช่วงสว่าง-จางออก — ที่ 0 ทุกดวงทึบเท่ากันหมดแบบฝุ่น */
       const bb = S.rng>0 ? Math.pow(p.b, 1-S.rng/140) : p.b;
       const al = Math.max(0, base*(.10+.90*bb)*tw*fade);
@@ -193,7 +204,8 @@ const INJECT = `(function(){
       ctx.beginPath(); ctx.arc(px, py, rr, 0, Math.PI*2); ctx.fill();
       /* ⭐ แฉก — มีเฉพาะดวงที่สว่างจริง และเป็นสิ่งที่ฝุ่นไม่มีวันมี */
       if(S.spike>0 && bb>.45){
-        const L=rr*(1.6+S.spike/22)*(.6+bb);
+        /* แฉกยาว-หดตามจังหวะเดียวกับความสว่าง — นี่คือสิ่งที่ทำให้ "เห็นว่ากระพริบ" */
+        const L=rr*(1.6+S.spike/22)*(.6+bb)*(.45+.55*tw);
         ctx.globalAlpha = al*.55;
         ctx.strokeStyle='rgba('+mixc(p.h)+',1)';
         ctx.lineWidth=.6; ctx.beginPath();
@@ -244,7 +256,8 @@ function paintOut(){
   $('#out').textContent =
     'ดาว   n '+v.n+' · a '+(v.a/100).toFixed(2)+' · size '+(v.size/100).toFixed(2)
     +' · twk '+(v.twk/100).toFixed(2)+' · halo '+(v.halo/100).toFixed(2)+' · sunf '+(v.sunf/100).toFixed(2)
-    +'\n       rng '+(v.rng/100).toFixed(2)+' · spike '+(v.spike/100).toFixed(2)+' · tone '+(v.tone/100).toFixed(2)
+    +'\n       twk '+(v.twk/100).toFixed(2)+' · rate '+(v.rate/100).toFixed(2)
+    +' · rng '+(v.rng/100).toFixed(2)+' · spike '+(v.spike/100).toFixed(2)+' · tone '+(v.tone/100).toFixed(2)
     +'\nดาวตก every '+v.every+'s · spd '+(v.spd/100).toFixed(2)
     +' · tail '+(v.tail/100).toFixed(2)+' · sha '+(v.sha/100).toFixed(2)
     +' · dir '+((w()&&w().__STAR)?w().__STAR.dir:0);
