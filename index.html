@@ -5291,6 +5291,30 @@ function dust(ctx,dt){
       วัดที่ฉะเชิงเทรา: ตก 15 ใน 24 ชั่วโมง · 0-1.8 mm
    📌 ความหมายอยู่ตรงที่มัน *บางวันมี บางวันไม่มี* — เปิดแอปตอนฝนตก แล้วในแอปก็ฝนตกด้วย
    ⓘ เส้นฝนเอียงตามทิศลมจริง เพราะฝนที่ตกในลมไม่เคยตกดิ่ง */
+/* ---------- ฝนกระทบพื้นตรงที่เรายืน (ข้อ 153) ----------
+   ⚠️ ข้อ 150.4 เขียนไว้ว่า "ฉากนี้ไม่มีพื้น" ตอนตัดสินเรื่องเงา — **ยังจริงอยู่**
+      นั่นพูดถึง *ลูกโลก* ว่ามันลอย ไม่ได้วางบนอะไร
+      ส่วนขอบล่างจอคือพื้นตรงที่ *เรา* ยืน ซึ่งอยู่คนละระยะกันคนละเรื่อง
+   📌 ลูกโลกอยู่ไกล · ฝนตกใกล้ตัวเรา · สองอย่างนี้ไม่ได้อยู่ในฉากเดียวกัน */
+const SPLASH=[];
+function splash(ctx,dt){
+  if(!SPLASH.length) return;
+  ctx.strokeStyle='rgba('+SKIN.rainBg+',1)';
+  ctx.lineWidth=1;
+  for(let i=SPLASH.length-1;i>=0;i--){
+    const s=SPLASH[i];
+    s.t+=dt;
+    if(s.t>=s.life){ SPLASH.splice(i,1); continue; }
+    const k=s.t/s.life;                         /* 0 → 1 */
+    /* วงแบนที่แผ่ออกแล้วจาง — แบนเพราะมองพื้นจากมุมเฉียง ไม่ใช่มองจากบนลงมา */
+    ctx.globalAlpha=(1-k)*.12*s.w;
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, 2+k*9*s.w, (2+k*9*s.w)*.30, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+
 const RAIN=[];
 function rain(ctx,dt){
   if(!RAIN_HERE || RAIN_HERE<=0 || WIND_DIR===null) return;
@@ -5307,7 +5331,16 @@ function rain(ctx,dt){
   RAIN.forEach(p=>{
     p.y += (.32+.26*p.s)*dt;
     p.x += wx*(.20+.16*p.s)*dt;
-    if(p.y>1.05){ p.y=-.05; p.x=Math.random(); }
+    if(p.y>1.05){
+      /* ⚠️ จำกัดจำนวนวงที่มีชีวิตอยู่ — ฝนหนัก 40 เม็ดสร้างวงได้ราว 13 วงต่อวินาที
+         ปล่อยไว้จะกลายเป็นแถบเดือดที่ขอบล่าง ไม่ใช่ฝนกระทบพื้น */
+      /* ⚠️ ยกขึ้นจากขอบจอเล็กน้อย — ที่ y=H-2 วงแผ่ลงล่างแล้วตกนอกจอ เห็นแค่ครึ่งบน
+         ⓘ ยกมากกว่านี้จะดูเหมือนพื้นลอยอยู่กลางอากาศ */
+      if(SPLASH.length<14)
+        SPLASH.push({x:p.x*W, y:H-7-Math.random()*7, t:0,
+                     life:.34+Math.random()*.26, w:.55+p.s*.6});
+      p.y=-.05; p.x=Math.random();
+    }
     if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
     ctx.globalAlpha=.055+.055*p.s;
     ctx.beginPath();
@@ -5357,6 +5390,7 @@ function renderGlobe(){
   grain(sctx);
   dust(sctx,dt);
   rain(sctx,dt);
+  splash(sctx,dt);
   globeShade(sctx);
   const list=store.letters();
   /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */

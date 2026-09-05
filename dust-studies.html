@@ -76,6 +76,11 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>ความทึบ ×</label>
       <input type="range" id="ra" min="0" max="300" value="100"><output id="oRa"></output></div>
 
+    <div class="row"><label>วงกระทบ ทึบ ×</label>
+      <input type="range" id="sa" min="0" max="400" value="100"><output id="oSa"></output></div>
+    <div class="row"><label>วงกระทบ สูงจากขอบ</label>
+      <input type="range" id="sy" min="0" max="60" value="7"><output id="oSy"></output></div>
+
     <p class="grp">เนื้อกระดาษ</p>
     <div class="row"><label>ความเข้ม ×</label>
       <input type="range" id="gn" min="0" max="300" value="100"><output id="oGn"></output></div>
@@ -124,7 +129,7 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 
 /* ค่าที่แอปใช้อยู่จริง — ปุ่มคืนค่าเดิมกลับมาที่นี่ */
-const BASE = {n:26, a0:75, a1:60, r0:10, r1:17, sp:100, rn:0, ra:100, gn:100, sh:13, so:34, li:30, lk:34, ws:18, wd:225, wg:40};
+const BASE = {n:26, a0:75, a1:60, r0:10, r1:17, sp:100, rn:0, ra:100, sa:100, sy:7, gn:100, sh:13, so:34, li:30, lk:34, ws:18, wd:225, wg:40};
 const K = Object.keys(BASE);
 const V = () => Object.fromEntries(K.map(k => [k, +$('#'+k).value]));
 const cap = k => 'o'+k[0].toUpperCase()+k.slice(1);
@@ -217,7 +222,12 @@ function apply(){
         ctx.lineWidth=1; ctx.lineCap='round';
         RAIN.forEach(p=>{
           p.y+=(.32+.26*p.s)*dt; p.x+=wx*(.20+.16*p.s)*dt;
-          if(p.y>1.05){ p.y=-.05; p.x=Math.random(); }
+          if(p.y>1.05){
+            if(SPLASH.length<14)
+              SPLASH.push({x:p.x*W, y:H-${v.sy}-Math.random()*7, t:0,
+                           life:.34+Math.random()*.26, w:.55+p.s*.6});
+            p.y=-.05; p.x=Math.random();
+          }
           if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
           ctx.globalAlpha=(.055+.055*p.s)*${(v.ra/100).toFixed(2)};
           ctx.beginPath();
@@ -225,6 +235,22 @@ function apply(){
           ctx.lineTo(p.x*W+wx*len*1.5, p.y*H+len*(.7+.5*p.s));
           ctx.stroke();
         });
+        ctx.globalAlpha=1;
+      };
+      SPLASH.length=0;
+      splash = function(ctx,dt){
+        if(!SPLASH.length) return;
+        ctx.strokeStyle='rgba('+SKIN.rainBg+',1)';
+        ctx.lineWidth=1;
+        for(let i=SPLASH.length-1;i>=0;i--){
+          const s=SPLASH[i]; s.t+=dt;
+          if(s.t>=s.life){ SPLASH.splice(i,1); continue; }
+          const k=s.t/s.life;
+          ctx.globalAlpha=(1-k)*.12*s.w*${(v.sa/100).toFixed(2)};
+          ctx.beginPath();
+          ctx.ellipse(s.x, s.y, 2+k*9*s.w, (2+k*9*s.w)*.30, 0, 0, Math.PI*2);
+          ctx.stroke();
+        }
         ctx.globalAlpha=1;
       };
       GRAIN=null; _grainW=0;
@@ -261,6 +287,7 @@ function paintOut(){
     +' · r '+(v.r0/10).toFixed(1)+'-'+((v.r0+v.r1)/10).toFixed(1)+' · sp ×'+(v.sp/100).toFixed(2)
     +'\nเงา   '+(v.sh/100).toFixed(3)+' · เยื้อง '+(v.so/100).toFixed(2)+'R'
     +'\nฝน    '+(v.rn/10).toFixed(1)+' mm · ทึบ ×'+(v.ra/100).toFixed(2)
+    +' · วงกระทบ ×'+(v.sa/100).toFixed(2)+' สูง '+v.sy
     +'\nเกรน  ×'+(v.gn/100).toFixed(2)
     +'\nแสง   '+(v.li/100).toFixed(2)+' + '+(v.lk/100).toFixed(2)+'·z'
     +'\nลม    '+v.ws+' กม./ชม. จากทิศ '+v.wd+'° · กระโชก '+v.wg;
