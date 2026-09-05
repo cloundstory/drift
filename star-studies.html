@@ -57,24 +57,28 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     </div>
 
     <div class="grp">ดาวประจำที่</div>
-    <div class="row"><label>จำนวน</label><input type="range" id="n"    min="0"  max="260" value="120"><output></output></div>
-    <div class="row"><label>ความสว่าง</label><input type="range" id="a" min="0"  max="100" value="55"><output></output></div>
-    <div class="row"><label>ขนาด</label><input type="range" id="size"  min="40" max="260" value="100"><output></output></div>
-    <div class="row"><label>กระพริบ</label><input type="range" id="twk" min="0"  max="100" value="50"><output></output></div>
+    <div class="row"><label>จำนวน</label><input type="range" id="n"    min="0"  max="260" value="55"><output></output></div>
+    <div class="row"><label>ความสว่าง</label><input type="range" id="a" min="0"  max="100" value="60"><output></output></div>
+    <div class="row"><label>ขนาด</label><input type="range" id="size"  min="20" max="200" value="60"><output></output></div>
+    <div class="row"><label>กระพริบ</label><input type="range" id="twk" min="0"  max="100" value="45"><output></output></div>
     <div class="row"><label>หลบขอบโลก</label><input type="range" id="halo" min="0" max="60" value="18"><output></output></div>
     <div class="row"><label>จางใกล้ตะวัน</label><input type="range" id="sunf" min="0" max="100" value="70"><output></output></div>
+    <div class="row"><label>สว่าง-จางถ่าง</label><input type="range" id="rng" min="0" max="100" value="70"><output></output></div>
+    <div class="row"><label>แฉกดาวสว่าง</label><input type="range" id="spike" min="0" max="100" value="35"><output></output></div>
+    <div class="row"><label>โทนสี เย็น→อุ่น</label><input type="range" id="tone" min="0" max="100" value="45"><output></output></div>
 
     <div class="grp">ดาวตก</div>
-    <div class="row"><label>ทุกกี่วินาที</label><input type="range" id="every" min="3" max="90" value="16"><output></output></div>
+    <div class="row"><label>ทุกกี่วินาที</label><input type="range" id="every" min="5" max="300" value="55"><output></output></div>
     <div class="row"><label>ความเร็ว</label><input type="range" id="spd" min="30" max="300" value="100"><output></output></div>
-    <div class="row"><label>ความยาวหาง</label><input type="range" id="tail" min="20" max="300" value="100"><output></output></div>
-    <div class="row"><label>ความสว่าง</label><input type="range" id="sha" min="0" max="100" value="80"><output></output></div>
+    <div class="row"><label>ความยาวหาง</label><input type="range" id="tail" min="20" max="300" value="120"><output></output></div>
+    <div class="row"><label>ความสว่าง</label><input type="range" id="sha" min="0" max="100" value="75"><output></output></div>
 
     <div class="btns">
       <button id="dir0" class="on">ทิศสุ่ม</button>
       <button id="dir1">ตามลมจริงที่ต้นทาง</button>
       <button id="autoOff">ปิดดาวตกอัตโนมัติ</button>
       <button id="starOff">ปิดดาวทั้งหมด</button>
+      <button id="dustOff">ปิดฝุ่น (ดูว่าแยกออกไหม)</button>
       <button id="btnCopy">คัดลอกค่า</button>
     </div>
 
@@ -92,7 +96,7 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 let dark=true, W=null;
 
-const K=['n','a','size','twk','halo','sunf','every','spd','tail','sha'];
+const K=['n','a','size','twk','halo','sunf','rng','spike','tone','every','spd','tail','sha'];
 const V=()=>{ const o={}; K.forEach(k=>o[k]=+$('#'+k).value); return o; };
 
 /* ---------- ชั้นดาว: ยัดเข้าไปในลูปวาดของแอปจริง ----------
@@ -103,18 +107,28 @@ const V=()=>{ const o={}; K.forEach(k=>o[k]=+$('#'+k).value); return o; };
 const INJECT = `(function(){
   if(window.__starOn) return 'already';
   window.__starOn = 1;
-  const S = window.__STAR = {on:1,auto:1,n:120,a:55,size:100,twk:50,halo:18,sunf:70,
-                             every:16,spd:100,tail:100,sha:80,dir:0};
+  const S = window.__STAR = {on:1,auto:1,n:55,a:60,size:60,twk:45,halo:18,sunf:70,
+                             rng:70,spike:35,tone:45,
+                             every:55,spd:100,tail:120,sha:75,dir:0};
   const P=[]; let last=performance.now(), tt=0, next=4, SH=null;
 
+  /* ⛔ ดาวกับฝุ่นเคยเป็นจุดกลมสีเดียวกัน ต่างแค่ฝุ่นขยับ — แยกไม่ออก (ข้อ 174.4)
+        สามอย่างที่แยกได้จริง และไม่มีอันไหนเป็นแค่การปรับตัวเลข
+        1. ท้องฟ้าจริงมีดาวสว่างไม่กี่ดวง ที่เหลือจางเป็นสิบเท่า — ฝุ่นทึบเท่ากันหมด
+        2. ดาวเป็นจุด *คม* เล็กกว่าฝุ่นครึ่งหนึ่ง — ฝุ่นเป็นก้อนนุ่ม
+        3. ดาวสว่างมีแฉก — ฝุ่นไม่มีวันมีแฉก */
   function seed(){
     P.length=0;
-    for(let i=0;i<260;i++) P.push({
-      x:Math.random(), y:Math.random(),
-      r:.35+Math.random()*1.05,          /* ดาวจริงมีขนาดต่างกันมาก ไม่ใช่จุดเท่ากันหมด */
-      b:.30+Math.random()*.70,           /* ความสว่างประจำตัว */
-      ph:Math.random()*6.283, sp:.5+Math.random()*1.2
-    });
+    for(let i=0;i<260;i++){
+      /* ยกกำลังสาม = ดาวส่วนใหญ่จาง มีไม่กี่ดวงที่สว่างจริง (คล้ายบันไดโชติมาตร) */
+      const b=Math.pow(Math.random(),3);
+      P.push({
+        x:Math.random(), y:Math.random(),
+        r:.30+b*.85,                     /* ดวงที่สว่างกว่าคือดวงที่ใหญ่กว่าด้วย */
+        b, ph:Math.random()*6.283, sp:.5+Math.random()*1.2,
+        h:Math.random()                  /* สีประจำดวง — ดาวจริงมีทั้งขาวอมฟ้าและอมส้ม */
+      });
+    }
   }
   seed(); window.__starSeed=seed;
 
@@ -142,7 +156,14 @@ const INJECT = `(function(){
     try{ const s=G.pipeV(sunVec());
          sx=s.x; sy=s.y; si=s.z>0 ? .30+.34*s.z : Math.max(0,.30+.34*s.z); }catch(e){}
 
-    const col = (typeof SKIN!=='undefined' && SKIN.dust) ? SKIN.dust : '214,220,232';
+    /* ⛔ ห้ามใช้ SKIN.dust เป็นสีดาว — นั่นคือสีของอากาศใกล้ตัว ไม่ใช่แสงจากไกล
+          เคยใช้ร่วมกันแล้วดาวกับฝุ่นกลายเป็นของอย่างเดียวกัน (ข้อ 174.4) */
+    const cool=[214,226,255], warm=[255,232,206];
+    const mixc = h => { const t=(S.tone/100)*h;
+      return Math.round(cool[0]+(warm[0]-cool[0])*t)+','
+            +Math.round(cool[1]+(warm[1]-cool[1])*t)+','
+            +Math.round(cool[2]+(warm[2]-cool[2])*t); };
+    const col = mixc(.5);                 /* สีกลาง ไว้ใช้กับดาวตก */
     const R = (typeof G!=='undefined' && G.R) ? G.R : 0;
     const cx = (typeof G!=='undefined') ? G.CX : W/2, cy = (typeof G!=='undefined') ? G.CY : H/2;
     const keep = R*(1+S.halo/100);            /* ไม่วางดาวใกล้ขอบโลกกว่านี้ */
@@ -162,8 +183,23 @@ const INJECT = `(function(){
       }
       if(fade<=.02) continue;
       const tw = 1 - twk*.55*(0.5+0.5*Math.sin(tt*p.sp+p.ph));
-      ctx.globalAlpha = Math.max(0, base*p.b*tw*fade);
-      ctx.beginPath(); ctx.arc(px, py, p.r*sz, 0, Math.PI*2); ctx.fill();
+      /* rng ถ่างช่วงสว่าง-จางออก — ที่ 0 ทุกดวงทึบเท่ากันหมดแบบฝุ่น */
+      const bb = S.rng>0 ? Math.pow(p.b, 1-S.rng/140) : p.b;
+      const al = Math.max(0, base*(.10+.90*bb)*tw*fade);
+      if(al<=.012) continue;
+      ctx.fillStyle='rgba('+mixc(p.h)+',1)';
+      ctx.globalAlpha = al;
+      const rr=p.r*sz;
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, Math.PI*2); ctx.fill();
+      /* ⭐ แฉก — มีเฉพาะดวงที่สว่างจริง และเป็นสิ่งที่ฝุ่นไม่มีวันมี */
+      if(S.spike>0 && bb>.45){
+        const L=rr*(1.6+S.spike/22)*(.6+bb);
+        ctx.globalAlpha = al*.55;
+        ctx.strokeStyle='rgba('+mixc(p.h)+',1)';
+        ctx.lineWidth=.6; ctx.beginPath();
+        ctx.moveTo(px-L,py); ctx.lineTo(px+L,py);
+        ctx.moveTo(px,py-L); ctx.lineTo(px,py+L); ctx.stroke();
+      }
     }
     ctx.globalAlpha=1;
 
@@ -208,6 +244,7 @@ function paintOut(){
   $('#out').textContent =
     'ดาว   n '+v.n+' · a '+(v.a/100).toFixed(2)+' · size '+(v.size/100).toFixed(2)
     +' · twk '+(v.twk/100).toFixed(2)+' · halo '+(v.halo/100).toFixed(2)+' · sunf '+(v.sunf/100).toFixed(2)
+    +'\n       rng '+(v.rng/100).toFixed(2)+' · spike '+(v.spike/100).toFixed(2)+' · tone '+(v.tone/100).toFixed(2)
     +'\nดาวตก every '+v.every+'s · spd '+(v.spd/100).toFixed(2)
     +' · tail '+(v.tail/100).toFixed(2)+' · sha '+(v.sha/100).toFixed(2)
     +' · dir '+((w()&&w().__STAR)?w().__STAR.dir:0);
@@ -244,6 +281,17 @@ $('#autoOff').onclick = e=>{ try{ const S=w().__STAR; S.auto=S.auto?0:1;
 $('#starOff').onclick = e=>{ try{ const S=w().__STAR; S.on=S.on?0:1;
   e.target.classList.toggle('on',!S.on);
   e.target.textContent = S.on?'ปิดดาวทั้งหมด':'เปิดดาวทั้งหมด'; }catch(err){} };
+/* คำถามคือ "ดาวกับฝุ่นเหมือนกันเกินไปไหม" — ตอบได้ทางเดียวคือปิดทีละอย่างแล้วดู */
+$('#dustOff').onclick = e=>{
+  try{
+    const win=w();
+    if(win.__dustOff){ win.eval('dust = window.__dust0'); win.__dustOff=0;
+      e.target.classList.remove('on'); e.target.textContent='ปิดฝุ่น (ดูว่าแยกออกไหม)'; }
+    else { win.eval('window.__dust0 = window.__dust0 || dust; dust = function(){};');
+      win.__dustOff=1; e.target.classList.add('on'); e.target.textContent='เปิดฝุ่นกลับ'; }
+  }catch(err){ $('#out').textContent='ปิดฝุ่นไม่ได้: '+err.message; }
+};
+
 $('#btnCopy').onclick = async ()=>{
   const t=$('#out').textContent;
   try{ await navigator.clipboard.writeText(t); $('#btnCopy').textContent='คัดลอกแล้ว';
