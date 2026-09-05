@@ -65,6 +65,12 @@ body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;trans
      ⛔ สองอย่างที่ **ห้ามเอา token พวกนี้ไปแทน** เพราะมีเหตุผลของตัวเอง
         1. input · textarea = 16px — ต่ำกว่านี้ iOS Safari ซูมจอเองตอนโฟกัส
         2. #cSheet · .ptext = เนื้อจดหมาย ไม่ใช่ UI — ขนาดมาจากความยาวบรรทัดที่อ่านสบาย (ข้อ 63) */
+  /* ---- แสงพื้นหลังจากดวงอาทิตย์ (ข้อ 150.3 · ปรับข้อ 160) ----
+     ⚠️ ความแรงเท่ากันทั้งสองโหมดให้ผลต่างกัน 2.4 เท่า เพราะพื้นคนละขั้ว
+        โหมดสว่าง 1.07x (แทบไม่เห็น) · โหมดมืด 2.60x (ลูกโลกดูเปล่งแสงเอง) */
+  --sun-tint: 255,252,244;   /* แสงแดดกลางวัน */
+  --sun-gain: 1;
+
   --t-title: 22px;    /* หัวเรื่องของหน้า */
   --t-head:  17px;    /* หัวข้อรอง — คู่กับตัวหนาและเส้นคั่น */
   --t-body:  15px;    /* เนื้อหาหลัก · ปุ่ม · ชื่อในรายการ */
@@ -111,7 +117,8 @@ body{
      📌 ค่าตั้งต้นคือกลางบนของจอ เผื่อ JS ยังไม่ทำงาน หน้าจะได้ไม่ดำ */
   background:
     radial-gradient(90% 70% at var(--sun-x,50%) var(--sun-y,-10%),
-      rgba(255,252,244,var(--sun-i,0)), rgba(255,252,244,0) 62%),
+      rgba(var(--sun-tint), calc(var(--sun-i,0) * var(--sun-gain,1))),
+      rgba(var(--sun-tint),0) 62%),
     linear-gradient(165deg,var(--bg-a),var(--bg-b));
   color:var(--txt);
   font-family:"Noto Serif Thai",Georgia,"Times New Roman",serif;
@@ -583,6 +590,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     --gold-ink: #d8bb88;
     --gold-ink-2: #c9a878;
     --alert: #d68a7c;
+    /* ⛔ กลางคืนไม่มีแดด — แสงที่เหลือคือฟ้าเรือง ไม่ใช่ดวงอาทิตย์ส่องหน้า (ข้อ 160)
+       เปลี่ยนทั้ง *สี* และ *ความแรง* เพราะขาวครีมบนพื้นเข้มคือของที่เปล่งแสงเอง */
+    --sun-tint: 132,158,196;
+    --sun-gain: .30;
     --hits-bg: #222834;
 
     --line: rgba(var(--sheet-rgb),.26);
