@@ -5252,6 +5252,10 @@ const DUST=[];
 let dustT=0;
 function dust(ctx,dt){
   if(WIND_HERE===null || WIND_DIR===null) return;
+  /* ⛔ ฝนตก = ไม่มีฝุ่น · ไม่มีฝน = มีฝุ่น — สองอย่างนี้ไม่อยู่พร้อมกัน (ข้อ 155)
+     📌 ฝนชะฝุ่นลงจากอากาศ นั่นคือเหตุผลที่อากาศใสหลังฝนตก
+     ⓘ ระบบจับฝนก่อนเสมอ ฝุ่นเป็นสิ่งที่มาแทนตอนฟ้าแห้ง */
+  if(RAIN_HERE>0){ DUST.length=0; return; }
   if(!DUST.length)
     for(let i=0;i<26;i++)
       DUST.push({x:Math.random(), y:Math.random(), r:1+Math.random()*1.7, a:.25+Math.random()*.75});

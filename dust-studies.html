@@ -56,7 +56,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
   <div id="panel">
     <div class="hd"><b>ชั้นหลังลูกโลก</b><button class="tog" id="btnMin">ย่อ</button></div>
 
-    <p class="grp">ฝุ่น — ต้องรู้ลมถึงจะวาด</p>
+    <p class="grp">ฝุ่น — ต้องรู้ลม และต้องไม่มีฝน</p>
     <div class="row"><label>จำนวนจุด</label>
       <input type="range" id="n" min="0" max="80" value="26"><output id="oN"></output></div>
     <div class="row"><label>ความทึบต่ำสุด</label>
@@ -148,6 +148,8 @@ function apply(){
       DUST.length = 0;
       dust = function(ctx,dt){
         if(WIND_HERE===null || WIND_DIR===null) return;
+        /* ฝนตก = ไม่มีฝุ่น (ข้อ 155) — เลื่อน "ปริมาณ mm" ขึ้นแล้วฝุ่นต้องหาย */
+        if(RAIN_HERE>0){ DUST.length=0; return; }
         if(!DUST.length)
           for(let i=0;i<${v.n};i++)
             DUST.push({x:Math.random(), y:Math.random(),
