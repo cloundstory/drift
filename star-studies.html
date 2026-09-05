@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1420">
+<title>drift — แบบศึกษาดาวและดาวตก</title>
+<style>
+/* แบบศึกษาดาวและดาวตก (ข้อ 174)
+   ⚠️ ไม่จำลองลูกโลกขึ้นมาเอง — iframe ตัวจริงแล้วยัดชั้นดาวเข้าไปในลูปวาดของแอป
+      หลักเดียวกับ dark-studies.html · ที่เห็นคือฉากจริง ไม่ใช่ภาพร่าง
+   ⛔ ยังไม่มีอะไรเข้า index.html — ที่นี่คือที่ *ดูก่อนตัดสิน* */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;
+  font-family:"Noto Serif Thai",Georgia,serif;background:#0b0f18;color:#e8e3d8}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+#stagebox{flex:1;position:relative;min-height:0;background:#000}
+iframe{width:100%;height:100%;border:0;display:block}
+#panel{background:#141a27;border-top:1px solid rgba(232,227,216,.14);
+  padding:8px 14px calc(env(safe-area-inset-bottom) + 10px);
+  max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#panel.min{max-height:52px;overflow:hidden}
+.hd{display:flex;align-items:center;gap:8px;height:34px}
+.hd b{font-weight:400;font-size:13px;letter-spacing:.2em;flex:1;opacity:.75}
+button{background:rgba(232,227,216,.12);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 13px;height:34px;min-width:44px;border-radius:17px}
+button.on{background:rgba(232,227,216,.3)}
+button.go{background:rgba(214,190,140,.26)}
+.grp{font-size:11px;letter-spacing:.18em;opacity:.5;margin:13px 0 2px}
+.row{display:flex;align-items:center;gap:11px;margin:5px 0}
+.row label{width:112px;font-size:12px;opacity:.72;flex:none}
+.row output{width:42px;text-align:right;font-size:12px;opacity:.55;flex:none;
+  font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;height:40px;background:none;-webkit-appearance:none;appearance:none;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:#e8e3d8;margin-top:-12px}
+input[type=range]::-moz-range-track{height:2px;background:rgba(232,227,216,.28)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#e8e3d8}
+.btns{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 2px}
+#out{font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.6;opacity:.6;
+  white-space:pre-wrap;margin-top:10px}
+.note{font-size:11.5px;line-height:1.7;opacity:.55;margin:9px 0 0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stagebox"><iframe id="app"></iframe></div>
+
+  <div id="panel">
+    <div class="hd">
+      <b>ดาว</b>
+      <button id="btnShoot" class="go">ยิงดาวตก</button>
+      <button id="btnDark" class="on">มืด</button>
+      <button id="btnNight">หมุนไปกลางคืน</button>
+      <button id="btnMin">ย่อ</button>
+    </div>
+
+    <div class="grp">ดาวประจำที่</div>
+    <div class="row"><label>จำนวน</label><input type="range" id="n"    min="0"  max="260" value="120"><output></output></div>
+    <div class="row"><label>ความสว่าง</label><input type="range" id="a" min="0"  max="100" value="55"><output></output></div>
+    <div class="row"><label>ขนาด</label><input type="range" id="size"  min="40" max="260" value="100"><output></output></div>
+    <div class="row"><label>กระพริบ</label><input type="range" id="twk" min="0"  max="100" value="50"><output></output></div>
+    <div class="row"><label>หลบขอบโลก</label><input type="range" id="halo" min="0" max="60" value="18"><output></output></div>
+    <div class="row"><label>จางใกล้ตะวัน</label><input type="range" id="sunf" min="0" max="100" value="70"><output></output></div>
+
+    <div class="grp">ดาวตก</div>
+    <div class="row"><label>ทุกกี่วินาที</label><input type="range" id="every" min="3" max="90" value="16"><output></output></div>
+    <div class="row"><label>ความเร็ว</label><input type="range" id="spd" min="30" max="300" value="100"><output></output></div>
+    <div class="row"><label>ความยาวหาง</label><input type="range" id="tail" min="20" max="300" value="100"><output></output></div>
+    <div class="row"><label>ความสว่าง</label><input type="range" id="sha" min="0" max="100" value="80"><output></output></div>
+
+    <div class="btns">
+      <button id="dir0" class="on">ทิศสุ่ม</button>
+      <button id="dir1">ตามลมจริงที่ต้นทาง</button>
+      <button id="autoOff">ปิดดาวตกอัตโนมัติ</button>
+      <button id="starOff">ปิดดาวทั้งหมด</button>
+      <button id="btnCopy">คัดลอกค่า</button>
+    </div>
+
+    <p class="note">
+      ⛔ ดาวโผล่เฉพาะโหมดมืด · ⚠️ "จางใกล้ตะวัน" ใช้ตำแหน่งดวงอาทิตย์จริงจาก
+      <code>sunVec()</code> ที่แอปคำนวณอยู่แล้ว — ฝั่งที่ฟ้าสว่าง ดาวจะหายไปเอง
+      · ถ้าลูกโลกหันซีกกลางวันมาทั้งใบ กดปุ่ม "หมุนไปกลางคืน"
+    </p>
+    <div id="out"></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const app=$('#app');
+let dark=true, W=null;
+
+const K=['n','a','size','twk','halo','sunf','every','spd','tail','sha'];
+const V=()=>{ const o={}; K.forEach(k=>o[k]=+$('#'+k).value); return o; };
+
+/* ---------- ชั้นดาว: ยัดเข้าไปในลูปวาดของแอปจริง ----------
+   ⚠️ paintSky() ไม่ได้วาดอะไรลง canvas เลย — มันตั้ง CSS custom property
+      แล้ว body gradient เป็นคนวาดอวกาศ · ดาวจึงต้องเป็นชั้นใหม่บน canvas
+   ⓘ ห่อ grain() เพราะมันคือชั้นแรกสุดที่วาดบน sctx — ดาวอยู่ไกลกว่าทุกอย่าง
+      และลูกโลกวาดทีหลัง จึงทับดาวเองโดยไม่ต้องทำอะไรเพิ่ม */
+const INJECT = `(function(){
+  if(window.__starOn) return 'already';
+  window.__starOn = 1;
+  const S = window.__STAR = {on:1,auto:1,n:120,a:55,size:100,twk:50,halo:18,sunf:70,
+                             every:16,spd:100,tail:100,sha:80,dir:0};
+  const P=[]; let last=performance.now(), tt=0, next=4, SH=null;
+
+  function seed(){
+    P.length=0;
+    for(let i=0;i<260;i++) P.push({
+      x:Math.random(), y:Math.random(),
+      r:.35+Math.random()*1.05,          /* ดาวจริงมีขนาดต่างกันมาก ไม่ใช่จุดเท่ากันหมด */
+      b:.30+Math.random()*.70,           /* ความสว่างประจำตัว */
+      ph:Math.random()*6.283, sp:.5+Math.random()*1.2
+    });
+  }
+  seed(); window.__starSeed=seed;
+
+  /* ดาวตกหนึ่งดวง — เกิดนอกจอแล้ววิ่งเข้ามา ไม่ใช่โผล่กลางจอ */
+  function mk(){
+    let th;
+    if(S.dir===1 && typeof WIND_DIR==='number' && WIND_DIR!==null)
+      th=(WIND_DIR+180)*Math.PI/180;    /* ทิศที่ลมพัด *ไป* เหมือนฝุ่นกับฝน */
+    else th=(200+Math.random()*100)*Math.PI/180;
+    const vx=Math.sin(th), vy=-Math.cos(th);
+    /* เริ่มจากขอบฝั่งตรงข้ามทิศที่จะวิ่งไป เผื่อระยะให้วิ่งพาดจอได้ */
+    return {x:.5-vx*.85+(Math.random()-.5)*.5, y:.5-vy*.85+(Math.random()-.5)*.5,
+            vx, vy, t:0, life:1.1+Math.random()*.5};
+  }
+  window.__shootNow=()=>{ SH=mk(); };
+
+  function draw(ctx){
+    if(!S.on) return;
+    if(!document.documentElement.classList.contains('dm')) return;  /* ⛔ ไม่มีดาวกลางวัน */
+    const now=performance.now();
+    const dt=Math.min(.05,(now-last)/1000)||0; last=now; tt+=dt;
+
+    /* ตำแหน่งดวงอาทิตย์บนจอ + ความแรง — ตัวเดียวกับที่ paintSky ใช้ */
+    let sx=0, sy=0, si=0;
+    try{ const s=G.pipeV(sunVec());
+         sx=s.x; sy=s.y; si=s.z>0 ? .30+.34*s.z : Math.max(0,.30+.34*s.z); }catch(e){}
+
+    const col = (typeof SKIN!=='undefined' && SKIN.dust) ? SKIN.dust : '214,220,232';
+    const R = (typeof G!=='undefined' && G.R) ? G.R : 0;
+    const cx = (typeof G!=='undefined') ? G.CX : W/2, cy = (typeof G!=='undefined') ? G.CY : H/2;
+    const keep = R*(1+S.halo/100);            /* ไม่วางดาวใกล้ขอบโลกกว่านี้ */
+    const twk = S.twk/100, sunf=S.sunf/100, base=S.a/100, sz=S.size/100;
+    const diag = Math.hypot(W,H)||1;
+
+    ctx.fillStyle='rgba('+col+',1)';
+    for(let i=0;i<S.n && i<P.length;i++){
+      const p=P[i], px=p.x*W, py=p.y*H;
+      const d=Math.hypot(px-cx,py-cy);
+      if(R && d<keep) continue;             /* ลูกโลกกินที่ตรงนั้นอยู่ */
+      /* ยิ่งใกล้ดวงอาทิตย์ ฟ้ายิ่งสว่าง ดาวยิ่งหาย — ระยะบนจอ ไม่ใช่ระยะจริง */
+      let fade=1;
+      if(sunf>0 && si>0){
+        const ds=Math.hypot(px-sx,py-sy)/diag;
+        fade = 1 - sunf*si*Math.max(0, 1-ds*1.9);
+      }
+      if(fade<=.02) continue;
+      const tw = 1 - twk*.55*(0.5+0.5*Math.sin(tt*p.sp+p.ph));
+      ctx.globalAlpha = Math.max(0, base*p.b*tw*fade);
+      ctx.beginPath(); ctx.arc(px, py, p.r*sz, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    /* ---- ดาวตก ---- */
+    if(S.auto){ next-=dt; if(next<=0){ SH=mk(); next=S.every*(.6+Math.random()*.8); } }
+    if(SH){
+      SH.t+=dt*(S.spd/100);
+      if(SH.t>SH.life){ SH=null; }
+      else{
+        const u=SH.t/SH.life;
+        const x=(SH.x+SH.vx*SH.t*.9)*W, y=(SH.y+SH.vy*SH.t*.9)*H;
+        const len=diag*.13*(S.tail/100);
+        /* หัวสว่าง หางจาง — และทั้งดวงจางลงตอนใกล้จบ ไม่ใช่ดับกลางอากาศ */
+        const a=(S.sha/100)*Math.sin(Math.PI*Math.min(1,u*1.15));
+        const g=ctx.createLinearGradient(x,y,x-SH.vx*len,y-SH.vy*len);
+        g.addColorStop(0,'rgba('+col+','+(a).toFixed(3)+')');
+        g.addColorStop(1,'rgba('+col+',0)');
+        ctx.strokeStyle=g; ctx.lineWidth=1.5; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-SH.vx*len,y-SH.vy*len); ctx.stroke();
+        ctx.globalAlpha=a; ctx.fillStyle='rgba('+col+',1)';
+        ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1;
+      }
+    }
+  }
+  grain = (function(o){ return function(c){ try{ draw(c); }catch(e){} return o(c); }; })(grain);
+  return 'ok';
+})()`;
+
+function w(){ return app.contentWindow; }
+
+function apply(){
+  const win=w(); if(!win||!win.__STAR) return;
+  const v=V(); Object.assign(win.__STAR, v);
+  K.forEach(k=>{ $('#'+k).nextElementSibling.value =
+    (k==='every') ? v[k]+'s' : (k==='n' ? v[k] : v[k]+(k==='halo'||k==='a'||k==='twk'||k==='sunf'?'%':'%')); });
+  paintOut();
+}
+
+function paintOut(){
+  const v=V();
+  $('#out').textContent =
+    'ดาว   n '+v.n+' · a '+(v.a/100).toFixed(2)+' · size '+(v.size/100).toFixed(2)
+    +' · twk '+(v.twk/100).toFixed(2)+' · halo '+(v.halo/100).toFixed(2)+' · sunf '+(v.sunf/100).toFixed(2)
+    +'\nดาวตก every '+v.every+'s · spd '+(v.spd/100).toFixed(2)
+    +' · tail '+(v.tail/100).toFixed(2)+' · sha '+(v.sha/100).toFixed(2)
+    +' · dir '+((w()&&w().__STAR)?w().__STAR.dir:0);
+}
+
+K.forEach(k=>$('#'+k).addEventListener('input', apply));
+
+$('#btnShoot').onclick = ()=>{ try{ w().__shootNow(); }catch(e){} };
+$('#btnDark').onclick = e=>{
+  dark=!dark; e.target.classList.toggle('on',dark); e.target.textContent = dark?'มืด':'สว่าง';
+  try{ w().eval("setSchemePref('"+(dark?'dark':'light')+"')"); }catch(err){}
+};
+/* ลูกโลกมักหันซีกกลางวันมาทั้งใบ แล้วจะไม่เห็นว่าดาวจางใกล้ตะวันอย่างไร (ข้อ 129.6) */
+$('#btnNight').onclick = ()=>{
+  try{ w().eval(`(function(){
+    const r0=G.rotY; let best=null;
+    for(let i=0;i<180;i++){
+      G.rotY = r0 + i*Math.PI/90;
+      const v = G.pipeV(sunVec());
+      if(!best || v.z < best.z) best = {z:v.z, rot:G.rotY};
+    }
+    G.rotY=best.rot; G.vY=0; G._key=null; G._nkey=null; renderGlobe();
+  })()`); }catch(e){}
+};
+$('#btnMin').onclick = ()=>{ const p=$('#panel'); p.classList.toggle('min');
+  $('#btnMin').textContent = p.classList.contains('min')?'ขยาย':'ย่อ'; };
+$('#dir0').onclick = ()=>{ try{ w().__STAR.dir=0; }catch(e){}
+  $('#dir0').classList.add('on'); $('#dir1').classList.remove('on'); paintOut(); };
+$('#dir1').onclick = ()=>{ try{ w().__STAR.dir=1; }catch(e){}
+  $('#dir1').classList.add('on'); $('#dir0').classList.remove('on'); paintOut(); };
+$('#autoOff').onclick = e=>{ try{ const S=w().__STAR; S.auto=S.auto?0:1;
+  e.target.classList.toggle('on',!S.auto);
+  e.target.textContent = S.auto?'ปิดดาวตกอัตโนมัติ':'เปิดดาวตกอัตโนมัติ'; }catch(err){} };
+$('#starOff').onclick = e=>{ try{ const S=w().__STAR; S.on=S.on?0:1;
+  e.target.classList.toggle('on',!S.on);
+  e.target.textContent = S.on?'ปิดดาวทั้งหมด':'เปิดดาวทั้งหมด'; }catch(err){} };
+$('#btnCopy').onclick = async ()=>{
+  const t=$('#out').textContent;
+  try{ await navigator.clipboard.writeText(t); $('#btnCopy').textContent='คัดลอกแล้ว';
+       setTimeout(()=>$('#btnCopy').textContent='คัดลอกค่า',1400); }catch(e){}
+};
+
+app.addEventListener('load', ()=>{
+  const win=w();
+  try{
+    W = win.eval('typeof W!=="undefined" ? W : null');
+    const r = win.eval(INJECT);
+    $('#out').textContent = 'ยัดชั้นดาวแล้ว: '+r;
+  }catch(e){ $('#out').textContent = 'ยัดไม่ได้: '+e.message; return; }
+  /* ปิดแผ่นทุกอย่างให้เห็นแต่ฉาก — ลูกโลกวาดเฉพาะตอนไม่มี sheet เปิด */
+  try{ const d=win.document, st=d.createElement('style');
+       st.textContent='#splash,.veil{display:none!important}';
+       d.head.appendChild(st); }catch(e){}
+  setTimeout(apply, 200);
+});
+
+/* ตั้งให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว และอยู่โหมดมืด *ก่อน* ปล่อยให้เฟรมโหลด */
+try{
+  localStorage.setItem('lw.v1.scheme','dark');
+  localStorage.setItem('lw.v1.intro','1');
+  sessionStorage.setItem('lw.v1.splash','1');
+}catch(e){}
+/* ⚠️ service worker แคชแอปไว้ — เฟรมจะได้ไฟล์เก่าแล้วเราจะนึกว่าชั้นดาวไม่ทำงาน (ข้อ 127.4) */
+navigator.serviceWorker && navigator.serviceWorker.getRegistrations
+  && navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+app.src='index.html?fresh='+Date.now();
+paintOut();
+</script>
+</body>
+</html>
