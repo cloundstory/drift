@@ -5258,7 +5258,7 @@ function dust(ctx,dt){
   if(RAIN_HERE>0){ DUST.length=0; return; }
   if(!DUST.length)
     for(let i=0;i<26;i++)
-      DUST.push({x:Math.random(), y:Math.random(), r:1+Math.random()*1.7, a:.25+Math.random()*.75});
+      DUST.push({x:Math.random(), y:Math.random(), r:1.4+Math.random()*2.2, a:.25+Math.random()*.75});
   /* dir = ทิศที่ลม *มาจาก* — ที่ฝุ่นเคลื่อนไปคือด้านตรงข้าม */
   const th=(WIND_DIR+180)*RAD;
   const vx=Math.sin(th), vy=-Math.cos(th);
@@ -5281,9 +5281,12 @@ function dust(ctx,dt){
     if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
     if(p.y<-.05)p.y=1.05; if(p.y>1.05)p.y=-.05;
     /* หายใจช้า ๆ ไม่พร้อมกัน — ฝุ่นจริงไม่กะพริบเป็นจังหวะเดียว */
-    /* ⚠️ วัดแล้ว: .030-.070 ให้จุดเข้มสุดแค่ 7/255 = 2.7% ซึ่งเท่ากับไม่มีอยู่จริง
-       .075-.135 ได้ราว 25/255 = เห็นว่าอากาศมีอะไรลอยอยู่ แต่ไม่แย่งสายตาจากลูกโลก */
-    const a=(.075+.060*p.a)*(.72+.28*Math.sin(dustT*.5+i*1.7));
+    /* ⚠️ ไล่มาสามค่าแล้ว และสองค่าแรกมาจากการวัดที่ผิดพิกัด (ข้อ 154.3 · 156)
+         .030-.070  →  7/255   เท่ากับไม่มีอยู่จริง
+         .075-.135  →  33/255  ยังหาไม่เจอบนมือถือจริง เพราะกินพื้นที่จอแค่ 0.13%
+         .150-.270  →  ค่าปัจจุบัน — ทึบขึ้นเท่าตัว *และ* จุดใหญ่ขึ้น
+       📌 ของที่กินพื้นที่น้อยมาก ต่อให้ทึบขึ้นก็ยังหาไม่เจอ ต้องโตขึ้นด้วย */
+    const a=(.150+.120*p.a)*(.72+.28*Math.sin(dustT*.5+i*1.7));
     ctx.globalAlpha=a;
     ctx.beginPath(); ctx.arc(p.x*W, p.y*H, p.r, 0, Math.PI*2); ctx.fill();
   });
@@ -5345,14 +5348,14 @@ const SPLASH=[];
 function splash(ctx,dt){
   if(!SPLASH.length) return;
   ctx.strokeStyle='rgba('+SKIN.rainBg+',1)';
-  ctx.lineWidth=1;
+  ctx.lineWidth=1.3;
   for(let i=SPLASH.length-1;i>=0;i--){
     const s=SPLASH[i];
     s.t+=dt;
     if(s.t>=s.life){ SPLASH.splice(i,1); continue; }
     const k=s.t/s.life;                         /* 0 → 1 */
     /* วงแบนที่แผ่ออกแล้วจาง — แบนเพราะมองพื้นจากมุมเฉียง ไม่ใช่มองจากบนลงมา */
-    ctx.globalAlpha=(1-k)*.12*s.w;
+    ctx.globalAlpha=(1-k)*.22*s.w;   /* เดิม .12 (ข้อ 156) */
     ctx.beginPath();
     ctx.ellipse(s.x, s.y, 2+k*9*s.w, (2+k*9*s.w)*.30, 0, 0, Math.PI*2);
     ctx.stroke();
@@ -5372,7 +5375,7 @@ function rain(ctx,dt){
   const wx=Math.sin(th)*clamp((WIND_HERE||0)/40,0,.85);
   const len=9+clamp(RAIN_HERE*7,0,10);
   ctx.strokeStyle='rgba('+SKIN.rainBg+',1)';
-  ctx.lineWidth=1; ctx.lineCap='round';
+  ctx.lineWidth=1.3; ctx.lineCap='round';
   RAIN.forEach(p=>{
     const y0=p.y*H;
     p.y += (.32+.26*p.s)*dt;
@@ -5391,7 +5394,7 @@ function rain(ctx,dt){
       p.y=-.05; p.x=Math.random();
     }
     if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
-    ctx.globalAlpha=.055+.055*p.s;
+    ctx.globalAlpha=.115+.105*p.s;   /* เดิม .055-.110 — จางจนหาไม่เจอบนมือถือ (ข้อ 156) */
     ctx.beginPath();
     ctx.moveTo(p.x*W, p.y*H);
     ctx.lineTo(p.x*W + wx*len*1.5, p.y*H + len*(.7+.5*p.s));
@@ -5417,7 +5420,7 @@ function grain(ctx){
       /* ⓘ เกรนกระดาษเป็นก้อนหยาบกว่าเกรนดิจิทัล — สุ่มทีละพิกเซลจะละเอียดเกินจนหายไป */
       const v=Math.random();
       d[i]=r; d[i+1]=gr; d[i+2]=b;
-      d[i+3]= v<.55 ? 0 : Math.round(4+v*9);
+      d[i+3]= v<.55 ? 0 : Math.round(6+v*13);   /* เดิม 4+v*9 — ครอบทั้งจอจึงเพิ่มน้อยกว่าชั้นอื่น (ข้อ 156) */
     }
     g.putImageData(im,0,0);
     GRAIN=c;
