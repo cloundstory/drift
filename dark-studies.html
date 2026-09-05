@@ -85,6 +85,10 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <input type="range" id="gBaseL" min="-70" max="40" value="-49"><output id="oGBaseL"></output></div>
     <div class="row"><label>กลางวัน ทึบ</label>
       <input type="range" id="gDayA" min="80" max="1400" value="180"><output id="oGDayA"></output></div>
+    <div class="row"><label>รอยต่อวัน-คืน นุ่ม</label>
+      <input type="range" id="gSoft" min="0" max="100" value="90"><output id="oGSoft"></output></div>
+    <div class="row"><label>ขอบซีกกลางวัน</label>
+      <input type="range" id="gEdge" min="0" max="40" value="6"><output id="oGEdge"></output></div>
     <div class="row"><label>กลางคืน ทึบ</label>
       <input type="range" id="gNightA" min="20" max="800" value="300"><output id="oGNightA"></output></div>
     <div class="row"><label>แสงตกกระทบ</label>
@@ -131,7 +135,7 @@ const $ = s => document.querySelector(s);
 const app = $('#app');
 let dark = true;
 
-const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gFog','gBaseA','gBaseL','gDayA','gNightA','gDay','gLit','gNight','gInkD','gInkN','pL','pW','pInk'];
+const K = ['bgL','bgH','bgS','shL','shW','inkL','goL','gFog','gBaseA','gBaseL','gDayA','gNightA','gSoft','gEdge','gDay','gLit','gNight','gInkD','gInkN','pL','pW','pInk'];
 /* ความทึบเป็นเปอร์เซ็นต์ 100 = เท่าเดิม — คุมคนละเรื่องกับสี จึงแยกออกมา (ข้อ 129) */
 const GA = {gDayA:'dayA', gNightA:'nightA'};
 const GB = {gBaseA:'baseA'};   /* ความทึบของเนื้อโลก 0-100% (ข้อ 129) */
@@ -223,6 +227,14 @@ function applyGlobe(){
      ในโหมดสว่างลูกโลกที่จางลงถูกกลืนในหมอกสีอ่อน · ในโหมดมืดมันหายไปในความมืด
      ดัน dayA เท่าไหร่ก็ชนเพดานนี้ ต้องลดหมอกเท่านั้น (ข้อ 129.5) */
   try{ w.eval('CFG.FOG=' + (dark ? (v.gFog/100) : 0.72) + ';'); }catch(e){}
+  /* ⚠️ SOFT คุมรูปทรงของรอยต่อวัน-คืนสี่อย่างพร้อมกัน (ข้อ 164)
+       band()   ความกว้างแถบสนธยา  = .30 + SOFT*.20
+       blurPx() ความเบลอของขอบเงา  = SOFT * ... * .24
+       lift     การยกแสงฝั่งมืด
+       lineA    เส้นขอบแสง = .45*(1-SOFT) — ที่ .90 แทบไม่เหลือเส้น
+     ⛔ ใช้ *ทั้งสองโหมด* ไม่ใช่เฉพาะมืด — ค่าที่เลือกจะกระทบโหมดสว่างด้วย */
+  try{ w.eval('SOFT=' + (v.gSoft/100) + ';'); }catch(e){}
+  skin.dayEdge = v.gEdge/100;
   skin.base = dark ? shiftL(w.__SKIN0.base, v.gBaseL) : w.__SKIN0.base;
   /* ⚠️ sphere() แคชภาพไว้ด้วย _key ที่คิดจากมุมกับซูมเท่านั้น ไม่รู้จักสี
      ไม่ล้างก่อน จะได้ภาพเดิมกลับมาแล้วนึกว่าค่าที่ปรับไม่มีผล (ข้อ 129) */
