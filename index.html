@@ -316,6 +316,16 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 .mrow:active{background:rgba(var(--sheet-rgb),.4)}
 .mrow.on b,.mrow.on em{color:var(--gold-ink)}
 .mrow.gone{opacity:.5}
+/* ---------- แถวเลือกสามทาง (ข้อ 158) ----------
+   ⓘ ใช้ .mrow เดิมเป็นฐาน — แถวตั้งค่าควรหน้าตาเดียวกับแถวอื่นในหน้าเดียวกัน
+   ⚠️ ปุ่มย่อยสูง 34px แต่แถวรวมยังเกิน 44px ตามเกณฑ์พื้นที่แตะ */
+.mrow.seg{flex-wrap:wrap;gap:8px}
+.segs{display:flex;gap:0;border:1px solid var(--line-soft);border-radius:999px;overflow:hidden}
+.segs button{font:inherit;font-size:var(--t-tiny);letter-spacing:.02em;color:var(--dim);
+  background:transparent;border:0;padding:0 13px;height:34px;white-space:nowrap}
+.segs button+button{border-left:1px solid var(--line-soft)}
+.segs button.on{background:rgba(var(--gold-rgb),.16);color:var(--gold-ink)}
+
 .grp{font-size:var(--t-tiny);letter-spacing:.03em;color:var(--faint);margin:16px 0 2px}
 .grp:first-child{margin-top:0}
 
@@ -854,6 +864,18 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <p class="sub">เก็บในเครื่องนี้เท่านั้น</p>
     <!-- ⛔ จดหมาย · รายชื่อ · รหัส port ย้ายไป #porthome แล้ว (ข้อ 140.1)
          อย่าเอากลับมา — ที่นี่มีแต่ของที่ตั้งครั้งเดียวแล้วลืม -->
+    <!-- โหมดสี (ข้อ 158) — ⛔ แก้ข้อ 127.1 ที่เคยตัดสินว่า "ไม่มีปุ่มสลับ ตั้งใจ"
+         เหตุผลเดิมคือไม่อยากให้ปุ่มรกหน้าจอ แต่ผลจริงคือคนที่ตั้งเครื่องมืดถาวร
+         **ไม่มีวันเห็นโหมดสว่างของแอปเลยสักครั้ง** และทางเดียวที่จะเห็นคือ
+         ออกไปเปลี่ยนตั้งค่าทั้งเครื่อง ซึ่งไม่มีใครทำเพื่อดูแอปเดียว
+         ⓘ อยู่ในหน้าตั้งค่า ไม่ใช่หน้าแรก — ไม่ขัดข้อ 100.2 ที่ว่าหน้าแรกมีสี่อย่าง -->
+    <div class="mrow seg"><b>โหมดสี</b>
+      <div class="segs" id="segScheme">
+        <button data-v="auto">ตามเครื่อง</button>
+        <button data-v="light">สว่าง</button>
+        <button data-v="dark">มืด</button>
+      </div>
+    </div>
     <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
     <button class="mrow" id="mInstall"><b>เพิ่มลงหน้าจอโฮม</b><em id="mInstallNote"></em></button>
     <button class="mrow" id="mBug"><b>แจ้งปัญหา</b><em id="mBugNote"></em></button>
@@ -6209,7 +6231,13 @@ async function openPort(pt){
     : 'ไม่รู้ฟ้าที่นั่น — อยู่นอกเขตที่แอปเก็บลมไว้';
 }
 
-$('#btnMenu').onclick=()=>{ syncBugNote(); openSheet('menu'); };
+$('#btnMenu').onclick=()=>{ syncBugNote(); paintSegs(); openSheet('menu'); };
+/* ⚠️ ผูกที่ตัวกลุ่มไม่ใช่ทีละปุ่ม — ปุ่มถูกวาดจาก markup คงที่ก็จริง
+   แต่ event เดียวคุมทั้งสามอันได้ และเพิ่มทางเลือกที่สี่ทีหลังไม่ต้องแก้ตรงนี้ */
+$('#segScheme').onclick=e=>{
+  const b=e.target.closest('button[data-v]'); if(!b) return;
+  setSchemePref(b.dataset.v);
+};
 $('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
 $('#mInstall').onclick=openInstall;
 
@@ -8027,8 +8055,34 @@ const DARK_MODE = false;
 
 const SCHEME = matchMedia('(prefers-color-scheme: dark)');
 let schemeNow = null;
+/* ---------- โหมดสี: ตามเครื่อง · สว่าง · มืด (ข้อ 158) ----------
+   ⛔ แก้ข้อ 127.1 ที่เคยตัดสินว่าไม่มีปุ่มสลับ — คนที่ตั้งเครื่องมืดถาวร
+      ไม่มีวันเห็นโหมดสว่างของแอปเลย ซึ่งไม่ใช่ผลที่ข้อนั้นตั้งใจ
+   ⓘ 'auto' ยังเป็นค่าเริ่มต้น คนที่ไม่แตะจึงได้พฤติกรรมเดิมทุกอย่าง */
+const K_SCHEME='lw.v1.scheme';
+function schemePref(){
+  try{ const v=LS.get(K_SCHEME); return (v==='light'||v==='dark')?v:'auto'; }
+  catch(e){ return 'auto'; }
+}
+function setSchemePref(v){
+  try{ LS.set(K_SCHEME, v); }catch(e){}
+  syncScheme(); paintSegs();
+}
+function paintSegs(){
+  /* ⛔ สวิตช์ใหญ่ปิดอยู่ = ปุ่มนี้กดแล้วไม่มีอะไรเกิดขึ้น จึงต้องไม่มีให้กด
+     กฎเดียวกับที่ทำให้ปุ่ม drift port เคยหายไป (ข้อ 149) — แต่รอบนี้ถูกต้อง
+     เพราะแถวนี้ *ว่างจริง* ตอนปิด ต่างจากหน้า drift port ที่ไม่เคยว่าง */
+  const row=document.querySelector('#menu .mrow.seg');
+  if(row) row.hidden = !DARK_MODE;
+  const v=schemePref();
+  document.querySelectorAll('#segScheme button').forEach(b=>
+    b.classList.toggle('on', b.dataset.v===v));
+}
 function syncScheme(){
-  const on = DARK_MODE && SCHEME.matches;
+  const pref=schemePref();
+  /* ⚠️ DARK_MODE ยังเป็นสวิตช์ใหญ่ที่ปิดทั้งระบบอยู่ (ข้อ 136)
+     ปุ่มนี้เลือกได้ก็ต่อเมื่อสวิตช์ใหญ่เปิดแล้วเท่านั้น */
+  const on = DARK_MODE && (pref==='dark' || (pref==='auto' && SCHEME.matches));
   if(on === schemeNow) return;   /* ไม่วาดใหม่ถ้าไม่ได้เปลี่ยนจริง */
   schemeNow = on;
   document.documentElement.classList.toggle('dm', on);
