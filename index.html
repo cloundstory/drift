@@ -93,9 +93,9 @@ body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;trans
   --bg-b: #eee9de;
   --sheet-a: 223,226,230;        /* พื้นของแผ่นเต็มจอ */
   --sheet-b: 238,233,222;
-  --gold-ink: #8b6a33;           /* ตัวหนังสือสีทองบนปุ่ม */
-  --gold-ink-2: #7d5f2e;
-  --alert: #a8574a;
+  --gold-ink: #7a5c2a;           /* ตัวหนังสือสีทองบนปุ่ม — 4.76:1 (ข้อ 171) */
+  --gold-ink-2: #6f5426;
+  --alert: #954d41;             /* คำเตือน — 4.73:1 · hue/sat เดิมของ #a8574a (ข้อ 171) */
   --hits-bg: #fbf9f4;
 
   --gold-flat:#c69a54;
@@ -103,8 +103,14 @@ body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;trans
   --line:rgba(var(--ink-rgb),.30);
   --line-soft:rgba(var(--ink-rgb),.15);
   --txt:rgba(var(--shadow-rgb),.92);
-  --dim:rgba(var(--ink-rgb),.55);
-  --faint:rgba(var(--ink-rgb),.38);
+  /* ⛔ สามระดับนี้ผ่านเกณฑ์ 4.5:1 บนพื้นที่เข้มที่สุดของแอป (ข้อ 171)
+     ค่าเดิม .55/.38 ได้ 2.25:1 กับ 1.71:1 ซึ่งอ่านไม่ออกจริง ไม่ใช่แค่เงียบ
+     ⚠️ ลดลงเมื่อไหร่ต้องวัดใหม่ที่ contrast-studies.html ไม่ใช่เทียบด้วยตา */
+  --dim:rgba(var(--ink-rgb),1);
+  --faint:rgba(var(--ink-rgb),.92);
+  /* ⚠️ หัวข้อรองเคยเป็น .86 ตายตัว ซึ่งพอ --dim ขึ้นเป็น 1 แล้วมันจางกว่าเนื้อความ
+        คือลำดับชั้นกลับหัว · โหมดมืดยังใช้ .86 เพราะที่นั่นไม่ได้ขยับอะไร */
+  --head2:rgba(var(--ink-rgb),1);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
@@ -346,7 +352,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #mCode:focus{outline:0;border-color:rgba(var(--gold-rgb),.55)}
 #mine .btn.wide{margin-top:8px}
 /* หัวข้อรองชุดเดียวกับหน้า drift port — ต้องตรงกัน ไม่งั้นสองหน้าพูดคนละภาษา (ข้อ 146) */
-#mine .grp{font-size:var(--t-head);font-weight:700;letter-spacing:.03em;color:rgba(var(--ink-rgb),.86);
+#mine .grp{font-size:var(--t-head);font-weight:700;letter-spacing:.03em;color:var(--head2);
   padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
 #mine h2{font-size:var(--t-title);font-weight:700;letter-spacing:.01em}
 
@@ -378,7 +384,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 /* ⚠️ หน้า inbox ตอนนี้หัวกลุ่มคือ *ชื่อคน* ไม่ใช่ป้ายสถานะอีกต่อไป (ข้อ 147)
    มันจึงเป็นหัวข้อรองเหมือนหน้า drift port — ขนาดเดียวกัน */
 #porthome .grp,#inbox .grp{font-size:var(--t-head);font-weight:700;letter-spacing:.03em;
-  color:rgba(var(--ink-rgb),.86);margin:26px 0 6px;padding-bottom:7px;
+  color:var(--head2);margin:26px 0 6px;padding-bottom:7px;
   border-bottom:1px solid var(--line-soft)}
 #inbox .grp:first-child{margin-top:8px}
 #porthome .grp{margin-top:0}
@@ -594,6 +600,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     --txt: rgba(var(--ink-rgb),.92);
     --dim: rgba(var(--ink-rgb),.62);
     --faint: rgba(var(--ink-rgb),.42);
+    --head2: rgba(var(--ink-rgb),.86);
   }
   html.dm /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก */
   .btn{background:rgba(var(--sheet-rgb),.13)}
