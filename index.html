@@ -553,9 +553,12 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ⓘ ใช้ ::before ไม่เพิ่ม element · ตำแหน่งกับความเข้มมาจากตัวแปรที่ :root
       loop เดียวจึงคุมได้ทั้งหน้าเขียนและหน้าอ่าน
    ⚠️ โผล่เฉพาะโหมดมืด ผูกแกนเดียวกับทุกอย่าง ไม่ดูนาฬิกา (ข้อ 127.1) */
-/* ⛔ ปิดอยู่ชั่วคราว — ต้องมี html.dm ถึงจะทำงาน (ข้อ 136)
-   สวิตช์อยู่ที่ const DARK_MODE ในสคริปต์ ไม่ต้องแก้ CSS ตรงนี้ */
-@media (prefers-color-scheme: dark){
+/* ---- CSS โหมดมืด — คุมด้วย html.dm อย่างเดียว (ข้อ 162) ----
+   ⛔ **ห้ามเอา @media (prefers-color-scheme: dark) กลับมาครอบ**
+      เดิมครอบไว้ตอนปิดโหมดมืด (ข้อ 136) ผลคือต้องผ่านสองเงื่อนไขพร้อมกัน
+      พอมีปุ่มเลือกโหมดสี (ข้อ 158) ปุ่ม "มืด" จึงใช้ไม่ได้เลยถ้าเครื่องตั้งเป็นสว่าง
+   ⓘ JS เป็นคนตัดสินว่าจะติด .dm เมื่อไหร่ — อ่านทั้งค่าที่ผู้ใช้เลือกและการตั้งค่าเครื่อง */
+
   html.dm #cSheet::before,
   html.dm .ptext::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
@@ -567,15 +570,14 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   html.dm /* เนื้อหาต้องอยู่เหนือแสง ไม่งั้นตัวหนังสือถูกฉาบจนซีด */
   #cSheet .ink,
   html.dm .ptext > *{position:relative;z-index:2}
-}
+
 /* ---------- โหมดมืด (ข้อ 131) ----------
    📌 "แสงน้อยลง" ไม่ใช่ "กลับสี" — แผ่นขาวกลายเป็นแผ่นสว่างบนพื้นเข้ม (ข้อ 127.1)
    ⛔ กระดาษเป็นเกาะของตัวเอง — ทุกอย่างบนกระดาษใช้สีของกระดาษ ไม่ใช่สีของ UI
       กระดาษยังสว่าง หมึกบนมันจึงต้องเข้มเหมือนเดิม (ข้อ 130.3)
    ⚠️ ไม่มีปุ่มสลับในแอป ตั้งใจ — คนที่ชอบมืดตั้งที่ระบบไว้แล้ว (ข้อ 127.1) */
-/* ⛔ ปิดอยู่ชั่วคราว — ต้องมี html.dm ถึงจะทำงาน (ข้อ 136)
-   สวิตช์อยู่ที่ const DARK_MODE ในสคริปต์ ไม่ต้องแก้ CSS ตรงนี้ */
-@media (prefers-color-scheme: dark){
+/* CSS โหมดมืดชุดสี — คุมด้วย html.dm อย่างเดียว (ข้อ 162) */
+
   html.dm{
     --sheet-rgb: 231,224,207;
     --ink-rgb: 228,226,221;
@@ -635,7 +637,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   html.dm .wline .lb{color:rgba(var(--paper-ink-rgb),.9)}
   html.dm .ptext{color:rgba(var(--paper-ink-rgb),.9)}
   html.dm .sig{color:rgba(var(--paper-ink-rgb),.6)}
-}
+
 </style>
 </head>
 <body>
