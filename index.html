@@ -3276,6 +3276,7 @@ function sunDot(lat,lng,ms){
 /* ความนุ่มของรอยต่อกลางวัน-กลางคืน (ข้อ 39) — 0 = คมแบบเดิม · 1 = นุ่มสุด
    0.9 มาจากการเลือกด้วยตา ไม่ใช่ตัวเลข: ที่ค่านี้เงาทำหน้าที่เหมือนแรเงาให้ลูกโลกดูกลม */
 let SOFT=0.90;
+let LAYERS=10;   /* จำนวนชั้นของทางสำรอง — ปรับได้จาก dust/dark-studies (ข้อ 166) */
 /* เพดานเวลาวาดโลกหนึ่งครั้ง (ms) — เกินกว่านี้ค่อยยอมลดรายละเอียดตอนหมุน
    งบทั้งเฟรมคือ 16.7ms และยังต้องเหลือให้จดหมาย เส้นทาง สภาพอากาศ */
 const PAINT_BUDGET=6;
@@ -3444,33 +3445,13 @@ const G = {
      แต่พอกว้างเกินจอแล้วตาไม่เห็นความต่างอีก ขณะที่ราคายังขึ้นเรื่อย ๆ
      ที่ซูม 17 เท่า R=4147 จะได้เบลอ 896px ซึ่งทำให้การวาดโลกหนึ่งครั้งใช้ 12ms */
   blurPx(){ return SOFT*Math.min(this.R, Math.min(this.W,this.H)*0.5)*0.24; },
-  /* ⚠️ `'filter' in ctx` เป็น true บน Safari ทั้งที่ **ใช้กับ drawImage ไม่ได้จริง**
-     ต้องวาดทดสอบแล้ววัดว่าเบลอจริงไหม ไม่ใช่ถามว่ามี property ไหม (ข้อ 165)
-     ⓘ ทดสอบครั้งเดียวต่อ session แล้วจำไว้ — ราคาแค่ canvas 32×8 หนึ่งใบ */
-  _blurOK:null,
-  blurWorks(){
-    if(this._blurOK!==null) return this._blurOK;
-    try{
-      const a=document.createElement('canvas'); a.width=32; a.height=8;
-      const ac=a.getContext('2d');
-      ac.fillStyle='#000'; ac.fillRect(0,0,16,8);      /* ครึ่งซ้ายดำ ครึ่งขวาใส */
-      const b=document.createElement('canvas'); b.width=32; b.height=8;
-      const bc=b.getContext('2d');
-      bc.filter='blur(4px)'; bc.drawImage(a,0,0); bc.filter='none';
-      /* ถ้าเบลอจริง พิกเซลที่ x=20 (ขวาของรอยต่อ) ต้องมีหมึกซึมมาบ้าง */
-      const d=bc.getImageData(20,4,1,1).data;
-      this._blurOK = d[3] > 8;
-    }catch(e){ this._blurOK=false; }
-    return this._blurOK;
-  },
   /* กรอบที่ต้องเติมสีจริง = ส่วนร่วมของ "จอ" กับ "วงโลก"
      ที่ซูม 1 ทรงกลมเล็กกว่าจอ · ที่ซูมสูงจอเล็กกว่าทรงกลม — เอาอันที่เล็กกว่าเสมอ */
   fillBox(){
     const {CX,CY,R}=this;
     const x0=Math.max(0,CX-R-2), y0=Math.max(0,CY-R-2);
     return [x0, y0, Math.min(this.W,CX+R+2)-x0, Math.min(this.H,CY+R+2)-y0];
-  },
-  shadeDay(v,z){
+  },  shadeDay(v,z){
     const s=sunVec();
     const day=clamp((v.x*s.x+v.y*s.y+v.z*s.z+.12)/(.30+SOFT*.20),0,1);
     return day*(z>=0 ? (.42+.58*Math.sqrt(z)) : .13);
@@ -3639,28 +3620,20 @@ const G = {
     if(term){
       const ax=CX-(s.x-CX), ay=CY-(s.y-CY);
       const blur=this.blurPx();
-      const useBlur=blur>0.5 && this.blurWorks() && !term.all;
-      let tgt=c;
-      if(useBlur){
-        if(!this._ncv) this._ncv=document.createElement('canvas');
-        const dpr=Math.min(devicePixelRatio||1,2);
-        if(this._ncv.width!==this.W*dpr||this._ncv.height!==this.H*dpr){
-          this._ncv.width=this.W*dpr; this._ncv.height=this.H*dpr;
-        }
-        tgt=this._ncv.getContext('2d');
-        tgt.setTransform(dpr,0,0,dpr,0,0);
-        tgt.clearRect(0,0,this.W,this.H);
-      }
+      /* ⛔ ไม่ใช้ ctx.filter อีกแล้ว (ข้อ 166) — วัดได้ว่าช้ากว่าการวาดหลายชั้น 2.4 เท่า
+         (5.83ms เทียบ 2.4ms) และ Safari ใช้กับ drawImage ไม่ได้เลย (ข้อ 165)
+         ทางหลายชั้นจึงเร็วกว่า *และ* ให้ภาพเดียวกันทุกเครื่อง — ไม่มีเหตุผลให้เก็บสองทาง */
+      const tgt=c;
       /* ⛔ เครื่องที่ blur ใช้ไม่ได้ (Safari) ต้องได้ขอบนุ่มด้วย ไม่ใช่ปล่อยให้คมเหมือนตัดกระดาษ
          วาดซีกมืดซ้ำหลายชั้น แต่ละชั้นหดเข้าไปในซีกมืดทีละนิดด้วย alpha ต่ำ
          ชั้นนอกสุดจางที่สุด → ขอบไล่ระดับเองโดยไม่พึ่ง filter (ข้อ 165)
          ⓘ จำนวนชั้นมาจาก SOFT — SOFT 0 = ชั้นเดียว = ขอบคมเหมือนเดิม */
-      const steps = useBlur ? 1 : Math.max(1, Math.round(SOFT*7));
+      const steps = Math.max(1, Math.round(SOFT*LAYERS));
       for(let st=0; st<steps; st++){
       const inset = steps>1 ? (blur*0.9) * (1 - st/(steps-1||1)) : 0;
       tgt.save();
       if(steps>1) tgt.globalAlpha = 1/steps * (0.55 + 0.45*st/(steps-1||1));
-      if(!useBlur){ tgt.beginPath(); tgt.arc(CX,CY,R,0,Math.PI*2); tgt.clip(); }
+      tgt.beginPath(); tgt.arc(CX,CY,R,0,Math.PI*2); tgt.clip();
       if(!term.all){
         tgt.beginPath();
         /* เลื่อนเส้นแบ่งเข้าไปทางซีกมืด = ชั้นในเล็กลงเรื่อย ๆ */
@@ -3686,14 +3659,7 @@ const G = {
       tgt.fillStyle=n; tgt.fillRect(box[0],box[1],box[2],box[3]);
       tgt.restore();
       }   /* จบลูปชั้นซีกมืด */
-      if(useBlur){
-        c.save();
-        c.beginPath(); c.arc(CX,CY,R,0,Math.PI*2); c.clip();
-        c.filter='blur('+blur.toFixed(1)+'px)';
-        c.drawImage(this._ncv,0,0,this.W,this.H);
-        c.filter='none';
-        c.restore();
-      }
+
     }
     /* 4. เส้นซีกหน้า — หมึกเข้มฝั่งกลางวัน / สีอ่อนฝั่งกลางคืน ไล่ข้ามกันตรงสนธยา */
     this.segs(c,GRID,.13,.7,true,1,SKIN.dayInk,this.shadeDay);
