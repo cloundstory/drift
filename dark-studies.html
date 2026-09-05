@@ -84,7 +84,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>เนื้อโลก สว่าง</label>
       <input type="range" id="gBaseL" min="-70" max="40" value="-49"><output id="oGBaseL"></output></div>
     <div class="row"><label>กลางวัน ทึบ</label>
-      <input type="range" id="gDayA" min="100" max="1400" value="320"><output id="oGDayA"></output></div>
+      <input type="range" id="gDayA" min="80" max="1400" value="180"><output id="oGDayA"></output></div>
     <div class="row"><label>กลางคืน ทึบ</label>
       <input type="range" id="gNightA" min="20" max="800" value="300"><output id="oGNightA"></output></div>
     <div class="row"><label>แสงตกกระทบ</label>
@@ -303,7 +303,10 @@ $('#btnMin').addEventListener('click', () => {
 });
 
 $('#btnOff').addEventListener('click', () => {
-  dark = !dark; $('#btnOff').textContent = dark ? 'ดูแบบสว่าง' : 'ดูแบบมืด'; apply();
+  dark = !dark; $('#btnOff').textContent = dark ? 'ดูแบบสว่าง' : 'ดูแบบมืด';
+  /* สลับโหมดของแอปจริงด้วย — CSS กับ SKIN ต้องไปทางเดียวกัน */
+  try{ app.contentWindow.eval("setSchemePref('"+(dark?'dark':'light')+"')"); }catch(e){}
+  apply();
 });
 
 $('#btnCopy').addEventListener('click', async () => {
@@ -329,6 +332,9 @@ app.addEventListener('load', () => { apply(); });
 /* ตั้งค่าให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว *ก่อน* ปล่อยให้มันโหลด
    same-origin จึงเป็น localStorage ก้อนเดียวกัน ตั้งจากตรงนี้ได้เลย */
 try{
+  /* ⚠️ แอปเปิดโหมดมืดแล้ว (ข้อ 159) — ต้องบังคับ iframe เข้าโหมดมืดของแอปเองด้วย
+     ไม่งั้น CSS เป็นชุดสว่างแต่ SKIN ถูกดันเป็นค่ามืด = จูนจากภาพที่ไม่มีอยู่จริง */
+  localStorage.setItem('lw.v1.scheme','dark');
   localStorage.setItem('lw.v1.intro','1');
   sessionStorage.setItem('lw.v1.splash','1');
 }catch(e){}
