@@ -1,6 +1,6 @@
 # drift — เหลืออะไรบ้าง (5 ก.ย. 2569)
 
-> เปิด session ใหม่ให้เริ่มที่ไฟล์นี้ แล้วค่อยไป `DRIFT_DECISIONS.md` (139 ข้อ)
+> เปิด session ใหม่ให้เริ่มที่ไฟล์นี้ แล้วค่อยไป `DRIFT_DECISIONS.md` (171 ข้อ)
 > สถานะโค้ด: `index.html` ทำงานได้ · **ขึ้น https แล้ว** · working tree สะอาด
 >
 > 🌐 **https://cloundstory.github.io/drift/** · repo `cloundstory/drift` (public)
