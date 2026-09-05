@@ -75,6 +75,9 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     <div class="row"><label>ความสว่าง</label><input type="range" id="sha" min="0" max="100" value="75"><output></output></div>
 
     <div class="btns">
+      <button id="st0" class="on">เข็มเรียว</button>
+      <button id="st1">ริ้วจาง</button>
+      <button id="st2">วูบสั้น</button>
       <button id="dir0" class="on">ทิศสุ่ม</button>
       <button id="dir1">ตามลมจริงที่ต้นทาง</button>
       <button id="autoOff">ปิดดาวตกอัตโนมัติ</button>
@@ -110,8 +113,18 @@ const INJECT = `(function(){
   window.__starOn = 1;
   const S = window.__STAR = {on:1,auto:1,n:55,a:60,size:60,twk:70,rate:100,halo:18,sunf:70,
                              rng:70,spike:45,tone:45,
-                             every:55,spd:100,tail:120,sha:75,dir:0};
+                             every:55,spd:100,tail:120,sha:75,dir:0,style:0};
   const P=[]; let last=performance.now(), tt=0, next=4, SH=null;
+  const HEAD='245,249,255';               /* หัวดาวตกขาวเกือบบริสุทธิ์ ไม่ใช่สีของดาว */
+  /* สามแบบที่ต่างกันที่ *เจตนา* ไม่ใช่ที่ตัวเลข
+     0 เข็มเรียว — เห็นชัด อ่านออกว่าคืออะไร
+     1 ริ้วจาง  — แทบไม่แน่ใจว่าเห็น เงียบที่สุด
+     2 วูบสั้น  — สั้นและจ้า เหมือนดาวตกจริงที่เห็นแวบเดียวแล้วสงสัยว่าเห็นจริงไหม */
+  const SHOOT=[
+    {len:.085, w:1.15, glow:5.5, aMul:1,    lifeMul:1  },
+    {len:.170, w:.70,  glow:0,   aMul:.55,  lifeMul:1.6},
+    {len:.050, w:1.55, glow:8.5, aMul:1.15, lifeMul:.45}
+  ];
 
   /* ⛔ ดาวกับฝุ่นเคยเป็นจุดกลมสีเดียวกัน ต่างแค่ฝุ่นขยับ — แยกไม่ออก (ข้อ 174.4)
         สามอย่างที่แยกได้จริง และไม่มีอันไหนเป็นแค่การปรับตัวเลข
@@ -144,9 +157,15 @@ const INJECT = `(function(){
       th=(WIND_DIR+180)*Math.PI/180;    /* ทิศที่ลมพัด *ไป* เหมือนฝุ่นกับฝน */
     else th=(200+Math.random()*100)*Math.PI/180;
     const vx=Math.sin(th), vy=-Math.cos(th);
-    /* เริ่มจากขอบฝั่งตรงข้ามทิศที่จะวิ่งไป เผื่อระยะให้วิ่งพาดจอได้ */
-    return {x:.5-vx*.85+(Math.random()-.5)*.5, y:.5-vy*.85+(Math.random()-.5)*.5,
-            vx, vy, t:0, life:1.1+Math.random()*.5};
+    /* ⛔ ของเดิมเริ่มไกล .85 แล้วเดินด้วย t ตรง ๆ — ระยะทางทั้งชีวิตราว 1.5 หน่วย
+          ดาวตกจึงใช้เวลาส่วนใหญ่อยู่ *นอกจอ* และบางดวงดับก่อนโผล่เข้ามาด้วยซ้ำ
+       ⓘ แก้โดยเดินด้วย u (0→1) ไม่ใช่ t — ทุกดวงจึงพาดจอเท่ากันไม่ว่า life เท่าไหร่ */
+    const nx=-vy, ny=vx;                    /* กระจายตามแนวตั้งฉาก ไม่ใช่ทั้งสองแกน
+                                               ไม่งั้นบางดวงเกิดกลางจอแล้วดูเหมือนโผล่มาเฉย ๆ */
+    const j=(Math.random()-.5)*.75;
+    const ST=SHOOT[S.style]||SHOOT[0];
+    return {x:.5-vx*.60+nx*j, y:.5-vy*.60+ny*j,
+            vx, vy, t:0, life:(1.1+Math.random()*.5)*ST.lifeMul};
   }
   window.__shootNow=()=>{ SH=mk(); };
 
@@ -215,25 +234,52 @@ const INJECT = `(function(){
     }
     ctx.globalAlpha=1;
 
-    /* ---- ดาวตก ---- */
+    /* ---- ดาวตก (รื้อใหม่ ข้อ 174.7) ----
+       ⛔ ของเดิมคือเส้นตรงหนาเท่ากันตลอด ยาวเท่ากันตลอดชีวิต สว่างเป็นโค้งสมมาตร
+          และไม่มีแสงที่หัว — มันคือ "ขีดเส้น" ไม่ใช่ "แสงที่วูบผ่าน"
+       ห้าอย่างที่แก้ ทุกอย่างมาจากการดูว่าดาวตกจริงทำอะไร */
     if(S.auto){ next-=dt; if(next<=0){ SH=mk(); next=S.every*(.6+Math.random()*.8); } }
     if(SH){
       SH.t+=dt*(S.spd/100);
-      if(SH.t>SH.life){ SH=null; }
+      if(SH.t>SH.life) SH=null;
       else{
         const u=SH.t/SH.life;
-        const x=(SH.x+SH.vx*SH.t*.9)*W, y=(SH.y+SH.vy*SH.t*.9)*H;
-        const len=diag*.13*(S.tail/100);
-        /* หัวสว่าง หางจาง — และทั้งดวงจางลงตอนใกล้จบ ไม่ใช่ดับกลางอากาศ */
-        const a=(S.sha/100)*Math.sin(Math.PI*Math.min(1,u*1.15));
-        const g=ctx.createLinearGradient(x,y,x-SH.vx*len,y-SH.vy*len);
-        g.addColorStop(0,'rgba('+col+','+(a).toFixed(3)+')');
-        g.addColorStop(1,'rgba('+col+',0)');
-        ctx.strokeStyle=g; ctx.lineWidth=1.5; ctx.lineCap='round';
-        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-SH.vx*len,y-SH.vy*len); ctx.stroke();
-        ctx.globalAlpha=a; ctx.fillStyle='rgba('+col+',1)';
-        ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill();
-        ctx.globalAlpha=1;
+        const ST=SHOOT[S.style]||SHOOT[0];
+        /* ① สว่างพุ่งเร็ว ดับช้า — ของเดิมเป็น sin สมมาตร ซึ่งคือ "ค่อย ๆ ติด ค่อย ๆ ดับ"
+              ดาวตกจริงติดแทบทันทีแล้วลากความสว่างยาวออกไป */
+        const a=(S.sha/100)*ST.aMul*Math.pow(Math.min(1,u*7),1.4)*Math.pow(1-u,1.7);
+        if(a>.004){
+          const SPAN=1.65;                 /* ระยะที่พาดจอ — คิดจาก u ไม่ใช่ t (ดู mk) */
+          const x=(SH.x+SH.vx*u*SPAN)*W, y=(SH.y+SH.vy*u*SPAN)*H;
+          /* ② หางยืดตอนต้น หดตอนจบ — ไม่ใช่ความยาวคงที่ทั้งชีวิต */
+          const grow=Math.min(1,u*3.4), fall=1-Math.pow(Math.max(0,(u-.5)/.5),1.4);
+          const L=diag*ST.len*(S.tail/100)*grow*Math.max(.05,fall);
+          const tx=x-SH.vx*L, ty=y-SH.vy*L;
+          const nx=-SH.vy, ny=SH.vx;              /* ตั้งฉากกับทิศวิ่ง */
+          const w=ST.w*(.6+.4*grow);
+          /* ③ ลิ่มเรียว — กว้างที่หัว ปลายแหลมที่หาง · stroke ทำแบบนี้ไม่ได้ ต้องเป็นรูปปิด
+             ④ ไล่สี หัวขาวเกือบบริสุทธิ์ → หางอมสีของดาว ไม่ใช่สีเดียวทั้งเส้น */
+          const g=ctx.createLinearGradient(x,y,tx,ty);
+          g.addColorStop(0,   'rgba('+HEAD+','+a.toFixed(3)+')');
+          g.addColorStop(.30, 'rgba('+mixc(.45)+','+(a*.42).toFixed(3)+')');
+          g.addColorStop(1,   'rgba('+mixc(.8)+',0)');
+          ctx.fillStyle=g;
+          ctx.beginPath();
+          ctx.moveTo(x+nx*w, y+ny*w);
+          ctx.quadraticCurveTo(x+SH.vx*w*1.3, y+SH.vy*w*1.3, x-nx*w, y-ny*w);  /* หัวมน */
+          ctx.lineTo(tx,ty);                       /* ปลายแหลม */
+          ctx.closePath(); ctx.fill();
+          /* ⑤ แสงฟุ้งที่หัว — ของเดิมเป็นวงกลมทึบ 1.5px ซึ่งอ่านเป็นจุด ไม่ใช่แสง */
+          if(ST.glow>0){
+            const R=w*ST.glow;
+            const rg=ctx.createRadialGradient(x,y,0,x,y,R);
+            rg.addColorStop(0,  'rgba('+HEAD+','+(a*.85).toFixed(3)+')');
+            rg.addColorStop(.4, 'rgba('+mixc(.3)+','+(a*.22).toFixed(3)+')');
+            rg.addColorStop(1,  'rgba('+mixc(.6)+',0)');
+            ctx.fillStyle=rg;
+            ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2); ctx.fill();
+          }
+        }
       }
     }
   }
@@ -260,7 +306,8 @@ function paintOut(){
     +' · rng '+(v.rng/100).toFixed(2)+' · spike '+(v.spike/100).toFixed(2)+' · tone '+(v.tone/100).toFixed(2)
     +'\nดาวตก every '+v.every+'s · spd '+(v.spd/100).toFixed(2)
     +' · tail '+(v.tail/100).toFixed(2)+' · sha '+(v.sha/100).toFixed(2)
-    +' · dir '+((w()&&w().__STAR)?w().__STAR.dir:0);
+    +' · dir '+((w()&&w().__STAR)?w().__STAR.dir:0)
+    +' · style '+((w()&&w().__STAR)?w().__STAR.style:0);
 }
 
 K.forEach(k=>$('#'+k).addEventListener('input', apply));
@@ -284,6 +331,11 @@ $('#btnNight').onclick = ()=>{
 };
 $('#btnMin').onclick = ()=>{ const p=$('#panel'); p.classList.toggle('min');
   $('#btnMin').textContent = p.classList.contains('min')?'ขยาย':'ย่อ'; };
+[0,1,2].forEach(i=>{ $('#st'+i).onclick = ()=>{
+  try{ w().__STAR.style=i; w().__shootNow(); }catch(e){}
+  [0,1,2].forEach(j=>$('#st'+j).classList.toggle('on', j===i));
+  paintOut();
+}; });
 $('#dir0').onclick = ()=>{ try{ w().__STAR.dir=0; }catch(e){}
   $('#dir0').classList.add('on'); $('#dir1').classList.remove('on'); paintOut(); };
 $('#dir1').onclick = ()=>{ try{ w().__STAR.dir=1; }catch(e){}
