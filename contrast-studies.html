@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b2233">
+<title>drift — แบบศึกษา contrast โหมดสว่าง</title>
+<style>
+/* แบบศึกษา contrast ของโหมดสว่าง (ข้อ 170)
+   ⚠️ ไม่คัดลอก UI ของแอปมาเลย — iframe ตัวจริงแล้วยัด token ทับ
+      หลักเดียวกับ dark-studies.html และ lost-studies.html
+   ⛔ สิ่งที่จะตัดสินคือ "อ่านออกไหม" ซึ่งขึ้นกับ *ขนาดจริง* บนมือถือ
+      บนจอกว้างจึงวางข้างกันให้เทียบ · บนมือถือให้สลับดูทีละแบบเต็มขนาด
+      ห้ามตัดสินจากคอลัมน์ที่ถูกย่อ */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;
+  font-family:"Noto Serif Thai",Georgia,serif;background:#0f1420;color:#e8e3d8}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+
+#bar{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:9px 12px;background:#171d2b;border-bottom:1px solid rgba(232,227,216,.14)}
+#bar b{font-weight:400;font-size:12px;letter-spacing:.2em;opacity:.7;margin-right:4px}
+/* มือถือ: สองแถวเลื่อนได้ ไม่ตัดขึ้นบรรทัดใหม่จนกินจอ */
+@media (max-width:899px){
+  #bar{flex-wrap:nowrap;flex-direction:column;align-items:stretch;gap:6px;padding:7px 0}
+  #bar .grp{display:flex;align-items:center;gap:7px;overflow-x:auto;
+    -webkit-overflow-scrolling:touch;padding:0 12px;scrollbar-width:none}
+  #bar .grp::-webkit-scrollbar{display:none}
+  #bar button{flex:0 0 auto;height:36px}
+  #bar .sep{display:none}
+}
+button{background:rgba(232,227,216,.1);border:0;color:inherit;font:inherit;font-size:12px;
+  padding:0 13px;height:38px;min-width:44px;border-radius:19px}
+button.on{background:rgba(232,227,216,.28)}
+#bar .sep{flex:1}
+#bar .grp{display:flex;align-items:center;gap:7px}
+#pages,#sets{display:flex;align-items:center;gap:7px}
+
+#deck{flex:1;min-height:0;display:flex;gap:10px;padding:10px;overflow:auto;
+  -webkit-overflow-scrolling:touch;align-items:stretch}
+.col{flex:0 0 390px;display:flex;flex-direction:column;min-height:0}
+.col h2{font-weight:400;font-size:12.5px;letter-spacing:.04em;margin:0 0 6px;padding:0 2px;
+  display:flex;align-items:baseline;gap:8px}
+.col h2 i{font-style:normal;opacity:.5;font-size:11px}
+.frame{flex:1;min-height:0;border-radius:14px;overflow:hidden;background:#000;
+  border:1px solid rgba(232,227,216,.16)}
+iframe{width:100%;height:100%;border:0;display:block;background:#e8e6e0}
+.nums{flex:none;display:flex;gap:12px;padding:7px 3px 0;font-size:11px;
+  font-variant-numeric:tabular-nums;opacity:.72}
+.nums span{white-space:nowrap}
+.ok{color:#8fce9a}.mid{color:#e0c37a}.bad{color:#e08a7c}
+
+/* ---------- มือถือ: หนึ่งจอเต็มขนาดจริง สลับดูทีละแบบ ---------- */
+#one{display:none;flex:1;min-height:0;flex-direction:column}
+#one .frame{flex:1;min-height:0;border-radius:0;border:0}
+#one .nums{padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);
+  background:#171d2b;border-top:1px solid rgba(232,227,216,.14);font-size:12px;opacity:.85}
+@media (max-width:899px){
+  #deck{display:none}
+  #one{display:flex}
+}
+#note{flex:none;font-size:11.5px;line-height:1.7;opacity:.6;padding:0 12px 10px}
+@media (max-width:899px){ #note{display:none} }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+  <div id="bar">
+    <div class="grp"><b>หน้า</b><span id="pages"></span></div>
+    <span class="sep"></span>
+    <div class="grp" id="setGrp" style="display:none"><b>ค่า</b><span id="sets"></span></div>
+  </div>
+
+  <div id="deck"></div>
+
+  <div id="one">
+    <div class="frame"><iframe id="solo"></iframe></div>
+    <div class="nums" id="soloNums"></div>
+  </div>
+
+  <div id="note">
+    เทียบกับพื้นที่เข้มที่สุดของแอป (<code>--bg-a #dfe2e6</code>) ซึ่งเป็นกรณีแย่ที่สุด ·
+    บนพื้นอุ่น <code>#eee9de</code> ทุกค่าจะสูงขึ้นราว .05–.30 ·
+    เกณฑ์ WCAG: ตัวปกติ 4.5:1 · ตัวใหญ่หรือหนา 3:1
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+
+/* ---------- ค่าที่จะเทียบ ----------
+   ⚠️ NEXT.md เสนอ dim .92 / faint .92 ซึ่งทำให้สองระดับเท่ากันพอดี
+      ลำดับชั้นของตัวหนังสือหายไปทั้งแอป จึงใส่ทางที่ *คงลำดับชั้น* มาเทียบด้วย */
+const SETS=[
+  {id:'now',  name:'วันนี้',        dim:.55, faint:.38, gold:'#8b6a33', gold2:'#7d5f2e'},
+  {id:'c3',   name:'เกณฑ์ 3:1',     dim:.84, faint:.72, gold:'#8b6a33', gold2:'#7d5f2e'},
+  {id:'c45',  name:'เกณฑ์ 4.5:1',   dim:1,   faint:.92, gold:'#7a5c2a', gold2:'#6f5426'},
+  {id:'flat', name:'4.5:1 แบบแบน',  dim:.92, faint:.92, gold:'#7a5c2a', gold2:'#6f5426'}
+];
+const DECK=['now','c3','c45'];          /* คอลัมน์ที่วางข้างกันบนจอกว้าง */
+
+const PAGES=[
+  {id:'vault',    name:'บัญชี'},
+  {id:'install',  name:'เพิ่มลงหน้าจอ'},
+  {id:'bug',      name:'แจ้งปัญหา'},
+  {id:'porthome', name:'drift port'},
+  {id:'home',     name:'หน้าแรก'}
+];
+let page='vault', solo='now';
+
+/* ---------- contrast ---------- */
+const INK=[84,90,104], BG=[223,226,230];        /* --ink-rgb บน --bg-a */
+const lin=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+const lum=([r,g,b])=>.2126*lin(r)+.7152*lin(g)+.0722*lin(b);
+const ratio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+const over=(fg,a,bg)=>fg.map((v,i)=>v*a+bg[i]*(1-a));
+const hex=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+const cls=r=>r>=4.5?'ok':r>=3?'mid':'bad';
+const f2=r=>r.toFixed(2)+':1';
+
+function numsHTML(S){
+  const d=ratio(over(INK,S.dim,BG),BG), f=ratio(over(INK,S.faint,BG),BG), g=ratio(hex(S.gold),BG);
+  return `<span>dim <b class="${cls(d)}">${f2(d)}</b></span>`
+       + `<span>faint <b class="${cls(f)}">${f2(f)}</b></span>`
+       + `<span>ทอง <b class="${cls(g)}">${f2(g)}</b></span>`;
+}
+
+/* ---------- ยัด token ทับในเฟรม ----------
+   :root ในสไตล์ที่ต่อท้าย head ชนะของเดิมเพราะมาทีหลังและ specificity เท่ากัน
+   (ใช้ html{} ไม่ได้ — specificity ต่ำกว่า :root) */
+function paint(fr,S){
+  const w=fr.contentWindow, d=fr.contentDocument; if(!w||!d||!d.head) return false;
+  try{ w.eval("setSchemePref('light')"); }catch(e){}
+  let st=d.getElementById('__contrast');
+  if(!st){ st=d.createElement('style'); st.id='__contrast'; d.head.appendChild(st); }
+  st.textContent=`:root{--dim:rgba(var(--ink-rgb),${S.dim});--faint:rgba(var(--ink-rgb),${S.faint});`
+                +`--gold-ink:${S.gold};--gold-ink-2:${S.gold2}}`
+                +`#splash{display:none!important}.veil{display:none!important}`;
+  return true;
+}
+
+function goto(fr){
+  const w=fr.contentWindow; if(!w) return;
+  try{
+    if(page==='home'){ w.closeSheet && w.closeSheet(); return; }
+    if(page==='vault' && w.showMe) w.showMe();
+    if(page==='porthome' && w.refreshDock) w.refreshDock();
+    w.openSheet && w.openSheet(page);
+  }catch(e){}
+}
+
+function wire(fr,S){
+  fr.addEventListener('load',()=>{
+    /* ⚠️ token ต้องยัดก่อนเปิดหน้า ไม่งั้นเห็นค่าเดิมแวบหนึ่ง */
+    paint(fr,S); goto(fr);
+    setTimeout(()=>{paint(fr,S);goto(fr);},260);   /* boot ของแอปเขียนทับบางอย่างทีหลัง */
+  });
+  fr.src='index.html?fresh='+Date.now()+'&s='+S.id;
+}
+
+/* ---------- ประกอบหน้า ----------
+   ⛔ สร้างเฟรมเฉพาะฝั่งที่มองเห็นจริง — เฟรมที่ถูกซ่อนได้ canvas กว้าง 0
+      แล้วแอปโยน "drawImage … width or height of 0" รัวใน console
+      และบนมือถือคือการรันแอปสามตัวพร้อมกันโดยไม่มีใครดู */
+const narrow=()=>innerWidth<900;
+
+function buildDeck(){
+  const deck=$('#deck'); deck.innerHTML='';
+  if(narrow()) return;
+  DECK.forEach(id=>{
+    const S=SETS.find(s=>s.id===id);
+    const col=document.createElement('div'); col.className='col';
+    col.innerHTML=`<h2>${S.name} <i>dim ${S.dim} · faint ${S.faint}</i></h2>`
+                 +`<div class="frame"><iframe></iframe></div>`
+                 +`<div class="nums">${numsHTML(S)}</div>`;
+    deck.appendChild(col);
+    wire(col.querySelector('iframe'),S);
+  });
+}
+
+function buildBars(){
+  $('#pages').innerHTML=PAGES.map(p=>
+    `<button data-page="${p.id}"${p.id===page?' class="on"':''}>${p.name}</button>`).join('');
+  $('#sets').innerHTML=SETS.map(s=>
+    `<button data-set="${s.id}"${s.id===solo?' class="on"':''}>${s.name}</button>`).join('');
+  $('#setGrp').style.display = narrow() ? '' : 'none';
+}
+
+function soloRefresh(reload){
+  const S=SETS.find(s=>s.id===solo), fr=$('#solo');
+  $('#soloNums').innerHTML=numsHTML(S);
+  if(!narrow()){ if(fr.src) fr.removeAttribute('src'); return; }
+  if(reload || !fr.getAttribute('src')){ wire(fr,S); }
+  else { paint(fr,S); goto(fr); }
+}
+
+$('#bar').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.page){
+    page=b.dataset.page;
+    [...$('#pages').children].forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('#deck iframe').forEach(goto);
+    if(narrow()) goto($('#solo'));
+  }
+  if(b.dataset.set){
+    solo=b.dataset.set;
+    [...$('#sets').children].forEach(x=>x.classList.toggle('on',x===b));
+    soloRefresh(false);
+  }
+});
+/* ข้ามเส้น 900px แล้วต้องสลับว่าใครเป็นเจ้าของเฟรม — resize ธรรมดาไม่ต้องรื้อ */
+let wasNarrow=null;
+addEventListener('resize',()=>{
+  buildBars();
+  if(wasNarrow!==narrow()){ wasNarrow=narrow(); buildDeck(); soloRefresh(true); }
+});
+
+/* ตั้งให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว *ก่อน* ปล่อยให้เฟรมโหลด — same-origin จึงเป็นก้อนเดียวกัน
+   ⚠️ ต้องบังคับ scheme เป็น light ตั้งแต่ localStorage ไม่งั้นเห็นโหมดมืดแวบแรก */
+try{
+  localStorage.setItem('lw.v1.scheme','light');
+  localStorage.setItem('lw.v1.intro','1');
+  sessionStorage.setItem('lw.v1.splash','1');
+}catch(e){}
+/* ⚠️ service worker แคชแอปไว้ — เฟรมจะได้ไฟล์เก่าแล้วเราจะนึกว่า token ที่ยัดไม่ทำงาน (ข้อ 127.4) */
+navigator.serviceWorker && navigator.serviceWorker.getRegistrations
+  && navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+
+wasNarrow=narrow();
+buildBars();
+buildDeck();
+soloRefresh(true);
+</script>
+</body>
+</html>

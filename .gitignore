@@ -22,3 +22,6 @@ __pycache__/
 # หมายเหตุ: โฟลเดอร์ wind/ **ต้องอยู่ใน repo**
 # เพราะ .github/workflows/wind.yml เขียนไฟล์แคชลมกลับเข้ามาทุก 6 ชั่วโมง
 # และแอปอ่านจากไฟล์นั้นตรง ๆ (ข้อ 58)
+
+# ภาพเทียบที่สร้างใหม่ได้จาก contrast-studies.html เสมอ
+contrast-compare.png
