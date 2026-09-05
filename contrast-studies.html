@@ -107,15 +107,15 @@ html.dm .hit,html.dm #cHits .hit{background:rgba(var(--sheet-rgb),.06)}
 html.dm .hit:active{background:rgba(var(--sheet-rgb),.14)}`;
 
 /* หมึกของแต่ละโหมดคนละตัว — สว่างใช้ --ink-rgb เข้มบนพื้นครีม · มืดใช้ --ink-rgb สว่างบนพื้นเข้ม */
+/* ⚠️ ชุด "วันนี้" ต้องตรงกับ index.html เสมอ — บันทึกที่ล้าสมัยทำให้จูนจากภาพที่ไม่มีอยู่จริง */
 const SETS_LIGHT=[
-  {id:'l-was',  name:'ก่อนแก้',      dim:.55, faint:.38, head2:.86, gold:'#8b6a33', gold2:'#7d5f2e'},
-  {id:'l-now',  name:'วันนี้',       dim:1,   faint:.92, head2:1,   gold:'#7a5c2a', gold2:'#6f5426'},
-  {id:'l-gold', name:'ทองเข้มอีกขั้น',dim:1,   faint:.92, head2:1,   gold:'#6f5426', gold2:'#654c22'}
+  {id:'l-was',  name:'ก่อนแก้ (24 ส.ค.)', dim:.55, faint:.38, head2:.86, gold:'#8b6a33', gold2:'#7d5f2e'},
+  {id:'l-now',  name:'วันนี้',            dim:1,   faint:.92, head2:1,   gold:'#6f5426', gold2:'#654c22'}
 ];
 const SETS_DARK=[
-  {id:'d-now',  name:'วันนี้',            dim:.62, faint:.42, head2:.86, gold:'#d8bb88', gold2:'#c9a878'},
+  {id:'d-was',  name:'ก่อนแก้ (4 ก.ย.)',  dim:.62, faint:.42, head2:.86, gold:'#d8bb88', gold2:'#c9a878'},
   {id:'d-ink',  name:'ข. ดันหมึกอย่างเดียว',dim:.85, faint:.71, head2:.92, gold:'#e2c99e', gold2:'#d6bb8e'},
-  {id:'d-mix',  name:'ค. ผสม พื้นมืดลง',  dim:.78, faint:.65, head2:.88, gold:'#e2c99e', gold2:'#d6bb8e', plate:true}
+  {id:'d-now',  name:'วันนี้ (ค. ผสม)',    dim:.78, faint:.65, head2:.88, gold:'#e2c99e', gold2:'#d6bb8e', plate:true}
 ];
 let MODE='dark';                        /* งานที่เหลือคือโหมดมืด จึงเปิดมาที่โหมดนี้ */
 const sets = () => MODE==='dark' ? SETS_DARK : SETS_LIGHT;
@@ -129,7 +129,7 @@ const PAGES=[
   {id:'porthome', name:'drift port'},
   {id:'home',     name:'หน้าแรก'}
 ];
-let page='vault', solo='d-now';
+let page='vault', solo='d-was';
 
 /* ---------- contrast ---------- */
 /* ⚠️ ฐานของสองโหมดคนละคู่ และ "กรณีแย่ที่สุด" กลับด้านกัน

@@ -93,8 +93,9 @@ body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;trans
   --bg-b: #eee9de;
   --sheet-a: 223,226,230;        /* พื้นของแผ่นเต็มจอ */
   --sheet-b: 238,233,222;
-  --gold-ink: #7a5c2a;           /* ตัวหนังสือสีทองบนปุ่ม — 4.76:1 (ข้อ 171) */
-  --gold-ink-2: #6f5426;
+  --gold-ink: #6f5426;           /* ตัวหนังสือสีทองบนปุ่ม — 4.89:1 บนแผ่นที่เข้มที่สุด (ข้อ 173)
+                                    ⚠️ #7a5c2a ได้ 4.76 บนพื้นแอปแต่แค่ 4.30 บนแผ่นที่ทับพื้น */
+  --gold-ink-2: #654c22;
   --alert: #954d41;             /* คำเตือน — 4.73:1 · hue/sat เดิมของ #a8574a (ข้อ 171) */
   --hits-bg: #fbf9f4;
 
@@ -586,8 +587,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     --sheet-a: 30,35,47;
     --sheet-b: 41,49,56;
     --gold-flat: #d0b380;
-    --gold-ink: #d8bb88;
-    --gold-ink-2: #c9a878;
+    --gold-ink: #e2c99e;          /* 6.67:1 บนแผ่นที่สว่างที่สุด (ข้อ 173) */
+    --gold-ink-2: #d6bb8e;
     --alert: #d68a7c;
     /* ⛔ กลางคืนไม่มีแดด — แสงที่เหลือคือฟ้าเรือง ไม่ใช่ดวงอาทิตย์ส่องหน้า (ข้อ 160)
        เปลี่ยนทั้ง *สี* และ *ความแรง* เพราะขาวครีมบนพื้นเข้มคือของที่เปล่งแสงเอง */
@@ -598,27 +599,33 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     --line: rgba(var(--sheet-rgb),.26);
     --line-soft: rgba(var(--sheet-rgb),.13);
     --txt: rgba(var(--ink-rgb),.92);
-    --dim: rgba(var(--ink-rgb),.62);
-    --faint: rgba(var(--ink-rgb),.42);
-    --head2: rgba(var(--ink-rgb),.86);
+    /* ⛔ กรณีแย่ที่สุดของสองโหมดกลับด้านกัน (ข้อ 173) — หมึกที่นี่สว่างอยู่บนพื้นเข้ม
+          พื้นยิ่ง *สว่าง* contrast ยิ่งแย่ · แผ่นที่สว่างที่สุดคือที่ต้องผ่านให้ได้
+       ⓘ ค่าเหล่านี้คู่กับการหรี่แผ่นข้างล่าง ถ้าเอาแผ่นกลับไปสว่างเหมือนเดิม ต้องดันหมึกขึ้นอีก */
+    --dim: rgba(var(--ink-rgb),.78);
+    --faint: rgba(var(--ink-rgb),.65);
+    --head2: rgba(var(--ink-rgb),.88);
   }
-  html.dm /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก */
-  .btn{background:rgba(var(--sheet-rgb),.13)}
-  html.dm .btn:active{background:rgba(var(--sheet-rgb),.26)}
-  html.dm .pbtn{background:rgba(var(--sheet-rgb),.17)}
+  html.dm /* แผ่นต่าง ๆ จางกว่าโหมดสว่าง เพราะบนพื้นเข้ม แผ่นสว่างแรงกว่ามาก
+     ⛔ หรี่ลงอีกราว 40% เมื่อ 5 ก.ย. (ข้อ 173) — contrast ในโหมดมืดแก้ได้สองทาง
+        ดันหมึกให้สว่างขึ้น หรือดันพื้นให้มืดลง · ทางหลังตรงกับหลัก "แสงน้อยลง" (ข้อ 127.1)
+     ⚠️ ทั้งชุดต้องหรี่ตามสัดส่วนเดียวกัน ไม่งั้นช่องกรอกสว่างกว่าปุ่ม = ลำดับชั้นกลับหัว */
+  .btn{background:rgba(var(--sheet-rgb),.08)}
+  html.dm .btn:active{background:rgba(var(--sheet-rgb),.16)}
+  html.dm .pbtn{background:rgba(var(--sheet-rgb),.11)}
   html.dm .fc,
   html.dm .pick,
   html.dm .link,
   html.dm .addr,
-  html.dm .shade{background:rgba(var(--sheet-rgb),.10)}
-  html.dm .pick.on{background:rgba(var(--sheet-rgb),.20)}
+  html.dm .shade{background:rgba(var(--sheet-rgb),.06)}
+  html.dm .pick.on{background:rgba(var(--sheet-rgb),.12)}
   html.dm .hit,
-  html.dm #cHits .hit{background:rgba(var(--sheet-rgb),.10)}
-  html.dm .hit:active{background:rgba(var(--sheet-rgb),.22)}
+  html.dm #cHits .hit{background:rgba(var(--sheet-rgb),.06)}
+  html.dm .hit:active{background:rgba(var(--sheet-rgb),.14)}
   html.dm input,
-  html.dm textarea{background:rgba(var(--sheet-rgb),.10)}
+  html.dm textarea{background:rgba(var(--sheet-rgb),.06)}
   html.dm input:focus,
-  html.dm textarea:focus{background:rgba(var(--sheet-rgb),.16)}
+  html.dm textarea:focus{background:rgba(var(--sheet-rgb),.10)}
   html.dm #toast{background:rgba(var(--sheet-rgb),.94);color:var(--bg-a)}
   html.dm #splash{background:var(--bg-a)}
   html.dm /* ---- กระดาษเป็นเกาะ (ข้อ 130.3) ----
