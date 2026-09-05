@@ -161,6 +161,8 @@ html.spin .veil{opacity:0}
 
 button{font:inherit;color:var(--txt);background:none;border:0;cursor:pointer}
 .btn{border:1px solid var(--line-soft);border-radius:999px;padding:10px 16px;background:rgba(var(--sheet-rgb),.42);backdrop-filter:blur(7px);font-size:var(--t-body);letter-spacing:.015em;transition:background .2s,border-color .2s}
+/* ⚠️ ใช้ --alert ที่มีคู่มืดอยู่แล้ว (#a8574a / #d68a7c) — อย่าสร้าง token สีเตือนใหม่ (ข้อ 159) */
+.btn.danger{color:var(--alert)}
 .btn:active{background:rgba(var(--sheet-rgb),.85)}
 .btn.gold{border-color:rgba(var(--gold-rgb),.5);color:var(--gold-ink)}
 .btn.ghost{border-color:transparent;background:none;color:var(--dim)}
@@ -209,7 +211,7 @@ input,textarea{width:100%;font:inherit;font-size:16px;color:var(--txt);backgroun
 input:focus,textarea:focus{border-color:rgba(var(--gold-rgb),.5);background:rgba(var(--sheet-rgb),.7)}
 textarea{min-height:200px;resize:vertical;line-height:2}
 .count{text-align:right;font-size:var(--t-tiny);color:var(--faint);margin-top:5px;letter-spacing:.04em}
-.count.over{color:#a8574a}
+.count.over{color:var(--alert)}
 
 .hits{display:flex;flex-direction:column;gap:2px;margin:-9px 0 15px}
 .hit{text-align:left;padding:9px 12px;border-radius:8px;font-size:var(--t-sub);background:rgba(var(--sheet-rgb),.36)}
@@ -312,7 +314,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   padding:15px 4px;min-height:46px;border-bottom:1px solid var(--line-soft);text-align:left}
 .mrow:last-child{border-bottom:0}
 .mrow b{font-weight:normal;font-size:var(--t-body)}
-.mrow em{font-style:normal;font-size:var(--t-tiny);color:var(--faint);white-space:nowrap;flex:0 0 auto}
+/* ⚠️ เดิมใช้ --faint แล้ววัดได้ **1.71:1 ในโหมดสว่าง** ซึ่งคือแทบมองไม่เห็น
+   (โหมดมืดได้ 3.38:1 ดีกว่าแต่ก็ยังต่ำกว่าเกณฑ์ 4.5:1 ของตัวเล็ก)
+   📌 "ตั้งใจให้จาง" กับ "จางจนอ่านไม่ออก" คนละเรื่องกัน — ข้อความนี้บอกข้อมูลจริง (ข้อ 159) */
+.mrow em{font-style:normal;font-size:var(--t-tiny);color:var(--dim);white-space:nowrap;flex:0 0 auto}
 .mrow:active{background:rgba(var(--sheet-rgb),.4)}
 .mrow.on b,.mrow.on em{color:var(--gold-ink)}
 .mrow.gone{opacity:.5}
@@ -504,7 +509,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    เบลอ ไม่ใช่ลบ — ผู้รับยังเป็นเจ้าของจดหมายของตัวเอง เราแค่ไม่ยัดให้อ่านทันที */
 .shade{position:relative;border:1px solid rgba(var(--alert-rgb),.35);border-radius:14px;
   background:rgba(var(--sheet-rgb),.3);padding:20px 18px;text-align:center}
-.shade .cat{font-size:var(--t-tiny);letter-spacing:.03em;color:#a8574a;margin-bottom:9px}
+.shade .cat{font-size:var(--t-tiny);letter-spacing:.03em;color:var(--alert);margin-bottom:9px}
 .shade b{display:block;font-weight:normal;font-size:var(--t-body);letter-spacing:.015em;margin-bottom:6px}
 .shade p{font-size:var(--t-sub);color:var(--dim);line-height:1.9;margin-bottom:16px}
 .shade .row{max-width:320px;margin:0 auto}
@@ -514,7 +519,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 #cAsk{display:none;border-left:2px solid rgba(var(--alert-rgb),.55);padding:0 0 0 12px;margin-bottom:10px}
 #cAsk.on{display:block}
 #cAsk b{display:block;font-weight:normal;font-size:var(--t-sub);line-height:1.7}
-#cAsk i{display:block;font-style:normal;font-size:var(--t-tiny);color:var(--warn,#a8574a);line-height:1.7;margin-bottom:8px}
+#cAsk i{display:block;font-style:normal;font-size:var(--t-tiny);color:var(--alert);line-height:1.7;margin-bottom:8px}
 
 /* ---------- drift port (ข้อ 104) ---------- */
 .addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;letter-spacing:.12em;
@@ -830,7 +835,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <div class="rule"></div>
     <button class="btn wide gold" id="btnP1Write">เขียนถึง</button>
     <button class="btn wide" id="p1Give" style="margin-top:6px">ให้ที่อยู่ของฉันกับเขา</button>
-    <button class="btn wide ghost" id="btnP1Del" style="margin-top:6px;color:#a8574a">เอาออกจากรายชื่อ</button>
+    <button class="btn wide ghost danger" id="btnP1Del" style="margin-top:6px">เอาออกจากรายชื่อ</button>
   </div>
 </section>
 
@@ -1044,7 +1049,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <div class="rule"></div>
     <div class="note" id="vStat"></div>
     <div class="rule"></div>
-    <button class="btn wide ghost" id="btnWipe" style="color:#a8574a">ล้างข้อมูลทั้งหมด</button>
+    <!-- ⚠️ สีเตือนต้องมีคู่มืด — แดงเข้มบนพื้นเข้มได้ 2.33:1 ซึ่งอ่านไม่ออก (ข้อ 159) -->
+    <button class="btn wide ghost danger" id="btnWipe">ล้างข้อมูลทั้งหมด</button>
     <!-- ข้อ 78 — เปิดเผยทุกอย่างที่ออกจากเครื่อง
          เครดิตแหล่งข้อมูลกับการบอกว่าข้อมูลผู้ใช้ถูกส่งออกไป *เป็นคนละเรื่องกัน*
          ของเดิมมีแต่เครดิต ซึ่งถูกต้องตาม CC-BY แต่ไม่ได้บอกใครเลยว่าพิกัดถูกส่งออกไป -->
@@ -6935,7 +6941,7 @@ async function confirmSend(){
   $('#btnShare').onclick=()=>sendLink(url,'มีจดหมายกำลังไปหาคุณ');
   /* เปิดจากไฟล์ในเครื่อง = ลิงก์นี้คนอื่นเปิดไม่ได้ ต้องบอกก่อนที่เขาจะส่งไปแล้วงง */
   if(location.protocol==='file:'){
-    $('#sentWarn').innerHTML='<b style="font-weight:normal;color:#a8574a">ลิงก์นี้เปิดได้เฉพาะเครื่องคุณ</b> '
+    $('#sentWarn').innerHTML='<b style="font-weight:normal;color:var(--alert)">ลิงก์นี้เปิดได้เฉพาะเครื่องคุณ</b> '
       +'เพราะแอปกำลังรันจากไฟล์ในเครื่อง (file://) — ส่งเป็น <b style="font-weight:normal">ไฟล์จดหมาย</b> แทน '
       +'แล้วให้ผู้รับกด “บัญชี → Import” หรือเอาแอปขึ้น host ก่อนแล้วค่อยส่งลิงก์';
   }
@@ -8048,10 +8054,11 @@ function applyScheme(dark){
   try{ renderGlobe(); }catch(e){}
   try{ repaintPaper(); }catch(e){}
 }
-/* ⛔ โหมดมืดปิดอยู่ชั่วคราว (ข้อ 136) — โค้ดทั้งหมดยังอยู่ครบ
-   เปลี่ยนเป็น true แล้วเปิดกลับได้ทันที ไม่ต้องแตะอย่างอื่นเลย
-   ⓘ ปิดแล้วแอปเป็นโหมดสว่างเสมอ ไม่ว่าเครื่องจะตั้งไว้ยังไง */
-const DARK_MODE = false;
+/* ✅ โหมดมืดเปิดแล้ว 4 ก.ย. (ข้อ 159) — เปิดได้เพราะข้อ 158 ทำปุ่มเลือกโหมดสีเสร็จ
+   ก่อนหน้านั้นคนที่ตั้งเครื่องมืดถาวรจะไม่มีวันเห็นโหมดสว่างเลย ซึ่งเป็นเหตุผลที่ปิดไว้
+   ⓘ ปิดกลับได้ทันทีด้วยค่านี้ค่าเดียว — โค้ดทุกบรรทัดยังอยู่ครบเหมือนเดิม
+   ⚠️ ปิดแล้วแถว "โหมดสี" ในหน้าตั้งค่าจะซ่อนตัวเองด้วย (ข้อ 158.3) */
+const DARK_MODE = true;
 
 const SCHEME = matchMedia('(prefers-color-scheme: dark)');
 let schemeNow = null;
