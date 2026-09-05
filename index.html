@@ -5917,6 +5917,9 @@ function setOrigin(r){
   const me=store.me()||{};
   me.lat=r.lat; me.lng=r.lng; me.place=r.place;
   store.setMe(me); showMe(); syncOriginNote(); syncDist();
+  /* ⛔ เดิมฉากหลังยังว่างจนกว่าจะปิดแอปเปิดใหม่ เพราะ windHere() ถูกเรียกครั้งเดียวตอน boot
+        คนตั้งต้นทางครั้งแรกจึงไม่มีวันเห็นฝุ่นหรือฝนในรอบนั้นเลย (ข้อ 172.5) */
+  windAgain();
   closeSheet();
   const f=originAfter; originAfter=null;
   toast('ต้นทางคือ '+r.place);
@@ -6619,8 +6622,10 @@ function saveMe(){
     return toast('ชื่อนี้ใช้ไม่ได้ — มันจะไปโผล่ในกล่องจดหมายของคนอื่น');
   }
   me.name=nm;
+  const moved = meDraft && (meDraft.lat!==me.lat || meDraft.lng!==me.lng);
   if(meDraft){ me.lat=meDraft.lat; me.lng=meDraft.lng; me.place=meDraft.place; }
   store.setMe(me); showMe(); syncOriginNote();
+  if(moved) windAgain();          /* ย้ายต้นทางจากหน้าบัญชี — ทางที่สองที่พิกัดเปลี่ยนได้ */
 }
 /* หัวกระดาษเขียนแบบจดหมายจริง — ที่ กับ วัน ไม่ใช่ "ต้นทาง: X" ซึ่งเป็นภาษาของฟอร์ม */
 function syncOriginNote(){
@@ -6768,11 +6773,21 @@ function candleOn(){
 
 /* ลม ณ ต้นทาง — อ่านจากแคชลมก้อนเดิมที่แอปโหลดอยู่แล้ว ไม่ใช่คำขอใหม่
    ต้นทางอยู่ในกล่องแคช = ราคา 0 · อยู่นอกกล่อง = ไม่รู้ แล้วกระดาษก็นิ่ง ซึ่งซื่อสัตย์กว่าเดา */
+/* ต้นทางเปลี่ยน = ลมที่รู้อยู่เป็นของที่เก่า ต้องทิ้งแล้วถามใหม่
+   ⚠️ ต้องล้างทั้งสี่ค่า ไม่ใช่แค่ WIND_HERE — ไม่งั้นได้ลมที่ใหม่ปนฝนที่เก่า
+   ⓘ ราคายังคง 0 คำขอ เพราะอ่านจากแคชก้อนเดิมที่โหลดไว้แล้ว (ข้อ 172.5) */
+function windAgain(){
+  WIND_HERE=null; WIND_DIR=null; WIND_GUST=null; RAIN_HERE=null;
+  DUST.length=0;                    /* ฝุ่นเก่าเดินตามลมเก่า ปล่อยให้ dust() ก่อใหม่ */
+  WH_NOTE='ยังไม่ได้เรียก';
+  windHere();
+}
+
 async function windHere(){
   if(WIND_HERE!==null){ return; }
   const me=store.me();
   if(!me){ WH_NOTE='ยังไม่มีข้อมูลตัวเอง'; return; }
-  if(me.lat==null){ WH_NOTE='ตั้งต้นทางแล้วแต่ไม่มีพิกัด'; return; }
+  if(me.lat==null){ WH_NOTE='ยังไม่ได้ตั้งต้นทาง'; return; }
   /* ⚠️ ของเดิมอ่าน s[0].spd ทั้งที่ wcSeries คืน {hourly:{...}} ไม่ใช่อาร์เรย์
      เงื่อนไขจึงเป็นเท็จเสมอ และกระดาษไม่เคยหายใจเลยตั้งแต่ข้อ 102
      บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
