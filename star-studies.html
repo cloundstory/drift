@@ -78,8 +78,8 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
       <button id="st0" class="on">เข็มเรียว</button>
       <button id="st1">ริ้วจาง</button>
       <button id="st2">วูบสั้น</button>
-      <button id="dir0" class="on">ทิศสุ่ม</button>
-      <button id="dir1">ตามลมจริงที่ต้นทาง</button>
+      <button id="dir0" class="on">เฉียงสุ่มซ้าย-ขวา</button>
+      <button id="dir1">ลมจริงเลือกข้าง</button>
       <button id="autoOff">ปิดดาวตกอัตโนมัติ</button>
       <button id="starOff">ปิดดาวทั้งหมด</button>
       <button id="dustOff">ปิดฝุ่น (ดูว่าแยกออกไหม)</button>
@@ -87,6 +87,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
     </div>
 
     <p class="note">
+      ⛔ ดาวตกเฉียงลงจากด้านบนอย่างเดียว มุม 22–58° จากแนวดิ่ง ·
       ⛔ ดาวโผล่เฉพาะโหมดมืด · ⚠️ "จางใกล้ตะวัน" ใช้ตำแหน่งดวงอาทิตย์จริงจาก
       <code>sunVec()</code> ที่แอปคำนวณอยู่แล้ว — ฝั่งที่ฟ้าสว่าง ดาวจะหายไปเอง
       · ถ้าลูกโลกหันซีกกลางวันมาทั้งใบ กดปุ่ม "หมุนไปกลางคืน"
@@ -152,22 +153,35 @@ const INJECT = `(function(){
 
   /* ดาวตกหนึ่งดวง — เกิดนอกจอแล้ววิ่งเข้ามา ไม่ใช่โผล่กลางจอ */
   function mk(){
-    let th;
-    if(S.dir===1 && typeof WIND_DIR==='number' && WIND_DIR!==null)
-      th=(WIND_DIR+180)*Math.PI/180;    /* ทิศที่ลมพัด *ไป* เหมือนฝุ่นกับฝน */
-    else th=(200+Math.random()*100)*Math.PI/180;
-    const vx=Math.sin(th), vy=-Math.cos(th);
+    /* ⛔ ดาวตกตกเฉียงลงจากด้านบนอย่างเดียว (กอล์ฟตัดสิน ข้อ 174.10)
+          ของเดิมสุ่ม 200–300° ซึ่งมีทั้งดวงที่วิ่ง *ขึ้น* และดวงที่วิ่งขนานขอบจอ
+          — ที่ 300° ได้ vy −0.5 คือพุ่งขึ้นฟ้า ซึ่งไม่ใช่ดาวตก
+       ⓘ มุมวัดจากแนวดิ่ง 22–58° · ต่ำกว่านี้ดิ่งเกินไปจนดูเหมือนของหล่น
+          สูงกว่านี้แบนจนอ่านเป็นเส้นพาดจอ */
+    let vx, vy;
+    const ang=(22+Math.random()*36)*Math.PI/180;
+    if(S.dir===1 && typeof WIND_DIR==='number' && WIND_DIR!==null){
+      /* ลมจริงคุมแค่ว่าเฉียงไปทางไหน — ทิศลงบังคับไว้เสมอ เพราะดาวตกไม่พุ่งขึ้น */
+      const th=(WIND_DIR+180)*Math.PI/180;
+      vx=(Math.sin(th)>=0?1:-1)*Math.sin(ang);
+    }else{
+      vx=(Math.random()<.5?-1:1)*Math.sin(ang);
+    }
+    vy=Math.cos(ang);
     /* ⛔ ของเดิมเริ่มไกล .85 แล้วเดินด้วย t ตรง ๆ — ระยะทางทั้งชีวิตราว 1.5 หน่วย
           ดาวตกจึงใช้เวลาส่วนใหญ่อยู่ *นอกจอ* และบางดวงดับก่อนโผล่เข้ามาด้วยซ้ำ
        ⓘ แก้โดยเดินด้วย u (0→1) ไม่ใช่ t — ทุกดวงจึงพาดจอเท่ากันไม่ว่า life เท่าไหร่ */
-    const nx=-vy, ny=vx;                    /* กระจายตามแนวตั้งฉาก ไม่ใช่ทั้งสองแกน
-                                               ไม่งั้นบางดวงเกิดกลางจอแล้วดูเหมือนโผล่มาเฉย ๆ */
-    const j=(Math.random()-.5)*.75;
+    /* เกิด *เหนือขอบบน* เสมอ แล้วร่วงลงมา — ของเดิมคิดจากกลางจอ บางดวงจึงเกิดกลางฟ้า
+       ⓘ เลื่อนจุดเกิดสวนทางกับทิศเฉียง ดวงที่เฉียงซ้ายจะได้เกิดค่อนไปทางขวา
+          ไม่งั้นมันออกนอกจอตั้งแต่วินาทีแรก */
     const ST=SHOOT[S.style]||SHOOT[0];
-    return {x:.5-vx*.60+nx*j, y:.5-vy*.60+ny*j,
+    return {x:Math.random()*1.0-vx*.40, y:-.18,
+            span:1.42/vy,                   /* พาดจอในแนวตั้งเท่ากันทุกมุม */
             vx, vy, t:0, life:(1.1+Math.random()*.5)*ST.lifeMul};
   }
   window.__shootNow=()=>{ SH=mk(); };
+  /* ⓘ เปิดให้เครื่องมือวัดอ่านดวงที่กำลังวิ่งได้ — ไม่งั้นตรวจได้แค่ด้วยตา */
+  window.__peekShoot=()=>SH && {vx:SH.vx, vy:SH.vy, x:SH.x, y:SH.y, span:SH.span, life:SH.life};
 
   function draw(ctx){
     if(!S.on) return;
@@ -249,7 +263,7 @@ const INJECT = `(function(){
               ดาวตกจริงติดแทบทันทีแล้วลากความสว่างยาวออกไป */
         const a=(S.sha/100)*ST.aMul*Math.pow(Math.min(1,u*7),1.4)*Math.pow(1-u,1.7);
         if(a>.004){
-          const SPAN=1.65;                 /* ระยะที่พาดจอ — คิดจาก u ไม่ใช่ t (ดู mk) */
+          const SPAN=SH.span||1.65;        /* ระยะที่พาดจอ — คิดจาก u ไม่ใช่ t (ดู mk) */
           const x=(SH.x+SH.vx*u*SPAN)*W, y=(SH.y+SH.vy*u*SPAN)*H;
           /* ② หางยืดตอนต้น หดตอนจบ — ไม่ใช่ความยาวคงที่ทั้งชีวิต */
           const grow=Math.min(1,u*3.4), fall=1-Math.pow(Math.max(0,(u-.5)/.5),1.4);
