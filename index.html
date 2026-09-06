@@ -3376,9 +3376,14 @@ const G = {
   pipe(lat,lng){ return this.project(this.rotate(toXYZ(lat,lng))); },
   pipeV(v){ return this.project(this.rotate(v)); },
   focus(ll,z){
+    /* ⛔ กันพิกัดที่ไม่ใช่ตัวเลข (ข้อ 178) — จดหมายที่ข้อมูลพิกัดเสีย เคยทำให้ลูกโลก
+          *ทั้งใบ* พังทั้งจอ ไม่ใช่แค่ฉบับนั้นเปิดไม่ได้ · NaN ลามจาก target →
+          pipeV → globeShade แล้วโยนใน createRadialGradient ทุกเฟรม
+       ⓘ ไม่หันไปไหน ดีกว่าหันไปที่ NaN แล้วฉากตายทั้งฉาก */
+    if(!ll || !isFinite(ll.lat) || !isFinite(ll.lng)) return;
     this.target={y:ll.lng*RAD, x:clamp(ll.lat*RAD,-1.3,1.3)};
     this.vY=this.vX=0;
-    if(z!==undefined) this.zTarget=clamp(z,1,CFG.ZOOM_MAX);
+    if(z!==undefined && isFinite(z)) this.zTarget=clamp(z,1,CFG.ZOOM_MAX);
   },
   /* ซูมที่ทำให้เส้นทางกินพื้นที่ ZOOM_FIT ของด้านสั้นของจอ
      ปลายทั้งสองอยู่ห่างจากจุดกลางภาพข้างละครึ่งมุม ระยะบนจอจึงเป็น 2·R·sin(มุม/2) */
@@ -4243,6 +4248,10 @@ const G = {
      พอแผ่นดินเงียบลง จุดสองจุดนี้ต้องไม่เงียบตาม — มันคือคนสองคนในเรื่อง
      จึงเพิ่มวงแสงรอบจุดให้แยกออกจากพื้นได้แม้ตรงนั้นจะมีฝนหรือลมพาดผ่าน */
   node(ctx,p,hollow){
+    /* ⛔ กันพิกัดเสียเหมือน focus() (ข้อ 178) — จุดเดียวที่เป็น NaN
+          ทำให้ทุกเฟรมโยนใน createRadialGradient แล้วฉากตายทั้งฉาก
+          ไม่ใช่แค่จุดนั้นหาย · จดหมายฉบับเดียวไม่ควรพาลูกโลกล่มไปด้วย */
+    if(!p || !isFinite(p.x) || !isFinite(p.y) || !isFinite(p.z)) return;
     if(p.z<-.1) return;
     const a=p.z<0?.3:1;
     const r=hollow?4.4:3.6;
