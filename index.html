@@ -245,6 +245,10 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 /* read */
 .paperwrap{position:relative;margin:0 auto 16px;max-width:500px}
 #rCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* เกล็ดหิมะอยู่ *บน* ตัวหนังสือ เพราะมันเกาะบนกระดาษที่เขียนเสร็จแล้ว (ข้อ 177)
+   ⛔ pointer-events:none — ไม่งั้นมันกินการเลือกข้อความกับการเลื่อนอ่าน */
+#rSnow{position:absolute;inset:0;width:100%;height:100%;display:block;
+  z-index:3;pointer-events:none}
 .ptext{position:relative;padding:36px 32px 30px;min-height:330px;font-size:15px;line-height:2.15;white-space:pre-wrap;word-break:break-word;color:rgba(var(--paper-ink-rgb),.9);-webkit-user-select:text;user-select:text}
 .sig{margin-top:26px;text-align:right;font-size:var(--t-sub);color:rgba(var(--paper-ink-rgb),.6);letter-spacing:.02em}
 .rmeta{font-size:var(--t-tiny);color:var(--dim);letter-spacing:.02em;margin-bottom:12px}
@@ -5214,14 +5218,17 @@ function wxWord(w){
 
 /* ---------- ข้อมูลย่อย ---------- */
 function tracesOf(L,upto){
-  let pre=0, st=0, gu=0, ic=0;
+  let pre=0, st=0, gu=0, ic=0, sn=0;
   const n = upto===undefined ? L.lg.length : upto+1;
   for(let i=0;i<Math.min(n,L.lg.length);i++){
     const l=L.lg[i];
+    /* ⚠️ หิมะถูกนับเป็น "เปียก" ที่นี่ด้วย ซึ่งไม่ตรงนัก — หิมะที่ยังไม่ละลายไม่ทำให้กระดาษเปียก
+       ⛔ ยังไม่แก้ เพราะจะเปลี่ยนหน้าตาจดหมายทุกฉบับที่เคยส่งไปแล้ว (ข้อ 177.3) */
     pre+=l[4]*l[0];                     /* ปริมาณน้ำฟ้า × ชั่วโมง — หิมะรวมอยู่ในนี้ด้วย (ข้อ 98) */
     if(l[6]>=2) st++;                   /* ลมแรงถึงขั้นเสี่ยงหาย = รอยยับแบบพายุ */
     else if(l[6]>0) gu++;               /* กระโชกถึงเกณฑ์เฉย ๆ = รอยปั่น ไม่ใช่รอยกด */
     if(wcx(l[8])===2) ic++;             /* ฝนแข็งตัว = รอยแตก ของที่ค้างอยู่ */
+    if(wcx(l[8])===1) sn++;             /* หิมะ = เกล็ดที่เกาะอยู่ ยังไม่ละลาย (ข้อ 177) */
   }
   /* การเคลือบตัดร่องรอยที่มันกันได้ (ข้อ 13) — ความเก่าตามวันยังอยู่เสมอ เพราะเวลาไม่มีอะไรกันได้
      กอล์ฟตัดสิน 26 ส.ค. (ข้อ 98): กันน้ำกันความเปียกทั้งหมด · เคลือบหนากันรอยแตกและรอยยับทั้งหมด */
@@ -5239,6 +5246,9 @@ function tracesOf(L,upto){
     storm: ct===2 ? 0 : Math.min(3,st),
     gust:  ct===2 ? 0 : Math.min(4,gu),
     ice:   ct===2 ? 0 : Math.min(4,ic),
+    /* ⛔ เคลือบกันน้ำก็ยังมีหิมะเกาะได้ — มันไม่ได้ *ซึม* เข้ากระดาษ มันวางอยู่ข้างบน
+          เคลือบหนากันได้ เพราะผิวลื่นจนเกล็ดไม่เกาะ (ตรรกะเดียวกับข้อ 98) */
+    snow:  ct===2 ? 0 : Math.min(4,sn),
     days:  Math.min(doneH, L.th)/24
   };
 }
@@ -7325,8 +7335,10 @@ function openRead(L){
     $('#btnNoti').onclick=askNotify;
   }else{
     stage.innerHTML='<div class="paperwrap" id="rPaper"><canvas id="rCanvas"></canvas>'
-      +'<div class="ptext"><div>'+esc(L.bd)+'</div><div class="sig">— '+esc(safeName(L.f.n))+'</div></div></div>';
+      +'<div class="ptext"><div>'+esc(L.bd)+'</div><div class="sig">— '+esc(safeName(L.f.n))+'</div></div>'
+      +'<canvas id="rSnow"></canvas></div>';
     requestAnimationFrame(paintPaper);
+    requestAnimationFrame(()=>seedPaperSnow(L));
     /* ---------- ม่าน (ข้อ 103) ----------
        เฉพาะจดหมายขาเข้า · ขาออกเป็นของที่เราเขียนเอง จะเตือนตัวเองทำไม
        และเฉพาะ sev 2 ซึ่งคือคำเหยียด ข่มขู่ คุกคามทางเพศ — ไม่ใช่แค่คำหยาบ
@@ -7351,8 +7363,79 @@ function openRead(L){
   refreshDock();
 }
 /* นับว่าอ่านแล้วเฉพาะตอนได้เห็นจริง — ฉบับที่ยังถูกม่านคลุมอยู่ ยังไม่ถือว่าอ่าน */
+/* ---------- หิมะที่เกาะมากับจดหมาย และการปัดมันออก (ข้อ 177) ----------
+   ⭐ กอล์ฟเสนอกิมมิคปัดหิมะ · ที่หน้าแรกทำไม่ได้เพราะ stage จับ pointer ทั้งจอ
+      เพื่อหมุนลูกโลก (ข้อ 175.3) — ที่นี่ทำได้ และมีความหมายกว่าด้วย
+      เกล็ดที่เกาะอยู่คือคำตอบว่า *จดหมายผ่านอะไรมาบ้าง* ซึ่งคือสิ่งที่ tracesOf ทำอยู่แล้ว
+   ⭐ ไม่ต้องสอนว่าปัดได้ — นิ้วที่เลื่อนอ่านจดหมายก็ปัดเกล็ดไปด้วยอยู่แล้ว
+      ⛔ จึงห้าม preventDefault เด็ดขาด ไม่งั้นเลื่อนอ่านไม่ได้ */
+let PSNOW=[], _psL=null;
+function seedPaperSnow(L){
+  const cv=$('#rSnow'), box=$('#rPaper');
+  PSNOW=[]; _psL=null;
+  if(!cv||!box||!L||!L.lg) return;
+  if(L.sw){ cv.width=cv.height=0; return; }      /* ปัดหมดไปแล้วในรอบก่อน */
+  const t=tracesOf(L);
+  const n=Math.round(t.snow*7);                  /* 4 ช่วง = 28 เกล็ด */
+  if(!n) return;
+  _psL=L;
+  const W=box.clientWidth, H=box.clientHeight;
+  if(!W||!H) return;
+  const DPR=Math.min(devicePixelRatio||1,2);
+  cv.width=W*DPR; cv.height=H*DPR;
+  const sd=seedOf(L.id||'');                     /* ⛔ ต้องมาจาก id ไม่ใช่ random — ผู้ส่งกับผู้รับเห็นใบเดียวกัน (ข้อ 98) */
+  let r=sd;
+  const rnd=()=>{ r=(r*1103515245+12345)&0x7fffffff; return r/0x7fffffff; };
+  for(let i=0;i<n;i++)
+    PSNOW.push({x:rnd()*W, y:rnd()*H, r:1.6+rnd()*3.4, a:.30+rnd()*.34, g:0});
+  paintPaperSnow();
+}
+function paintPaperSnow(){
+  const cv=$('#rSnow'); if(!cv||!cv.width) return;
+  const ctx=cv.getContext('2d');
+  const DPR=Math.min(devicePixelRatio||1,2);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,cv.width/DPR,cv.height/DPR);
+  for(const f of PSNOW){
+    if(f.g>=1) continue;
+    /* เกล็ดจริงไม่ใช่วงกลมทึบ — ขอบนุ่มเพราะมันเป็นผลึกที่กระจายแสง */
+    const a=f.a*(1-f.g);
+    const g=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r);
+    g.addColorStop(0,   'rgba(255,255,255,'+a.toFixed(3)+')');
+    g.addColorStop(.55, 'rgba(246,250,255,'+(a*.55).toFixed(3)+')');
+    g.addColorStop(1,   'rgba(232,240,252,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2); ctx.fill();
+  }
+}
+/* นิ้วผ่านตรงไหน เกล็ดตรงนั้นหลุด — ไม่ว่าจะตั้งใจปัดหรือแค่เลื่อนอ่าน */
+function sweepSnow(e){
+  if(!PSNOW.length || !_psL) return;
+  const box=$('#rPaper'); if(!box) return;
+  const b=box.getBoundingClientRect();
+  const x=e.clientX-b.left, y=e.clientY-b.top;
+  let hit=false, left=0;
+  for(const f of PSNOW){
+    if(f.g<1 && Math.hypot(f.x-x,f.y-y)<=26){ f.g=1; hit=true; }
+    if(f.g<1) left++;
+  }
+  if(!hit) return;
+  paintPaperSnow();
+  if(!left){
+    /* ⓘ ธงในเครื่องอย่างเดียว แบบเดียวกับ L.pk — ไม่อยู่ในลิงก์
+       ⛔ เก็บเฉพาะตอนปัด *หมด* · ปัดค้างไว้แล้วปิดหน้า เปิดใหม่ได้เกล็ดครบ
+          ซึ่งซื่อสัตย์กว่า เพราะงานยังไม่เสร็จ */
+    _psL.sw=1; store.put(_psL); _psL=null;
+  }
+}
 function markRead(L){ if(L.dir==='in'&&!L.read){ L.read=true; store.put(L); refreshDock(); } }
 function wfOn(){ try{ return LS.get('drift.wf')!=='0'; }catch(e){ return true; } }
+/* ⛔ ผูกที่ #read ครั้งเดียว ไม่ใช่ที่ #rPaper ซึ่งถูกสร้างใหม่ทุกครั้งที่เปิดจดหมาย
+   ⛔ ไม่ preventDefault และไม่ setPointerCapture — การเลื่อนอ่านต้องทำงานเหมือนเดิมทุกประการ */
+$('#read').addEventListener('pointermove', e=>{ if(e.buttons||e.pointerType==='touch') sweepSnow(e); },
+  {passive:true});
+$('#read').addEventListener('pointerdown', e=>sweepSnow(e), {passive:true});
+
 function paintPaper(){
   const cv=$('#rCanvas'); if(!cv||!current) return;
   const box=$('#rPaper'); if(!box) return;
