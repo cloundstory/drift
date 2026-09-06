@@ -3327,6 +3327,8 @@ const SKIN = {
   shade:  '96,102,116',
   dust:   '120,126,138',
   rainBg: '108,116,132',   /* ฝนที่ตกจริงตรงที่ผู้ใช้อยู่ (ข้อ 152) */
+  snowBg: '132,142,162',   /* หิมะ — จางกว่าฝนเพราะเกล็ดสะท้อนแสง ไม่ใช่เส้นน้ำ (ข้อ 175) */
+  bolt:   '120,132,158',   /* ฟ้าสว่างตอนฟ้าคะนอง — ⛔ ไม่ใช่เส้นแลบ */
   grain:  '92,86,72',      /* เนื้อกระดาษ — อุ่นกว่าหมึก UI เพราะเป็นเนื้อวัสดุ ไม่ใช่ตัวอักษร */
 
   /* ---- อากาศบนลูกโลก (ข้อ 135) ----
@@ -5175,7 +5177,9 @@ Object.assign(store,{
 
 /* ---------- อากาศ ณ จุดหนึ่ง จากแคชลมก้อนเดิม ----------
    ⚠️ ราคา 0 คำขอ ถ้าจุดนั้นอยู่ในกล่องแคช (ข้อ 99.6) · นอกกล่อง = ไม่รู้ ซึ่งพูดตรง ๆ ได้
-   ⚠️ แคชไม่มี weather_code (เขียนไว้ในคอมเมนต์ของ fetchWx) จึงเดาชนิดจากลม+ฝนเท่านั้น */
+   ⛔ บรรทัดเดิมตรงนี้เขียนว่า "แคชไม่มี weather_code" ซึ่ง **เคยจริง**
+      ข้อ 119 ใส่เข้าไปแล้ว (nv=6) แต่ไม่มีใครกลับมาแก้คอมเมนต์ และ wxAt ก็ไม่เคยส่งต่อ
+      ผลคือฉากตรงที่เรายืนไม่มีวันรู้ว่าที่ตกอยู่คือฝนหรือหิมะ (ข้อ 175) */
 async function wxAt(lat,lng){
   try{
     const man=await wcManifest(); if(!man) return null;
@@ -5190,7 +5194,11 @@ async function wxAt(lat,lng){
       if(dt<best){ best=dt; k=j; }
     }
     return {spd:H.wind_speed_10m[k], dir:H.wind_direction_10m[k],
-            pre:H.precipitation[k], gst:H.wind_gusts_10m[k]};
+            pre:H.precipitation[k], gst:H.wind_gusts_10m[k],
+            /* ⓘ แคชรุ่นเก่า (nv=4) ไม่มีสองชั้นนี้ — คืน null ไม่ใช่ 0
+                  เพราะ 0 คือ "ฟ้าใส" ซึ่งเป็นการอ้างว่ารู้ทั้งที่ไม่รู้ */
+            wc: H.weather_code ? H.weather_code[k] : null,
+            prs: H.pressure_msl ? H.pressure_msl[k] : null};
   }catch(e){ return null; }
 }
 /* คำเรียกอากาศจากค่าที่แคชมี — บันไดเดียวกับ simulate แต่ไม่มี weather_code กับความกดอากาศ
@@ -5384,6 +5392,103 @@ function deckAt(px, fromY){
   return best;
 }
 
+/* ---------- หิมะที่ตกจริงตรงที่คุณอยู่ (ข้อ 175) ----------
+   ⛔ ไม่ใช่ฝนที่ช้าลง — เกล็ดร่วงช้ากว่าราวหกเท่า *และส่ายไปมา* เพราะมันเบาพอให้อากาศพา
+   ⓘ ไม่มีวงกระทบ หิมะไม่กระเด็น — มันสะสม ซึ่งเป็นสิ่งที่ฝนทำไม่ได้
+   ⚠️ กองมีเพดาน เพราะกองที่โตไม่หยุดจะกินจอและกลายเป็นภาระของผู้ใช้ (กอล์ฟทัก) */
+const SNOW=[];
+const PILE_N=72, PILE_CAP=17;      /* 17px — ราว 2% ของความสูงจอมือถือ */
+const PILE=new Float32Array(PILE_N);
+let snowT=0, _pileMax=0;
+/* ⛔ รอบแรกเกล็ดหิมะเป็นจุดกลมนุ่มขนาดใกล้ฝุ่น — แยกไม่ออกอีกแล้ว
+      อาการเดียวกับดาวกับฝุ่น (ข้อ 174.4) ในบริบทที่สอง
+   ⭐ สิ่งที่หิมะมีแต่ฝุ่นไม่มีคือ **ระยะ** — เกล็ดที่ผ่านใกล้ตาใหญ่และเบลอ
+      เกล็ดที่อยู่ไกลเล็กและคม · ภาพถ่ายหิมะจริงมีสองระยะนี้เสมอ
+      ฝุ่นเป็นก้อนขนาดใกล้กันทึบเท่ากันหมด เพราะมันคือ *อากาศ* ไม่ใช่วัตถุที่ร่วง */
+function mkFlake(){
+  const near = Math.random()<.28;
+  return {x:Math.random(), y:Math.random(),
+          near,
+          r:  near ? 2.9+Math.random()*1.9 : .65+Math.random()*1.0,
+          a:  near ? .085+Math.random()*.055 : .20+Math.random()*.16,
+          fall: near ? .12+Math.random()*.05 : .048+Math.random()*.032,
+          sway: near ? .075+Math.random()*.045 : .022+Math.random()*.018,
+          sw:.5+Math.random()*1.1, ph:Math.random()*6.283};
+}
+function snow(ctx,dt){
+  const on=snowNow();
+  snowT+=dt;
+  if(on && WIND_DIR!==null){
+    const n=Math.round(clamp(RAIN_HERE*26,8,42));
+    while(SNOW.length<n) SNOW.push(mkFlake());
+    SNOW.length=n;
+    const th=(WIND_DIR+180)*RAD;
+    const wx=Math.sin(th)*clamp((WIND_HERE||0)/40,0,.6);
+    ctx.fillStyle='rgba('+SKIN.snowBg+',1)';
+    SNOW.forEach(p=>{
+      /* ⚠️ ราวหนึ่งในหกของฝน — ที่เร็วเท่าฝนมันอ่านเป็นฝนสีขาวทันที
+         ⓘ เกล็ดใกล้ตาตกเร็วกว่าและส่ายกว้างกว่า เพราะมันอยู่ใกล้ ไม่ใช่เพราะมันหนัก */
+      p.y += p.fall*dt;
+      p.x += (wx*.14 + Math.sin(snowT*p.sw+p.ph)*p.sway)*dt;
+      const col=Math.min(PILE_N-1,Math.max(0,Math.floor(p.x*PILE_N)));
+      const floorY = H-7-PILE[col];
+      const hit=deckAt(p.x*W, 0);
+      const stopY = hit ? Math.min(hit.y, floorY) : floorY;
+      if(p.y*H>=stopY){
+        /* กองขึ้นเฉพาะพื้นที่เรายืน — บนปุ่มยังไม่กอง (ข้อ 175.3) */
+        /* ⚠️ เดิม .10+.16 ทำให้กองเต็มเพดานใช้เวลาราว 3 นาที — ไม่มีใครนั่งดูนานขนาดนั้น
+              ของที่ไม่มีใครเห็นไม่ได้แปลว่าซื่อสัตย์ แปลว่าไม่มีอยู่ (ข้อ 174.5)
+           ⛔ เกล็ดใกล้ตาไม่กอง — มันผ่านหน้าเราไป ไม่ได้ตกลงพื้นที่เรามองอยู่ */
+        if(!p.near && (!hit || hit.y>=floorY))
+          PILE[col]=Math.min(PILE_CAP, PILE[col]+.42+.55*Math.random());
+        p.y=-.04; p.x=Math.random();
+        return;
+      }
+      if(p.x<-.04)p.x=1.04; if(p.x>1.04)p.x=-.04;
+      ctx.globalAlpha=p.a;
+      ctx.beginPath(); ctx.arc(p.x*W, p.y*H, p.r, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }else{
+    SNOW.length=0;
+    /* ⛔ หิมะหยุดแล้วกองต้องหายเอง — ของที่ค้างตลอดไปคือของที่ผู้ใช้ต้องมาจัดการ */
+    for(let i=0;i<PILE_N;i++) if(PILE[i]>0) PILE[i]=Math.max(0,PILE[i]-dt*1.1);
+  }
+
+  /* ---- กองหิมะที่ขอบล่าง ---- */
+  let mx=0; for(let i=0;i<PILE_N;i++) if(PILE[i]>mx) mx=PILE[i];
+  _pileMax=mx;
+  if(mx<.4) return;
+  const cw=W/PILE_N, base=H+2;
+  ctx.beginPath(); ctx.moveTo(-2, base);
+  for(let i=0;i<PILE_N;i++){
+    /* เกลี่ยกับเพื่อนบ้าน ไม่งั้นได้ฟันปลาแทนกองหิมะ */
+    const a=PILE[Math.max(0,i-1)], b=PILE[i], c=PILE[Math.min(PILE_N-1,i+1)];
+    const hgt=(a+b*2+c)/4;
+    ctx.lineTo(i*cw+cw*.5, H-7-hgt);
+  }
+  ctx.lineTo(W+2, base); ctx.closePath();
+  ctx.fillStyle='rgba('+SKIN.snowBg+',.30)'; ctx.fill();
+  ctx.strokeStyle='rgba('+SKIN.snowBg+',.42)'; ctx.lineWidth=1; ctx.stroke();
+}
+
+/* ---------- ฟ้าคะนองตรงที่คุณอยู่ (ข้อ 175.4) ----------
+   ⛔ ไม่วาดเส้นแลบ — ฟ้าแลบเป็นของที่ดังที่สุดที่จะเคยใส่ในแอปนี้
+      ที่ทำได้คือ *ฟ้าสว่างขึ้นครู่หนึ่ง* ซึ่งคือสิ่งที่คนในบ้านเห็นจริง ๆ ตอนฟ้าคะนอง
+   ⓘ นาน ๆ ที ตามที่กอล์ฟสั่ง — 14-46 วินาที ไม่ใช่ทุกสองสามวินาที */
+let boltNext=6+Math.random()*20, boltA=0;
+function bolt(ctx,dt){
+  if(!thunderNow()){ boltA=0; return; }
+  boltNext-=dt;
+  if(boltNext<=0){ boltA=1; boltNext=14+Math.random()*32; }
+  if(boltA<=0) return;
+  boltA=Math.max(0, boltA-dt*2.6);
+  /* วาบสองจังหวะ — ฟ้าแลบจริงแทบไม่เคยวาบครั้งเดียว */
+  const k=boltA>.55 ? boltA : boltA*(.55+.45*Math.sin(boltA*22));
+  ctx.fillStyle='rgba('+SKIN.bolt+','+(k*.055).toFixed(4)+')';
+  ctx.fillRect(0,0,W,H);
+}
+
 const SPLASH=[];
 function splash(ctx,dt){
   if(!SPLASH.length) return;
@@ -5406,6 +5511,9 @@ function splash(ctx,dt){
 const RAIN=[];
 function rain(ctx,dt){
   if(!RAIN_HERE || RAIN_HERE<=0 || WIND_DIR===null) return;
+  /* ⛔ หิมะกับฝนไม่อยู่พร้อมกัน — กฎเดียวกับ "ฝนตก = ไม่มีฝุ่น" (ข้อ 155)
+        ⓘ ฝนแข็งตัว (wcx 2) ยังใช้เส้นฝน ถูกแล้ว เพราะมันตกลงมาเป็นน้ำ */
+  if(snowNow()) return;
   /* 0.1 mm = พรำ · 1.8 mm = ตกหนักสุดของวันนี้ — คุมไม่ให้เกิน 40 เส้น */
   const n=Math.round(clamp(RAIN_HERE*22,6,40));
   while(RAIN.length<n) RAIN.push({x:Math.random(), y:Math.random(), s:.6+Math.random()*.7});
@@ -5483,7 +5591,9 @@ function renderGlobe(){
   dust(sctx,dt);
   syncDecks();
   rain(sctx,dt);
+  snow(sctx,dt);          /* หลังฝน เพราะสองอย่างนี้ไม่อยู่พร้อมกันอยู่แล้ว (ข้อ 175) */
   splash(sctx,dt);
+  bolt(sctx,dt);          /* ⛔ ต้องอยู่ *ก่อน* ลูกโลก ไม่งั้นฟ้าสว่างฉาบทับลูกโลกทั้งใบ */
   globeShade(sctx);
   const list=store.letters();
   /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
@@ -6520,7 +6630,10 @@ function bugText(){
       ' · '+r2(WIND_HERE)+' กม./ชม. · กระโชก '+(WIND_GUST==null?'—':r2(WIND_GUST))
       +' · ฝน '+(RAIN_HERE==null?'—':r2(RAIN_HERE))+' มม.'),
     'ฉากหลัง: '+(WIND_HERE===null ? 'ว่าง เพราะไม่รู้ลม'
-      : (RAIN_HERE>0 ? 'ฝน (ฝุ่นถูกกดตามกฎข้อ 155)' : 'ฝุ่น '+DUST.length+' เม็ด')),
+      : (snowNow() ? 'หิมะ · กองสูง '+_pileMax.toFixed(1)+'px'
+      : (RAIN_HERE>0 ? 'ฝน (ฝุ่นถูกกดตามกฎข้อ 155)' : 'ฝุ่น '+DUST.length+' เม็ด')))
+      + (thunderNow() ? ' + ฟ้าคะนอง' : ''),
+    'รหัสอากาศ: '+(WC_HERE===null ? 'แคชรุ่นเก่าไม่มีชั้นนี้' : WC_HERE+(wcx(WC_HERE)?' ('+WCX_WORD[wcx(WC_HERE)]+')':'')),
     navigator.userAgent
   ];
   L.push('', errs.length ? 'ข้อผิดพลาดล่าสุด' : 'ไม่มีข้อผิดพลาดที่บันทึกไว้');
@@ -6680,6 +6793,9 @@ $('#cBody').addEventListener('input',()=>{
 
 /* ---------- องก์ Write — กระดาษหายใจ และคีย์บอร์ดมือถือ (ข้อ 63) ---------- */
 let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null, WIND_GUST=null, RAIN_HERE=null;
+/* ⛔ ปริมาณฝนไม่บอกชนิด — หิมะก็ทำให้ precipitation > 0 เหมือนกัน
+      ก่อนข้อ 175 ฉากจึงวาดเส้นฝนทับหิมะโดยไม่มีอะไรฟ้อง */
+let WC_HERE=null;
 /* ⚠️ windHere() ล้มเหลวได้สี่ทางและทุกทางเงียบสนิท — ฝุ่น ฝน กระดาษหายใจ เปลวเทียน
       หายพร้อมกันโดยไม่มีอะไรฟ้อง (ตระกูลเดียวกับข้อ 104.5)
    ⓘ ค่านี้ไปโผล่ในหน้าแจ้งปัญหา เพื่อให้ตรวจจากมือถือได้โดยไม่ต้องเปิด console */
@@ -6807,7 +6923,12 @@ async function windHere(){
   if(w && typeof w.dir==='number') WIND_DIR=w.dir;
   if(w && typeof w.gst==='number') WIND_GUST=w.gst;
   if(w && typeof w.pre==='number') RAIN_HERE=w.pre;
+  if(w && typeof w.wc==='number') WC_HERE=w.wc;
 }
+/* หิมะตกอยู่จริงไหม ณ ที่ที่ผู้ใช้ยืน — ต้องมีทั้งของที่ร่วงลงมา *และ* รหัสที่บอกว่าเป็นหิมะ */
+function snowNow(){ return RAIN_HERE>0 && WC_HERE!==null && wcx(WC_HERE)===1; }
+/* ฟ้าคะนอง 95-99 — บันไดเดียวกับที่ลูกโลกใช้วางฟ้าแลบ (ข้อ 70) */
+function thunderNow(){ return WC_HERE!==null && WC_HERE>=95 && WC_HERE<=99; }
 
 /* วางปากกา = เลิกพิมพ์ ไม่ใช่กดปุ่ม — จับจาก focus/blur ของช่องบนกระดาษ */
 ['cTo','cPlace','cBody','cFrom'].forEach(id=>{
@@ -6887,10 +7008,10 @@ function showForecast(){
   $('#fcMeta').textContent  = 'ถึงประมาณ '+new Date(Date.now()+sim.total*3600000).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})
     + (holds?' · ติดลม '+holds+' ครั้ง':'');
   /* ---------- อากาศมาจากแคชล้วน (ข้อ 111.3) ----------
-     ⚠️ แคชภูมิภาคเก็บ 4 ชั้น (ลม · ทิศ · ฝน · กระโชก) ไม่มี weather_code กับ pressure_msl
-     ปกติไม่เป็นไร เพราะทุกช่วงที่จดหมายเดินผ่านอ่านจากคำขอสดซึ่งมีครบหกชั้น
-     แต่ตอนยิงสดไม่ได้ ทุกจุดตกมาใช้แคช → **จดหมายฉบับนั้นจะไม่มีวันเจอหิมะ หมอก
-     ฝนแข็งตัว หรือพายุหมุน** เพราะข้อมูลที่บอกสิ่งเหล่านั้นไม่ได้ถูกเก็บไว้ตั้งแต่แรก
+     ✅ **แคชเก็บหกชั้นแล้วตั้งแต่ข้อ 119** (ลม · ทิศ · ฝน · กระโชก · รหัสอากาศ · ความกด)
+     บรรทัดเดิมตรงนี้เขียนว่าเก็บ 4 ชั้นและ "จดหมายฉบับนั้นจะไม่มีวันเจอหิมะ" ซึ่ง
+     **เลิกจริงไปตั้งแต่ข้อ 119** แต่ไม่มีใครกลับมาแก้ · แก้แล้ว 6 ก.ย. (ข้อ 175.1)
+     ⚠️ แคชที่ generate ด้วยรุ่นเก่า (nv=4) ยังไม่มีสองชั้นนั้น — โค้ดจึงต้องรับ null ได้
 
      `WX_SRC` ถูกตั้งค่ามาตั้งแต่ข้อ 58 พร้อมคอมเมนต์ว่า "ต้องบอกให้รู้ ไม่ใช่เงียบ ๆ"
      แต่ไม่เคยมีที่ไหนอ่านมันเลย — คำสัญญาที่เขียนไว้แล้วไม่ได้ทำ */
@@ -8083,6 +8204,7 @@ const DARK_SKIN = {
   /* กลับขั้ว: พื้นมืดแล้ว เงาที่มืดกว่าอ่านไม่ออก · ฝุ่นต้องสว่างขึ้นถึงจะเห็น (ข้อ 150) */
   shade:'8,10,16', dust:'214,220,232',
   rainBg:'186,196,214', grain:'228,226,220',
+  snowBg:'220,230,246', bolt:'176,196,236',
   /* กลับขั้ว: ผิวโลกหรี่ลงแล้ว อากาศจึงต้องสว่างขึ้นถึงจะยังอ่านออก (ข้อ 135)
      ⓘ iceDot สว่างอยู่แล้วทั้งสองโหมด ไม่ต้องเปลี่ยน */
   cloud:'214,220,232', rain:'224,230,242', ice:'218,226,240',
