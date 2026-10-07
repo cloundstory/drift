@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2233">
 <title>drift — แบบศึกษา contrast</title>
@@ -262,9 +263,9 @@ addEventListener('resize',()=>{
 /* ตั้งให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว *ก่อน* ปล่อยให้เฟรมโหลด — same-origin จึงเป็นก้อนเดียวกัน
    ⚠️ ต้องบังคับ scheme เป็น light ตั้งแต่ localStorage ไม่งั้นเห็นโหมดมืดแวบแรก */
 try{
-  localStorage.setItem('lw.v1.scheme','light');
-  localStorage.setItem('lw.v1.intro','1');
-  sessionStorage.setItem('lw.v1.splash','1');
+  DRIFT_LOCAL.setItem('lw.v1.scheme','light');
+  DRIFT_LOCAL.setItem('lw.v1.intro','1');
+  DRIFT_SESSION.setItem('lw.v1.splash','1');
 }catch(e){}
 /* ⚠️ service worker แคชแอปไว้ — เฟรมจะได้ไฟล์เก่าแล้วเราจะนึกว่า token ที่ยัดไม่ทำงาน (ข้อ 127.4) */
 navigator.serviceWorker && navigator.serviceWorker.getRegistrations

@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0f1420">
 <title>drift — แบบศึกษาดาวและดาวตก</title>
@@ -393,9 +394,9 @@ app.addEventListener('load', ()=>{
 
 /* ตั้งให้แอปคิดว่าเป็นคนที่เคยใช้แล้ว และอยู่โหมดมืด *ก่อน* ปล่อยให้เฟรมโหลด */
 try{
-  localStorage.setItem('lw.v1.scheme','dark');
-  localStorage.setItem('lw.v1.intro','1');
-  sessionStorage.setItem('lw.v1.splash','1');
+  DRIFT_LOCAL.setItem('lw.v1.scheme','dark');
+  DRIFT_LOCAL.setItem('lw.v1.intro','1');
+  DRIFT_SESSION.setItem('lw.v1.splash','1');
 }catch(e){}
 /* ⚠️ service worker แคชแอปไว้ — เฟรมจะได้ไฟล์เก่าแล้วเราจะนึกว่าชั้นดาวไม่ทำงาน (ข้อ 127.4) */
 navigator.serviceWorker && navigator.serviceWorker.getRegistrations

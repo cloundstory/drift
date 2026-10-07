@@ -1,0 +1,28 @@
+<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drift — B ในหน้าโลกจริง</title>
+<script src="tools/study-storage.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;background:#202735;color:#ddd6c7;font:13px system-ui;display:flex;flex-direction:column;height:100svh;overflow:hidden}header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px}button,select{color:inherit;background:#303747;border:1px solid #676969;border-radius:8px;padding:7px;font:inherit}iframe{width:100%;flex:1;min-height:0;border:0}footer{padding:6px 12px;font-size:11px;color:#bbb6a9}#evidence{display:none}</style>
+<header><span>B · หน้าโลกจริง</span><button id="theme">มืด</button><select id="weather" aria-label="อากาศ"><option value="clear">ท้องฟ้าเปิด</option><option value="rain">ฝน</option><option value="snow">หิมะ</option></select><select id="quality" aria-label="รายละเอียดภาพ"><option value="auto">อัตโนมัติ</option><option value="high">ละเอียด</option><option value="low">เบา</option></select><button id="motion" aria-pressed="false">ลดการเคลื่อนไหว</button><button id="close">ดูจดหมายใกล้</button><button id="reset">โลกเต็มใบ</button><button id="measure">วัด 10 วินาที</button></header>
+<iframe id="app" title="หน้าโลก Drift พร้อมข้อมูลตัวอย่าง"></iframe>
+<footer>ข้อมูลตัวอย่างในหน่วยความจำ · ลากโลกเพื่อดูเส้นดินสอ</footer><output id="evidence"></output>
+<script>
+const app=document.querySelector('#app');let dark=true,reduced=false,maskChecks=[];
+const sample={id:'pencil-preview',f:{n:'ผู้เขียนตัวอย่าง',p:'กรุงเทพ',la:13.7,lo:100.5},t:{n:'ผู้รับตัวอย่าง',p:'โตเกียว',la:35.7,lo:139.7},s:Date.now()-2*3600000,th:6,ct:0,lo:-1,dir:'out',lg:Array.from({length:12},()=>[.5,0,18,210,0,0,0,25,0]),bd:'จดหมายตัวอย่างในสายลม'};
+DriftStudy.local.setItem('lw.v1.letters',JSON.stringify([sample]));DriftStudy.local.setItem('lw.v1.me',JSON.stringify({name:'ผู้เขียนตัวอย่าง',place:'กรุงเทพ',lat:13.7,lng:100.5,pid:'PENCILPREVIEW001'}));DriftStudy.local.setItem('lw.v1.intro','1');DriftStudy.local.setItem('lw.v1.scheme','dark');DriftStudy.session.setItem('lw.v1.splash','1');
+function command(code){app.contentWindow.eval(code);}
+function weather(){const kind=document.querySelector('#weather').value;command("_windEpoch++;_windUntil=Date.now()+86400000;_windRequest=null;WIND_HERE="+(kind==='rain'?24:12)+";WIND_DIR=210;WIND_GUST=WIND_HERE+7;RAIN_HERE="+(kind==='rain'?.8:kind==='snow'?.4:0)+";WC_HERE="+(kind==='rain'?61:kind==='snow'?73:0)+";DUST.length=RAIN.length=SNOW.length=SPLASH.length=0;PILE.fill(0);");}
+function checkMasks(){
+  return app.contentWindow.eval(`(()=>{const cv=document.createElement('canvas');cv.width=128;cv.height=96;const ctx=cv.getContext('2d');return [29,68].map(r=>{ctx.clearRect(0,0,128,96);PENCIL_WORLD.outsideWorld(ctx,()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,128,96);},{w:128,h:96,x:64,y:44,r});const data=ctx.getImageData(0,0,128,96).data;let insideLeaks=0,outsideMissing=0;for(let y=0;y<96;y++)for(let x=0;x<128;x++){const d=Math.hypot(x+.5-64,y+.5-44),a=data[(y*128+x)*4+3];if(d<r-1&&a)insideLeaks++;if(d>r+1&&a!==255)outsideMissing++;}ctx.fillRect(64,44,1,1);return {radius:r,insideLeaks,outsideMissing,restored:ctx.getImageData(64,44,1,1).data[3]===255};});})()`);
+}
+app.addEventListener('load',()=>{command("closeSheet();resetHero();previewOff();selected='pencil-preview';PREVIEW={id:selected,h:2,play:false};G.target=null;G.rotY=108*RAD;G.rotX=19*RAD;G.vX=G.vY=0;G.zoom=G.zTarget=1.04;G.R=G.R0*G.zoom;G._key=null;RENDER.start();");weather();maskChecks=checkMasks();});
+document.querySelector('#theme').onclick=()=>{dark=!dark;command("setSchemePref('"+(dark?'dark':'light')+"')");document.querySelector('#theme').textContent=dark?'มืด':'สว่าง';};
+document.querySelector('#weather').onchange=weather;
+document.querySelector('#quality').onchange=e=>command("setRenderQuality('"+e.target.value+"')");
+document.querySelector('#motion').onclick=()=>{reduced=!reduced;command('setMotionPreference('+reduced+')');document.querySelector('#motion').setAttribute('aria-pressed',reduced);};
+document.querySelector('#close').onclick=()=>command("{const L=store.letters().find(L=>L.id===selected),st=letterState(L,nowFor(L));G.focus(posAt(L,st.prog),G.fitZoom(fitKm(L))*2.4);RENDER.start();}");
+document.querySelector('#reset').onclick=()=>command('G.target=null;G.rotY=108*RAD;G.rotX=19*RAD;G.vX=G.vY=0;G.zoom=G.zTarget=1.04;G.R=G.R0*G.zoom;G._key=null;');
+function evidence(){return JSON.parse(app.contentWindow.eval('JSON.stringify({world:PENCIL_WORLD.snapshot(),quality:QUALITY.snapshot(),clock:RENDER.snapshot(),paper:[...GLOBE_PAPER_STATES.values()].map(s=>s.motion),scheme:schemeNow,camera:{x:G.rotX,y:G.rotY,zoom:G.zoom}})'));}
+setInterval(()=>{try{document.querySelector('#evidence').textContent=JSON.stringify({...evidence(),maskChecks});}catch(e){}},250);
+document.querySelector('#measure').onclick=()=>{const button=document.querySelector('#measure'),doc=app.contentDocument;command('QUALITY.resetMetrics()');button.disabled=true;button.textContent='กำลังวัด…';setTimeout(()=>{button.disabled=false;button.textContent='วัด 10 วินาที';if(doc!==app.contentDocument)return;const report=evidence();document.querySelector('#evidence').dataset.measurement=JSON.stringify(report);const stats=report.quality.scenes.globe;document.querySelector('footer').textContent=stats?'รอบล่าสุด · p95 '+stats.p95CostMs.toFixed(1)+' ms · '+report.quality.level+' · JavaScript draw callback':'ยังไม่มีเฟรมโลก';},10000);};
+app.src='index.html?qa=living-world-study&renderer=production';
+</script></html>

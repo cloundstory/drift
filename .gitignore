@@ -16,6 +16,7 @@ desktop.ini
 .DS_Store
 __pycache__/
 *.pyc
+wind/.wind-*
 .vscode/
 .idea/
 

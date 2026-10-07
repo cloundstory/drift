@@ -1,0 +1,129 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<title>Drift — synthetic browser QA</title>
+<script src="study-storage.js"></script>
+<style>body{margin:0;background:#ece5dc;font:14px system-ui;height:100dvh;display:flex;flex-direction:column;overflow:hidden}header{padding:10px;display:flex;gap:8px;flex-wrap:wrap}button{padding:8px}iframe{display:block;width:100%;flex:1;min-height:0;border:0}p{margin:0 10px 8px;overflow-wrap:anywhere;flex-shrink:0}#runtimeStatus{font-size:11px;max-height:100px;overflow:auto}</style>
+<header><button data-case="fresh">Fresh</button><button data-case="existing">Existing</button>
+<button data-case="waiting">Waiting link first</button><button data-case="arrived">Arrived link first</button>
+<button data-case="lost">Lost link first</button><button data-case="port">Port link first</button>
+<button data-case="quota">Storage blocked</button>
+<button id="reduceMotion">Reduce motion</button><button id="normalMotion">Normal motion</button>
+<button id="hideScene">Hide scene</button><button id="showScene">Show scene</button>
+<button id="measure">Measure 10 s</button><button id="reloadProfile">Reload same profile</button>
+<button id="qaNight">Night</button><button id="qaDay">Day</button>
+<button id="blockRelease">Block letter write</button><button id="allowRelease">Allow letter write</button></header>
+<p id="result">Synthetic memory only. Forecast/geocoding use fixtures. No real browser storage.</p>
+<iframe id="app" title="Drift test application"></iframe>
+<script>
+const app=document.querySelector('#app');
+const previewOnly=new URLSearchParams(location.search).has('preview');
+if(previewOnly){
+  document.documentElement.classList.add('preview');
+  const style=document.createElement('style');style.textContent='.preview header button{display:none}.preview header [data-case="existing"],.preview #qaNight,.preview #qaDay{display:block}.preview #runtimeStatus,.preview #result{display:none}.preview header{background:#eeece7}.preview header button{font:13px system-ui;border:1px solid #b7b2a8;border-radius:18px;background:transparent;padding:6px 12px}';document.head.append(style);
+  document.querySelector('[data-case="existing"]').textContent='เริ่มใหม่';
+  document.querySelector('#qaNight').textContent='กลางคืน';document.querySelector('#qaDay').textContent='กลางวัน';
+  document.title='Drift · ตัวอย่างฉากปล่อยในแอพจริง';
+}
+let qaReduced=false, weatherRequests=[], stageTimings={},releaseSamples=[],lastPaint=null;
+const diagnostics=document.createElement('p'); diagnostics.id='runtimeStatus';
+app.before(diagnostics);
+const normalSet=DriftStudy.local.setItem;
+const fixtureMe={name:'QA Writer',place:'Bangkok',lat:13.7,lng:100.5,pid:'QAWRITER00000001'};
+const fixturePort={i:'QAREADER00000001',n:'QA Reader',a:18.8,o:99,p:'Chiang Mai',gave:1,at:Date.now()};
+function record(kind){return {id:'qa-'+kind,f:{n:'QA Sender',p:'Bangkok',la:13.7,lo:100.5},
+  t:{n:'QA Reader',p:'Chiang Mai',la:18.8,lo:99},s:Date.now()-(kind==='waiting'?0:8*3600000),
+  th:6,ct:0,lg:[[6,0,12,180,0,0,0,18,0]],lo:kind==='lost'?0:-1,
+  bd:'This is a synthetic QA letter. No private data.',dir:'in'};}
+function payload(value){return 'r'+btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function show(kind){
+  weatherRequests=[];
+  DriftStudy.local.setItem=normalSet; DriftStudy.local.clear(); DriftStudy.session.clear();
+  DriftStudy.session.setItem('lw.v1.splash','1');
+  if(kind==='existing'||kind==='quota'){
+    DriftStudy.local.setItem('lw.v1.me',JSON.stringify(fixtureMe));
+    DriftStudy.local.setItem('lw.v1.intro','1');
+    DriftStudy.local.setItem('lw.v1.ports',JSON.stringify([fixturePort]));
+    DriftStudy.local.setItem('lw.v1.letters',JSON.stringify(['waiting','arrived','lost'].map(record)));
+  }
+  if(kind==='quota') DriftStudy.local.setItem=()=>{throw new DOMException('Synthetic quota failure','QuotaExceededError');};
+  let hash='';
+  if(['waiting','arrived','lost'].includes(kind)) hash='#'+payload(record(kind));
+  if(kind==='port') hash='#p'+payload(fixturePort);
+  document.querySelector('#result').textContent='Scenario: '+kind+' — memory only, fixture network';
+  app.src='../index.html?qa='+kind+'&renderer=production&run='+Date.now()+hash;
+}
+app.addEventListener('load',()=>{
+  const w=app.contentWindow, realFetch=w.fetch.bind(w);
+  stageTimings={};
+  releaseSamples=[];lastPaint=null;
+  // Fixture-only profiling: measure cache builders and drawing without changing
+  // their inputs, return values, render ownership or the production app.
+  for(const name of ['rainMarks','driftStreams','dPaint','renderGlobeWorld','renderGlobeWeather','renderGlobeRoutes']){
+    const original=w[name]; if(typeof original!=='function') continue;
+    w[name]=function(...args){const start=performance.now();try{return original.apply(this,args);}finally{
+      const ms=performance.now()-start, item=stageTimings[name]||(stageTimings[name]={count:0,maxMs:0,totalMs:0});
+      item.count++;item.totalMs+=ms;item.maxMs=Math.max(item.maxMs,ms);
+    }};
+  }
+  w.fetch=async(input,options)=>{
+    const url=new URL(typeof input==='string'?input:input.url,w.location.href);
+    if(url.hostname==='geocoding-api.open-meteo.com'){
+      const north=/chiang/i.test(url.searchParams.get('name')||'');
+      return new w.Response(JSON.stringify({results:[north
+        ?{name:'Chiang Mai',country:'Thailand',admin1:'Chiang Mai',latitude:18.8,longitude:99}
+        :{name:'Bangkok',country:'Thailand',admin1:'Bangkok',latitude:13.756,longitude:100.502}]}));
+    }
+    if(url.hostname==='api.open-meteo.com'){
+      const count=(url.searchParams.get('latitude')||'').split(',').length;
+      weatherRequests.push(count);
+      const time=Array.from({length:96},(_,i)=>new Date(Date.now()+i*3600000).toISOString().slice(0,16));
+      const hourly={time,wind_speed_10m:time.map(()=>12),wind_direction_10m:time.map(()=>210),
+        precipitation:time.map(()=>0),wind_gusts_10m:time.map(()=>18),weather_code:time.map(()=>0),pressure_msl:time.map(()=>1013)};
+      return new w.Response(JSON.stringify(Array.from({length:count},()=>({hourly}))));
+    }
+    if(url.hostname==='nominatim.openstreetmap.org') return new w.Response(JSON.stringify({address:{city:'Bangkok'}}));
+    return realFetch(input,options);
+  };
+  w.eval('setMotionPreference('+qaReduced+')');
+  const paint=w.dPaint;w.dPaint=function(...args){lastPaint={tx:args[0],ty:args[1],depth:-args[2],opacity:args[8]};return paint.apply(this,args);};
+});
+document.querySelector('#qaNight').onclick=()=>app.contentWindow.eval("setSchemePref('dark')");
+document.querySelector('#qaDay').onclick=()=>app.contentWindow.eval("setSchemePref('light')");
+document.querySelector('#blockRelease').onclick=()=>{DriftStudy.local.setItem=(k,v)=>{if(k==='lw.v1.letters')throw new DOMException('Synthetic letter write blocked','QuotaExceededError');normalSet(k,v);};};
+document.querySelector('#allowRelease').onclick=()=>{DriftStudy.local.setItem=normalSet;};
+function fixtureMotion(value){qaReduced=value;app.contentWindow.eval('setMotionPreference('+value+')');}
+document.querySelector('#reduceMotion').onclick=()=>fixtureMotion(true);
+document.querySelector('#normalMotion').onclick=()=>fixtureMotion(false);
+document.querySelector('#hideScene').onclick=()=>{
+  const w=app.contentWindow; Object.defineProperty(w.document,'hidden',{configurable:true,value:true});
+  w.dispatchEvent(new w.Event('visibilitychange'));
+};
+document.querySelector('#showScene').onclick=()=>{
+  const w=app.contentWindow; delete w.document.hidden;
+  w.dispatchEvent(new w.Event('visibilitychange')); fixtureMotion(qaReduced);
+};
+function snapshot(){return app.contentWindow.eval(`JSON.stringify({clock:RENDER.snapshot(),quality:QUALITY.snapshot(),world:PENCIL_WORLD?.snapshot(),reduced:REDUCED,release:dPHASE,arrival:aPHASE,lost:xPHASE,sheet:sheetOpen,transaction:releaseSession?.tx.snapshot()||null,letters:store.letters().length,draft:!!readPreparedDraft(),flight:dFly,progress:dProg,zoom:G.zoom,targetZoom:G.zTarget,worldOpacity:Number(stage.style.opacity),hintOpacity:Number(getComputedStyle($('#driftHint')).opacity),uiOpacity:Number(getComputedStyle($('#status')).opacity),background:document.body.style.background,actionsVisible:!$('#releaseActions').hidden,scheme:schemeNow,paper:(()=>{const c=$('#cPaper');return c.width&&c.height?{width:c.width,height:c.height,rgba:[[.5,.15],[.5,.8]].map(([x,y])=>Array.from(c.getContext('2d').getImageData(Math.floor(c.width*x),Math.floor(c.height*y),1,1).data)),ink:getComputedStyle($('#cBody')).color,candle:getComputedStyle($('#cSheet'),'::before').backgroundImage}:null;})()})`);}
+setInterval(()=>{try{
+  const state=JSON.parse(snapshot());
+  if(state.release==='fly')releaseSamples.push({...state,paint:lastPaint});
+  if(releaseSamples.length>32)releaseSamples.shift();
+  diagnostics.textContent=JSON.stringify(state);diagnostics.dataset.evidence=JSON.stringify({state,releaseSamples});
+}catch(e){diagnostics.textContent='Loading: '+e.message;}},200);
+document.querySelector('#measure').onclick=()=>{
+  stageTimings={};
+  app.contentWindow.eval('QUALITY.resetMetrics()');
+  const doc=app.contentDocument, before=JSON.parse(snapshot()), start=performance.now();
+  document.querySelector('#result').textContent='Measuring 10 seconds in this browser (not a physical mobile benchmark)…';
+  setTimeout(()=>{
+    if(doc!==app.contentDocument) return;
+    const after=JSON.parse(snapshot()),seconds=(performance.now()-start)/1000,frames=after.clock.frames-before.clock.frames;
+    const report={seconds:+seconds.toFixed(2),frames,callbacksPerSecond:+(frames/seconds).toFixed(1),
+      visualMs:+(after.clock.elapsed-before.clock.elapsed).toFixed(1),scheduled:after.clock.scheduled,reduced:after.reduced,
+      quality:after.quality,scene:after.sheet||(after.release!=='off'?'release':after.arrival!=='off'?'arrival':after.lost!=='off'?'lost':'globe'),weatherRequests:[...weatherRequests],stageTimings};
+    document.querySelector('#result').textContent=JSON.stringify(report);
+    document.querySelector('#result').dataset.measurement=JSON.stringify(report);
+  },10000);
+};
+document.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>show(b.dataset.case));
+document.querySelector('#reloadProfile').onclick=()=>app.contentWindow.location.reload();
+show(previewOnly?'existing':'fresh');
+</script></html>

@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-07T08:17:54.372Z",
+  "cases": 12,
+  "checks": [
+    "finite bounded poses at 120 Hz",
+    "release cut after paper disappears",
+    "rested arrival has no hover",
+    "pickup continuity and readable front",
+    "continuous velocity through shots",
+    "reduced motion stays still",
+    "wind response and camera variants"
+  ],
+  "passed": true
+}

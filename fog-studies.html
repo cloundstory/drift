@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2233">
 <title>drift — แบบศึกษาหมอก</title>
@@ -188,8 +189,8 @@ app.addEventListener('load', () => {
 navigator.serviceWorker && navigator.serviceWorker.getRegistrations
   && navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
 try{
-  localStorage.setItem('lw.v1.intro','1');
-  sessionStorage.setItem('lw.v1.splash','1');
+  DRIFT_LOCAL.setItem('lw.v1.intro','1');
+  DRIFT_SESSION.setItem('lw.v1.splash','1');
 }catch(e){}
 app.src = 'index.html?fresh=' + Date.now();
 paintOut();

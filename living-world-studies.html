@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>drift — living world / แบบศึกษาทิศทางภาพ</title>
+<script src="tools/study-storage.js"></script>
+<script src="tools/study-globe-lines.js"></script>
+<style>
+*{box-sizing:border-box} :root{color-scheme:light;--paper:#f0ece2;--ink:#333a49;--muted:#727366;--line:#d6d1c5;--gold:#9b763e}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.65 system-ui,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+header{display:flex;align-items:center;justify-content:space-between;gap:20px;max-width:1600px;margin:auto;padding:22px 32px;border-bottom:1px solid var(--line)}
+.brand{font:30px Georgia,serif;letter-spacing:.18em}.eyebrow{font:10px/1.6 ui-monospace,monospace;letter-spacing:.12em;color:var(--muted)}.header-note{font-size:12px;color:var(--muted);text-align:right}
+main{max-width:1600px;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:30px;padding:24px 32px 30px}
+.preview{min-width:0}.preview-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:14px}.preview-head h1{font-size:22px;font-weight:500;line-height:1.45;margin:3px 0}.preview-head p{font-size:12px;color:var(--muted);margin:0}
+.scene{position:relative;overflow:hidden;border-radius:3px;background:#202532;border:1px solid #d0ccbe;height:clamp(380px,60vh,760px)}iframe{display:block;width:100%;height:100%;border:0}
+.scene-label{position:absolute;top:16px;left:18px;color:#e4e0d5;font:10px ui-monospace,monospace;letter-spacing:.1em;pointer-events:none;text-shadow:0 1px 5px #111}.scene[data-theme=light] .scene-label{color:#515762;text-shadow:none}
+.scene-help{position:absolute;bottom:15px;left:0;right:0;text-align:center;color:#d4d0c5;font-size:11px;pointer-events:none}.scene[data-theme=light] .scene-help{color:#696b64}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 0 13px;margin-bottom:13px;border-bottom:1px solid var(--line)}.toolbar button,.toolbar select,.quick button{border:1px solid var(--line);background:transparent;border-radius:3px;padding:7px 11px;min-height:40px}.toolbar button[aria-pressed=true],.quick button[aria-pressed=true]{background:#ded9cc;border-color:#bbb2a0}.toolbar label{font-size:12px;color:var(--muted)}.toolbar select{color:var(--ink);padding-right:25px}.toolbar .reset{margin-left:auto}.quick{display:flex;gap:5px;margin-top:8px}.quick button{font:14px Georgia,serif;min-height:32px;padding:4px 13px}
+.caption{margin:12px 0 0;font-size:12px;color:var(--muted)}.caption strong{font-weight:500;color:var(--ink)}
+aside{padding-top:1px}.intro{margin:0 0 18px;color:var(--muted);font-size:12px}.intro h2{font-size:15px;color:var(--ink);font-weight:500;margin:0 0 5px}
+.direction{width:100%;background:transparent;border:1px solid var(--line);border-radius:3px;padding:15px 16px;margin-bottom:10px;text-align:left;display:grid;grid-template-columns:28px 1fr;gap:9px;position:relative}
+.direction[aria-pressed=true]{background:#e5e0d3;border-color:#a99471;box-shadow:inset 3px 0 #9b763e}.letter{font:25px Georgia,serif;color:var(--gold);line-height:1.25}.name{font-size:15px;display:block;font-weight:500}.english{font:10px ui-monospace,monospace;letter-spacing:.04em;color:var(--muted);display:block;margin:1px 0 6px}.desc{font-size:12px;color:#626658;display:block;line-height:1.7}.swatches{display:flex;gap:4px;margin-top:10px}.swatches i{width:29px;height:5px;display:block;border-radius:1px}.tag{font-size:10px;color:#876733;font-weight:400;margin-left:6px}
+.details{border-top:1px solid var(--line);padding-top:14px;margin-top:17px}.details h3{font-size:13px;font-weight:500;margin:0 0 7px}.details p{font-size:12px;color:var(--muted);margin:0 0 10px}.detail-label{font-size:10px;letter-spacing:.03em;color:var(--gold);display:block;margin-bottom:2px}.layers{display:flex;flex-wrap:wrap;gap:5px;margin:13px 0}.layers span{font-size:10px;padding:2px 6px;border:1px solid var(--line);border-radius:2px;color:var(--muted)}
+.tune{display:flex;align-items:center;gap:12px;font-size:12px}.tune input{min-width:0;flex:1;accent-color:#9b763e;min-height:34px}.tune output{width:30px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+footer{max-width:1600px;margin:auto;padding:0 32px 23px;display:flex;justify-content:space-between;gap:16px;font-size:11px;color:var(--muted)}footer a{color:var(--gold)}#status{font-size:11px;color:var(--muted);margin-top:9px;min-height:19px}#status.error{color:#9d4c36}
+@media(max-width:1050px){main{grid-template-columns:minmax(0,1fr) 285px;gap:20px;padding:20px}.scene{height:58vh;min-height:380px}header{padding:18px 20px}footer{padding:0 20px 20px}}
+@media(max-width:760px){header{padding:15px 18px}.brand{font-size:25px}.header-note{max-width:155px;font-size:10px}main{display:flex;flex-direction:column;padding:18px;gap:23px}.preview-head h1{font-size:19px}.preview-head p{max-width:130px;text-align:right;font-size:11px}.scene{height:62svh;min-height:420px;max-height:700px}.toolbar{gap:6px}.toolbar button,.toolbar select{font-size:12px;padding:7px 8px}.toolbar .reset{margin-left:0}.direction{padding:13px 14px}.directions{display:grid;grid-template-columns:1fr;gap:0}.intro{margin-bottom:12px}footer{padding:0 18px 22px;display:block}footer p{margin:3px 0}.caption{line-height:1.8}}
+</style>
+<style>
+body.mobile-study header{padding:8px 14px}.mobile-study .brand{font-size:22px}.mobile-study .header-note,.mobile-study header .eyebrow,.mobile-study aside,.mobile-study footer,.mobile-study .caption,.mobile-study #status,.mobile-study .quick,.mobile-study .preview-head p{display:none}
+.mobile-study main{display:block;padding:10px 12px}.mobile-study .preview-head{margin-bottom:8px}.mobile-study .preview-head .eyebrow{display:none}.mobile-study .preview-head h1{font-size:16px;margin:0}.mobile-study .toolbar{margin-bottom:8px;padding-bottom:8px;gap:6px}.mobile-study .toolbar > :not(#letterClose):not(label[for=paperWind]):not(#paperWind):not(#paperDirection):not(#paperCondition):not(#quality):not(#motion){display:none!important}.mobile-study .toolbar label{display:none!important}.mobile-study .toolbar button,.mobile-study .toolbar select{font-size:12px;min-height:40px;padding:7px 8px}.mobile-study .scene{height:calc(100svh - 200px);min-height:320px;max-height:none}.mobile-study .scene-label{font-size:8px;left:10px;top:10px}
+</style>
+<style>
+body.mobile-study{height:100svh;display:flex;flex-direction:column;overflow:hidden}.mobile-study header{flex:none;width:100%}.mobile-study main{flex:1;min-height:0;width:100%;display:flex;flex-direction:column}.mobile-study .preview{flex:1;min-height:0;display:flex;flex-direction:column}.mobile-study .scene{flex:1;height:auto;min-height:180px}.mobile-study .toolbar > #paperDirection{display:block!important}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">drift</div><div class="eyebrow">STUDY 01 / LIVING WORLD</div></div>
+  <div class="header-note">ศึกษาทิศทางภาพก่อนลงแอป<br>โลกเดิม · 3 น้ำหนักของบรรยากาศ</div>
+</header>
+<main>
+  <section class="preview" aria-label="ฉากทดลอง">
+    <div class="preview-head"><div><div class="eyebrow">LIVE CANVAS / DRAG TO EXPLORE</div><h1 id="sceneTitle">B — หายใจในสนธยา</h1><div class="quick" aria-label="สลับแบบศึกษา"><button data-direction="A" aria-label="ดูแบบ A กระดาษกับลม" aria-pressed="false">A</button><button data-direction="B" aria-label="ดูแบบ B หายใจในสนธยา" aria-pressed="true">B</button><button data-direction="C" aria-label="ดูแบบ C คืนที่มีระยะ" aria-pressed="false">C</button><button id="reset" style="font:12px system-ui,sans-serif">คืนมุมกล้อง</button></div></div><p>ลองอยู่กับภาพ 10 วินาที<br>แล้วลากโลกช้า ๆ</p></div>
+    <div class="toolbar" aria-label="สภาวะที่ใช้เปรียบเทียบ">
+      <button id="letterClose">ดูจดหมายใกล้ ๆ</button>
+      <label for="paperWind">ลมจดหมายตัวอย่าง</label><select id="paperWind" aria-label="ลมจดหมายตัวอย่าง"><option value="record">ตามเส้นทาง / 18 กม./ชม.</option><option value="light">ลมเบา / 8 กม./ชม.</option><option value="strong">ลมแรง / 40 กม./ชม.</option></select>
+      <label for="paperDirection">ลมจดหมายพัดมาจาก</label><select id="paperDirection" aria-label="ลมจดหมายพัดมาจาก"><option value="record">ทิศตามเส้นทาง</option><option value="0">จากเหนือ</option><option value="90">จากตะวันออก</option><option value="180">จากใต้</option><option value="270">จากตะวันตก</option></select>
+      <label for="paperCondition">กระดาษที่ผ่านทางมา</label><select id="paperCondition" aria-label="สภาพกระดาษ"><option value="dry">กระดาษแห้ง</option><option value="wet">ผ่านฝน</option><option value="creased">ผ่านลมแรง / มีรอยพับ</option><option value="coated">ผ่านฝน / เคลือบกันน้ำ</option></select>
+      <label for="quality">รายละเอียดภาพ</label><select id="quality" aria-label="รายละเอียดภาพ"><option value="auto">อัตโนมัติ</option><option value="high">ละเอียด</option><option value="low">เบา</option></select>
+      <button id="theme" aria-pressed="true">มืด</button>
+      <label for="weather">อากาศ</label><select id="weather"><option value="clear">ฟ้าใส / ลมเบา</option><option value="rain">ฝน / เมฆทึบ</option><option value="snow">หิมะ / ลมเย็น</option></select>
+      <label for="sun">แสงโลก</label><select id="sun"><option value="twilight">สนธยา</option><option value="day">กลางวัน</option><option value="night">กลางคืน</option></select>
+      <span style="display:inline-flex;align-items:center;gap:8px"><label for="surface">ผิว B</label><select id="surface"><option value="pencil-detail">ดินสอ / น้ำหนักเส้น</option><option value="pencil">ดินสอรอบก่อน</option><option value="satin">แบบเดิมที่ชอบ</option><option value="first">ผิวรอบแรก</option></select></span>
+      <button id="motion" aria-pressed="false">ลดการเคลื่อนไหว</button><button id="previousB" aria-pressed="false">เทียบ B ก่อนปรับ</button><button id="baseline" aria-pressed="false">เทียบของเดิม</button>
+    </div>
+    <div class="scene" id="scene" data-theme="dark"><iframe id="app" title="ลูกโลก Drift พร้อมภาพศึกษาจากข้อมูลตัวอย่าง"></iframe><div class="scene-label" id="sceneLabel">B / BREATHING TWILIGHT</div><div class="scene-help">ลากเพื่อหมุน · เลื่อนเพื่อซูม</div></div>
+    <p class="caption"><strong>B — ดินสอ / น้ำหนักเส้น:</strong> เส้นชายฝั่งมีแรงกด รอยแรเงาโค้งและปลายเบา ผิวกับโทนเดิมยังอยู่ ลองสลับ “ดินสอรอบก่อน” เพื่อเทียบในมุมเดียวกัน</p>
+    <div id="status" role="status" aria-live="polite">กำลังเตรียมลูกโลก…</div>
+  </section>
+  <aside aria-label="ทิศทางภาพ">
+    <div class="intro"><h2>อยากให้โลกให้ความรู้สึกแบบไหน</h2>กดสลับ A / B / C โดยไม่รีเซ็ตมุมกล้อง<br>ทุกแบบคงน้ำเงินลึก ครีม และทองด้าน</div>
+    <div class="directions">
+      <button class="direction" data-direction="A" aria-pressed="false"><span class="letter">A</span><span><span class="name">กระดาษกับลม</span><span class="english">PAPER & AIR</span><span class="desc">เบา แห้ง และใกล้ตัว<br>เนื้อภาพนำหน้าแสง โลกเหมือนภาพที่เขียนบนกระดาษ</span><span class="swatches"><i style="background:#353b47"></i><i style="background:#e8e0cf"></i><i style="background:#ad9470"></i></span></span></button>
+      <button class="direction" data-direction="B" aria-pressed="true"><span class="letter">B</span><span><span class="name">หายใจในสนธยา<span class="tag">ทิศทางที่เลือก</span></span><span class="english">BREATHING TWILIGHT</span><span class="desc">สงบ แต่มีระยะและอากาศ<br>โลกอยู่หน้าอากาศ ผิวมีแสงสะท้อนนุ่มขึ้น</span><span class="swatches"><i style="background:#2b3245"></i><i style="background:#d6d4cc"></i><i style="background:#c69a54"></i></span></span></button>
+      <button class="direction" data-direction="C" aria-pressed="false"><span class="letter">C</span><span><span class="name">คืนที่มีระยะ</span><span class="english">DISTANT NIGHT</span><span class="desc">ลึก เย็น และโดดเดี่ยวขึ้น<br>ดาวไกล ฝุ่นใกล้ และขอบฟ้าบาง โลกดูอยู่ห่างออกไป</span><span class="swatches"><i style="background:#182132"></i><i style="background:#a9b8cd"></i><i style="background:#bba47d"></i></span></span></button>
+    </div>
+    <div class="details"><h3>ดูอะไรในแบบนี้</h3><p id="lookFor"></p><span class="detail-label">จุดที่ต้องระวัง</span><p id="tradeoff"></p><div class="layers" id="layers"></div><label class="tune" for="strength">น้ำหนักบรรยากาศ<input id="strength" type="range" min="0" max="150" step="5" value="100"><output id="strengthOut">100</output></label><label class="tune" for="sheen">ผิวรับแสง B<input id="sheen" type="range" min="0" max="150" step="5" value="100"><output id="sheenOut">100</output></label><p style="margin-top:9px">ผิวรับแสง 0 = ผิวเดิม แต่โลกยังบังอากาศ ใช้แยกดูผลของแสงออกจากความลึก</p></div>
+    <div class="details"><button id="measureFrames">วัดภาพ 10 วินาที</button><p id="frameResult">วัดเวลาวาดทั้งเฟรมในเบราว์เซอร์นี้</p></div>
+  </aside>
+</main>
+<footer><p>ข้อมูลตัวอย่างในหน่วยความจำ · อากาศจำลองเพื่อเทียบภาพ · ปิดหน้าแล้วค่าไม่ถูกเก็บ</p><p><a href="LIVING_WORLD_STUDY.md" target="_blank" rel="noopener">อ่านเกณฑ์เลือกทิศทาง ↗</a></p></footer>
+<script src="tools/living-world-study.js"></script>
+</body></html>

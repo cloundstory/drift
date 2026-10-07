@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "date": "2026-10-07T08:24:50.386Z",
+  "scope": "Synthetic release transactions, real storage/backup helpers; no provider or user profile",
+  "checks": [
+    "prepared and cancelled paper has no stored journey or start clock",
+    "gesture time sets s and concurrent/repeated commits save exactly once",
+    "pack failure cannot save and preserves retry with a new release timestamp",
+    "cancellation during compression prevents any durable write",
+    "stale prepared weather stops before packing or saving",
+    "storage failure does not report committed; explicit retry can succeed",
+    "failed critical write keeps draft; failed cleanup still commits one durable journey",
+    "draft survives reload and backup/import; never counts as a sent letter",
+    "corrupt draft is rejected before import changes persisted data"
+  ]
+}

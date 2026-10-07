@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>พายุในสนามลม</title>
 
@@ -336,9 +337,9 @@ const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const memo = {};
 let LS_OK = true;
 const LS = {
-  get(k){ try{ return localStorage.getItem(k); }catch(e){ LS_OK=false; return memo[k]||null; } },
-  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ LS_OK=false; memo[k]=v; } },
-  del(k){ try{ localStorage.removeItem(k); }catch(e){ delete memo[k]; } }
+  get(k){ try{ return DRIFT_LOCAL.getItem(k); }catch(e){ LS_OK=false; return memo[k]||null; } },
+  set(k,v){ try{ DRIFT_LOCAL.setItem(k,v); }catch(e){ LS_OK=false; memo[k]=v; } },
+  del(k){ try{ DRIFT_LOCAL.removeItem(k); }catch(e){ delete memo[k]; } }
 };
 const store = {
   letters(){ try{ return JSON.parse(LS.get(K.LETTERS)||'[]'); }catch(e){ return []; } },
@@ -2849,7 +2850,7 @@ wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต�
   const l=document.createElement('link');
   l.rel='manifest'; l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
   document.head.appendChild(l);
-  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  if(!window.DriftStudy && 'serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 })();

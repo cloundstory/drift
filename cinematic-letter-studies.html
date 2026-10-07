@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Drift · กระดาษในสายลม</title>
+<script src="tools/study-storage.js"></script>
+<style>
+*{box-sizing:border-box} :root{color-scheme:light;--ink:#414959;--dim:#81847e;--gold:#b28c50;--line:#d9d5cb;--bg:#f1eee7}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px system-ui,sans-serif;height:100svh;overflow:hidden}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button{border:0;background:none;border-radius:3px;padding:9px 11px}button[aria-pressed=true]{background:#e5dfd3;color:#715934}button:disabled{opacity:.35;cursor:default}
+.layout{display:grid;grid-template-columns:242px 1fr;height:100%}aside{padding:30px 24px 22px;display:flex;flex-direction:column;gap:25px;border-right:1px solid var(--line);z-index:3;background:var(--bg);overflow:auto}
+.brand{font:300 30px Georgia,serif;letter-spacing:-1px;color:#5b6266}.eyebrow{font-size:9px;letter-spacing:2.1px;text-transform:uppercase;color:var(--dim);margin-top:8px}
+h1{font-size:15px;line-height:1.7;font-weight:500;margin:0 0 8px}p{font-size:12px;line-height:1.9;color:#7a7d78;margin:0}
+.group{display:grid;gap:5px}.label{font-size:10px;color:#8a8c84;margin-bottom:5px}.direction{text-align:left;padding:12px;border:1px solid transparent}.direction span{display:block;margin-top:4px;font-size:10px;color:#8b8c82}.direction[aria-pressed=true]{background:#e8e2d6;border-color:#d6c7ab}
+.controls{margin-top:auto}.row{display:flex;align-items:center;gap:10px;margin-top:12px}.row label{flex:1;color:#7a7d78;font-size:11px}select{border:0;border-bottom:1px solid var(--line);background:transparent;padding:7px 3px;font-size:11px;max-width:116px}
+.note{font-size:10px;line-height:1.8;color:#929287}
+main{min-width:0;min-height:0;display:grid;grid-template-rows:58px 1fr 74px;position:relative;background:#eae7df}
+nav{display:flex;align-items:center;justify-content:center;gap:16px;background:var(--bg);z-index:3;border-bottom:1px solid var(--line)}nav button{font-size:12px;padding:8px 14px}
+#viewport{position:relative;overflow:hidden;min-height:0;background:#eae7df;isolation:isolate}
+iframe,#film{position:absolute;inset:0;width:100%;height:100%;border:0;outline:0}#film{z-index:2;touch-action:pan-y;cursor:default;pointer-events:none}
+#film.pickable{pointer-events:auto;cursor:pointer}
+#caption{position:absolute;bottom:27px;left:20px;right:20px;text-align:center;pointer-events:none;color:#73766e;font-family:'Noto Serif Thai',Georgia,serif;font-size:14px;line-height:1.8;z-index:2}
+#caption small{display:block;font:10px system-ui;color:#97988e;margin-top:5px}
+.paper-study #caption{bottom:9px}
+footer{background:var(--bg);border-top:1px solid var(--line);padding:12px 24px;display:grid;grid-template-columns:100px 1fr 70px;gap:18px;align-items:center;z-index:3}
+#play{border:1px solid #c9bfac;color:#755e3e;padding:8px 12px;font-size:12px}#seek{width:100%;accent-color:#b49a6b;height:16px;cursor:pointer}#phase{font-size:10px;line-height:1.6;color:#8b8c82;text-align:right}
+#error{position:absolute;inset:0;display:grid;place-content:center;gap:14px;background:#ece8df;z-index:4;padding:28px;text-align:center}#error[hidden]{display:none}
+#evidence{display:none}.paper-study main{background:#e7e2d8}.dark{--bg:#282e3a;--ink:#d8d5ca;--dim:#858e99;--line:#414752}.dark main,.dark #viewport{background:#292f3a}.dark button[aria-pressed=true]{background:#3b4049;color:#e0c494}.dark .direction[aria-pressed=true]{border-color:#75664f}.dark #caption{color:#ccc7b8}.dark .brand{color:#c6c9c7}.dark #play{color:#e0c494;border-color:#786d5a}.dark #error{background:#292f3a}
+@media(max-width:760px){.layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{padding:10px 13px 9px;border-right:0;border-bottom:1px solid var(--line);gap:9px;display:grid;grid-template-columns:1fr auto;overflow:visible}.brand{font-size:22px}.eyebrow{display:none}.intro{display:none}.group{display:flex;gap:3px;grid-column:1/-1}.group .label{display:none}.direction{padding:7px 9px;font-size:11px;flex:1}.direction span{display:none}.controls{margin:0;display:flex;gap:8px;align-items:center;grid-row:1;grid-column:2}.controls .label,.controls label,.note{display:none}.row{margin:0;gap:0}.row select{font-size:10px;max-width:65px;padding:5px 0}.controls #motion{padding:6px;font-size:10px}.controls #theme{padding:6px;font-size:10px}main{grid-template-rows:47px 1fr 66px}nav{gap:4px}nav button{font-size:11px;padding:8px 15px}footer{padding:9px 13px;grid-template-columns:85px 1fr 48px;gap:10px}#caption{font-size:12px;bottom:19px}#caption small{font-size:9px}#play{font-size:11px}#phase{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+ <div><div class="brand">drift</div><div class="eyebrow">motion & material study · 01</div></div>
+ <div class="intro"><h1>กระดาษในสายลม</h1><p id="description">กล้องตามลมเบา ๆ<br>ขอบยกก่อนทั้งแผ่นจะลอย<br>ความเงียบก่อนแตะถึงมือ</p></div>
+ <div class="group" aria-label="ทิศทางภาพ"><div class="label">เทียบทิศทาง</div>
+  <button class="direction" data-direction="A" aria-pressed="false">A · แบบเดิม<span>จังหวะและผิวจากแอปปัจจุบัน</span></button>
+  <button class="direction" data-direction="B" aria-pressed="true">B · ละเมียด<span>ปัดแบบเดิม · กล้องตามลมเบา ๆ</span></button>
+  <button class="direction" data-direction="C" aria-pressed="false">C · กระชับ<span>ปัดแบบเดิม · เปิดระยะเร็วขึ้น</span></button>
+ </div>
+ <div class="controls"><div class="label">เงื่อนไขตัวอย่าง</div>
+  <div class="row"><label for="wind">ลม</label><select id="wind"><option value="5">เบา · 5</option><option value="18" selected>18 กม./ชม.</option><option value="34">แรง · 34</option></select></div>
+  <div class="row"><label for="theme">แสง</label><button id="theme" aria-pressed="false">กลางวัน</button></div>
+  <div class="row"><label for="motion">การเคลื่อนไหว</label><button id="motion" aria-pressed="false">ลด</button></div>
+ </div>
+ <p class="note">หน้าศึกษาแยกจากแอปจริง<br>ข้อมูลและลมจำลองในหน่วยความจำ<br>ลองเขียนข้อความ แล้วดูจดหมายฉบับเดียวกันในแต่ละฉาก</p>
+</aside>
+<main>
+ <nav aria-label="ฉาก"><button data-scene="compose" aria-pressed="false">เขียน</button><button data-scene="release" aria-pressed="false">ปล่อย</button><button data-scene="arrival" aria-pressed="false">รับ</button><button data-scene="paper" aria-pressed="true">กระดาษ</button></nav>
+ <section id="viewport" aria-label="ภาพตัวอย่าง"><iframe id="app" title="Drift · จดหมายตัวอย่าง"></iframe><canvas id="film" aria-label="ฉากจดหมาย"></canvas><div id="caption" aria-live="polite"></div><div id="error">กำลังเตรียมกระดาษ…</div></section>
+ <footer><button id="play" disabled>เล่นฉาก</button><input id="seek" type="range" min="0" max="1000" value="0" aria-label="ตำแหน่งในฉาก" disabled><output id="phase">ผิวกระดาษ</output></footer>
+</main>
+</div>
+<output id="evidence"></output>
+<script src="tools/release-choreography.js"></script>
+<script src="tools/cinematic-motion.js"></script>
+<script src="tools/release-reference.js"></script>
+<script src="tools/cinematic-letter-study.js"></script>
+</body></html>

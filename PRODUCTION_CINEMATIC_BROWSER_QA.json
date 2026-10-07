@@ -1,0 +1,2193 @@
+{
+  "date": "2026-10-07T08:19:36.209Z",
+  "scope": "Actual production renderer and synthetic memory/network fixtures",
+  "prepared": {
+    "state": {
+      "reduced": false,
+      "release": "wait",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": null,
+      "transaction": {
+        "phase": "prepared"
+      },
+      "letters": 3,
+      "draft": true,
+      "flight": 0,
+      "progress": 0,
+      "zoom": 11.801718758204037,
+      "targetZoom": 11.801718758204037,
+      "worldOpacity": 0,
+      "hintOpacity": 1,
+      "uiOpacity": 0,
+      "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+      "actionsVisible": true,
+      "scheme": true,
+      "paper": {
+        "width": 680,
+        "height": 385,
+        "rgba": [
+          [
+            252,
+            251,
+            250,
+            255
+          ],
+          [
+            250,
+            249,
+            248,
+            255
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "radial-gradient(105% 92% at 51.4% -6.8%, rgba(255, 178, 73, 0.21), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+      }
+    },
+    "releaseSamples": []
+  },
+  "storageFailure": {
+    "state": {
+      "reduced": false,
+      "release": "wait",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": null,
+      "transaction": {
+        "phase": "prepared"
+      },
+      "letters": 3,
+      "draft": true,
+      "flight": 0,
+      "progress": 0,
+      "zoom": 11.801718758204037,
+      "targetZoom": 11.801718758204037,
+      "worldOpacity": 0,
+      "hintOpacity": 1,
+      "uiOpacity": 0,
+      "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+      "actionsVisible": true,
+      "scheme": true,
+      "paper": {
+        "width": 680,
+        "height": 385,
+        "rgba": [
+          [
+            252,
+            251,
+            250,
+            255
+          ],
+          [
+            250,
+            249,
+            248,
+            255
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "radial-gradient(105% 92% at 51.4% -6.8%, rgba(255, 178, 73, 0.21), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+      }
+    },
+    "releaseSamples": []
+  },
+  "afterCancelReload": {
+    "state": {
+      "reduced": false,
+      "release": "off",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": null,
+      "transaction": null,
+      "letters": 3,
+      "draft": true,
+      "flight": 0,
+      "progress": 0,
+      "zoom": 1,
+      "targetZoom": 1,
+      "worldOpacity": 0,
+      "hintOpacity": 1,
+      "uiOpacity": 1,
+      "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+      "actionsVisible": false,
+      "scheme": true,
+      "paper": {
+        "width": 300,
+        "height": 150,
+        "rgba": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "radial-gradient(105% 92% at 50% -7%, rgba(255, 178, 73, 0.204), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+      }
+    },
+    "releaseSamples": []
+  },
+  "dayPaper": {
+    "width": 680,
+    "height": 385,
+    "rgba": [
+      [
+        252,
+        251,
+        250,
+        255
+      ],
+      [
+        250,
+        249,
+        248,
+        255
+      ]
+    ],
+    "ink": "rgba(43, 43, 47, 0.92)",
+    "candle": "none"
+  },
+  "nightPaper": {
+    "width": 680,
+    "height": 385,
+    "rgba": [
+      [
+        252,
+        251,
+        250,
+        255
+      ],
+      [
+        250,
+        249,
+        248,
+        255
+      ]
+    ],
+    "ink": "rgba(43, 43, 47, 0.92)",
+    "candle": "radial-gradient(105% 92% at 51.1% -6.3%, rgba(255, 178, 73, 0.2), rgba(255, 200, 128, 0.067) 38%, rgba(0, 0, 0, 0) 72%)"
+  },
+  "shortSwipe": {
+    "reduced": false,
+    "release": "wait",
+    "arrival": "off",
+    "lost": "off",
+    "sheet": null,
+    "transaction": {
+      "phase": "prepared"
+    },
+    "letters": 3,
+    "draft": true,
+    "flight": 0,
+    "progress": 0,
+    "zoom": 11.801718758204037,
+    "targetZoom": 11.801718758204037,
+    "worldOpacity": 0,
+    "hintOpacity": 1,
+    "uiOpacity": 0,
+    "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+    "actionsVisible": true,
+    "scheme": true,
+    "paper": {
+      "width": 680,
+      "height": 384,
+      "rgba": [
+        [
+          252,
+          251,
+          250,
+          255
+        ],
+        [
+          251,
+          250,
+          249,
+          255
+        ]
+      ],
+      "ink": "rgba(43, 43, 47, 0.92)",
+      "candle": "radial-gradient(105% 92% at 50.5% -6.3%, rgba(255, 178, 73, 0.204), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+    }
+  },
+  "desktopRelease": {
+    "state": {
+      "reduced": false,
+      "release": "off",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": "sent",
+      "transaction": null,
+      "letters": 4,
+      "draft": false,
+      "flight": 1,
+      "progress": 1,
+      "zoom": 9.366443458892093,
+      "targetZoom": 9.366443458892093,
+      "worldOpacity": 1,
+      "hintOpacity": 1,
+      "uiOpacity": 1,
+      "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+      "actionsVisible": false,
+      "scheme": true,
+      "paper": {
+        "width": 680,
+        "height": 384,
+        "rgba": [
+          [
+            252,
+            251,
+            250,
+            255
+          ],
+          [
+            251,
+            250,
+            249,
+            255
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "radial-gradient(105% 92% at 50.5% -6.3%, rgba(255, 178, 73, 0.204), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+      }
+    },
+    "releaseSamples": [
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.09835185185185158,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 3.5949163286885786,
+          "ty": -55.31467170683792,
+          "depth": 99.5873862797533,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.13844444444444418,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 8.882350207478966,
+          "ty": -65.12544389593914,
+          "depth": 139.48680992058593,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.17238888888888848,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 15.269565266839521,
+          "ty": -77.19077601544018,
+          "depth": 223.86985797206466,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.20011111111111085,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 21.556456170339,
+          "ty": -89.31297131002172,
+          "depth": 344.1849047983954,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.23096296296296243,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 29.3704206642389,
+          "ty": -104.73039907175435,
+          "depth": 545.0735941193309,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.2711296296296294,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 40.26817042332867,
+          "ty": -126.89287898708557,
+          "depth": 921.865640934113,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.3081111111111103,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.995026,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 50.454900876033165,
+          "ty": -148.31851762053532,
+          "depth": 1378.9035409290186,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.34516666666666557,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.94828,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 60.317945293343236,
+          "ty": -169.74866839928384,
+          "depth": 1921.7975788504607,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.38218518518518435,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.836199,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 69.43667877285765,
+          "ty": -190.24326414109896,
+          "depth": 2516.33009103197,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.41924074074073964,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.665962,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 77.50496232208481,
+          "ty": -209.09039214656076,
+          "depth": 3123.491663825307,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.4531666666666657,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.482541,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 83.73958059118442,
+          "ty": -224.35139891944544,
+          "depth": 3653.7970320280747,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.49327777777777654,
+        "progress": 1,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 0.271447,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 89.50650221208981,
+          "ty": -239.43793369622767,
+          "depth": 4207.625094178495,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5334074074074063,
+        "progress": 1,
+        "zoom": 11.79476880016692,
+        "targetZoom": 11.79476880016692,
+        "worldOpacity": 0.003,
+        "hintOpacity": 0.108517,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 93.50064865691046,
+          "ty": -251.03521683284146,
+          "depth": 4648.884471499836,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5456296296296286,
+        "progress": 1,
+        "zoom": 11.784698035814138,
+        "targetZoom": 11.784698035814138,
+        "worldOpacity": 0.007,
+        "hintOpacity": 0.0733221,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 94.38660258538361,
+          "ty": -253.86868015843802,
+          "depth": 4757.9822915976,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5641481481481471,
+        "progress": 1,
+        "zoom": 11.757246491046098,
+        "targetZoom": 11.757246491046098,
+        "worldOpacity": 0.018,
+        "hintOpacity": 0.0341229,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 95.4674165245067,
+          "ty": -257.56480898990196,
+          "depth": 4900.530957582517,
+          "opacity": 0.994931276768765
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5919259259259249,
+        "progress": 1,
+        "zoom": 11.682776526289176,
+        "targetZoom": 11.682776526289176,
+        "worldOpacity": 0.049,
+        "hintOpacity": 0.00495539,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 96.58306513511633,
+          "ty": -261.84834929067443,
+          "depth": 5065.213277438405,
+          "opacity": 0.9000138363913286
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6104444444444433,
+        "progress": 1,
+        "zoom": 11.608637396402516,
+        "targetZoom": 11.608637396402516,
+        "worldOpacity": 0.079,
+        "hintOpacity": 0.000212736,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 97.06247552594222,
+          "ty": -263.94776656265435,
+          "depth": 5145.176192814033,
+          "opacity": 0.7561420190011792
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6382222222222211,
+        "progress": 1,
+        "zoom": 11.46028585761812,
+        "targetZoom": 11.46028585761812,
+        "worldOpacity": 0.14,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 97.51832150844665,
+          "ty": -266.13109631305775,
+          "depth": 5227.151101151626,
+          "opacity": 0.4644948174861452
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6567407407407396,
+        "progress": 1,
+        "zoom": 11.338153138777576,
+        "targetZoom": 11.338153138777576,
+        "worldOpacity": 0.19,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 97.72142199781547,
+          "ty": -267.04354929285023,
+          "depth": 5260.7895522488325,
+          "opacity": 0.27046511313017785
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6845185185185174,
+        "progress": 1,
+        "zoom": 11.125207852483522,
+        "targetZoom": 11.125207852483522,
+        "worldOpacity": 0.278,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 97.98252997592569,
+          "ty": -267.7503558274639,
+          "depth": 5286.420927103664,
+          "opacity": 0.06483174287663263
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7122962962962952,
+        "progress": 1,
+        "zoom": 10.88523490670191,
+        "targetZoom": 10.88523490670191,
+        "worldOpacity": 0.376,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 98.31429602004533,
+          "ty": -267.8499908293792,
+          "depth": 5289.999608318459,
+          "opacity": 0.0008684679420445374
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7308148148148137,
+        "progress": 1,
+        "zoom": 10.715972842757953,
+        "targetZoom": 10.715972842757953,
+        "worldOpacity": 0.446,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 98.74809577168904,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7585925925925915,
+        "progress": 1,
+        "zoom": 10.457676099281581,
+        "targetZoom": 10.457676099281581,
+        "worldOpacity": 0.552,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 99.76934163399551,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7863703703703693,
+        "progress": 1,
+        "zoom": 10.205830407075425,
+        "targetZoom": 10.205830407075425,
+        "worldOpacity": 0.655,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 101.19754933123056,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8141481481481471,
+        "progress": 1,
+        "zoom": 9.973114915614074,
+        "targetZoom": 9.973114915614074,
+        "worldOpacity": 0.751,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 102.96424421854192,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8419259259259249,
+        "progress": 1,
+        "zoom": 9.770679872663624,
+        "targetZoom": 9.770679872663624,
+        "worldOpacity": 0.834,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 104.97554504670947,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8697037037037026,
+        "progress": 1,
+        "zoom": 9.60712005643803,
+        "targetZoom": 9.60712005643803,
+        "worldOpacity": 0.901,
+        "hintOpacity": 0,
+        "uiOpacity": 0.0184344,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 107.11758853832704,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8882222222222211,
+        "progress": 1,
+        "zoom": 9.522331343745153,
+        "targetZoom": 9.522331343745153,
+        "worldOpacity": 0.936,
+        "hintOpacity": 0,
+        "uiOpacity": 0.108659,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 108.55606026492038,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9159999999999989,
+        "progress": 1,
+        "zoom": 9.432469387252326,
+        "targetZoom": 9.432469387252326,
+        "worldOpacity": 0.973,
+        "hintOpacity": 0,
+        "uiOpacity": 0.388575,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 110.63269408740987,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9437777777777767,
+        "progress": 1,
+        "zoom": 9.38410167427284,
+        "targetZoom": 9.38410167427284,
+        "worldOpacity": 0.993,
+        "hintOpacity": 0,
+        "uiOpacity": 0.725098,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 112.4989787164324,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9715555555555545,
+        "progress": 1,
+        "zoom": 9.367670069778127,
+        "targetZoom": 9.367670069778127,
+        "worldOpacity": 0.999,
+        "hintOpacity": 0,
+        "uiOpacity": 0.949735,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 114.03922043695304,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9993333333333323,
+        "progress": 1,
+        "zoom": 9.366443458892093,
+        "targetZoom": 9.366443458892093,
+        "worldOpacity": 1,
+        "hintOpacity": 0,
+        "uiOpacity": 0.999999,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 115.15846379689057,
+          "ty": -267.85,
+          "depth": 5290,
+          "opacity": 0
+        }
+      }
+    ]
+  },
+  "mobileLayout": {
+    "height": 844,
+    "outerOverflow": false,
+    "width": 390
+  },
+  "mobilePaper": {
+    "width": 362,
+    "height": 622,
+    "rgba": [
+      [
+        251,
+        251,
+        249,
+        255
+      ],
+      [
+        248,
+        246,
+        245,
+        255
+      ]
+    ],
+    "ink": "rgba(43, 43, 47, 0.92)",
+    "candle": "radial-gradient(105% 92% at 49.9% -7.6%, rgba(255, 178, 73, 0.204), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+  },
+  "mobileShortSwipe": {
+    "reduced": false,
+    "release": "wait",
+    "arrival": "off",
+    "lost": "off",
+    "sheet": null,
+    "transaction": {
+      "phase": "prepared"
+    },
+    "letters": 3,
+    "draft": true,
+    "flight": 0,
+    "progress": 0,
+    "zoom": 16.609169562031454,
+    "targetZoom": 16.609169562031454,
+    "worldOpacity": 0,
+    "hintOpacity": 1,
+    "uiOpacity": 0,
+    "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+    "actionsVisible": true,
+    "scheme": true,
+    "paper": {
+      "width": 362,
+      "height": 622,
+      "rgba": [
+        [
+          251,
+          251,
+          249,
+          255
+        ],
+        [
+          248,
+          246,
+          245,
+          255
+        ]
+      ],
+      "ink": "rgba(43, 43, 47, 0.92)",
+      "candle": "radial-gradient(105% 92% at 50.7% -7.7%, rgba(255, 178, 73, 0.208), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+    }
+  },
+  "mobileRelease": {
+    "state": {
+      "reduced": false,
+      "release": "off",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": "sent",
+      "transaction": null,
+      "letters": 4,
+      "draft": false,
+      "flight": 1,
+      "progress": 1,
+      "zoom": 13.181880604786869,
+      "targetZoom": 13.181880604786869,
+      "worldOpacity": 1,
+      "hintOpacity": 1,
+      "uiOpacity": 1,
+      "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+      "actionsVisible": false,
+      "scheme": true,
+      "paper": {
+        "width": 362,
+        "height": 622,
+        "rgba": [
+          [
+            251,
+            251,
+            249,
+            255
+          ],
+          [
+            248,
+            246,
+            245,
+            255
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "radial-gradient(105% 92% at 50.7% -7.7%, rgba(255, 178, 73, 0.208), rgba(255, 200, 128, 0.07) 38%, rgba(0, 0, 0, 0) 72%)"
+      }
+    },
+    "releaseSamples": [
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 0,
+          "ty": -79.30000000000001,
+          "depth": 90,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 0,
+          "ty": -79.30000000000001,
+          "depth": 90,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 0,
+          "ty": -79.30000000000001,
+          "depth": 90,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.03346296296296377,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 0.05127520265324127,
+          "ty": -79.79951503851498,
+          "depth": 90.0379471053074,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.07359259259259286,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 0.49685667419986296,
+          "ty": -84.11989019911447,
+          "depth": 92.25020239605591,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.1075555555555561,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 1.40654902011796,
+          "ty": -93.02976176223787,
+          "depth": 104.85306472140908,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.14770370370370478,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 3.177439971087019,
+          "ty": -110.86836332053765,
+          "depth": 156.76030816023916,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.18164814814814975,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 5.184484667819528,
+          "ty": -131.94612832692005,
+          "depth": 258.2629377187749,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.21868518518518681,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 7.743856884490756,
+          "ty": -160.20575784820113,
+          "depth": 456.1175537045014,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.2588148148148159,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 10.74297220853934,
+          "ty": -195.26574370689278,
+          "depth": 792.4525916853388,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.2958518518518529,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.999056,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 13.561366725808474,
+          "ty": -229.87843354322308,
+          "depth": 1216.7111237757608,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.33285185185185345,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.970652,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 16.332910279186432,
+          "ty": -264.91015736265257,
+          "depth": 1733.7633749013394,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.3698888888888905,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.880741,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 19.020901141378637,
+          "ty": -298.93972666132396,
+          "depth": 2315.4389438411577,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.4069444444444431,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.72748,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 21.60234460441119,
+          "ty": -330.65402744213355,
+          "depth": 2923.309832435374,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.44398148148148014,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.533163,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 24.048210239226623,
+          "ty": -358.93727002484627,
+          "depth": 3514.5197365043437,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.48103703703703676,
+        "progress": 1,
+        "zoom": 16.609169562031454,
+        "targetZoom": 16.609169562031454,
+        "worldOpacity": 0,
+        "hintOpacity": 0.332605,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 26.314850649896954,
+          "ty": -382.9786794711221,
+          "depth": 4049.273271691628,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5180740740740738,
+        "progress": 1,
+        "zoom": 16.607543315190384,
+        "targetZoom": 16.607543315190384,
+        "worldOpacity": 0,
+        "hintOpacity": 0.162792,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 28.336027021543053,
+          "ty": -402.2359554531028,
+          "depth": 4495.061079187521,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5403518518518521,
+        "progress": 1,
+        "zoom": 16.592315545479504,
+        "targetZoom": 16.592315545479504,
+        "worldOpacity": 0.005,
+        "hintOpacity": 0.0876153,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 29.405978381576546,
+          "ty": -411.4552225647842,
+          "depth": 4712.347148913735,
+          "opacity": 1
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.5858888888888881,
+        "progress": 1,
+        "zoom": 16.469721235024895,
+        "targetZoom": 16.469721235024895,
+        "worldOpacity": 0.041,
+        "hintOpacity": 0.00863964,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 31.198245572118516,
+          "ty": -425.0586437264831,
+          "depth": 5034.191270266384,
+          "opacity": 0.9331906985723761
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6167592592592579,
+        "progress": 1,
+        "zoom": 16.295411433947937,
+        "targetZoom": 16.295411433947937,
+        "worldOpacity": 0.092,
+        "hintOpacity": 0.00000853623,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 32.09593039666531,
+          "ty": -430.75971312681395,
+          "depth": 5167.553490711238,
+          "opacity": 0.695093357199644
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6476666666666643,
+        "progress": 1,
+        "zoom": 16.044062193919647,
+        "targetZoom": 16.044062193919647,
+        "worldOpacity": 0.165,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 32.74503824676663,
+          "ty": -434.1881905961552,
+          "depth": 5246.166196981128,
+          "opacity": 0.3623486230720224
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.6785740740740706,
+        "progress": 1,
+        "zoom": 15.724925857389088,
+        "targetZoom": 15.724925857389088,
+        "worldOpacity": 0.258,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.16382375533143,
+          "ty": -435.8389394589451,
+          "depth": 5283.135549411576,
+          "opacity": 0.0969645951588417
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7247962962962912,
+        "progress": 1,
+        "zoom": 15.159290326150652,
+        "targetZoom": 15.159290326150652,
+        "worldOpacity": 0.423,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.45541274696355,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7617777777777748,
+        "progress": 1,
+        "zoom": 14.676177749662719,
+        "targetZoom": 14.676177749662719,
+        "worldOpacity": 0.564,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.60542508212891,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.7926481481481447,
+        "progress": 1,
+        "zoom": 14.286215534276126,
+        "targetZoom": 14.286215534276126,
+        "worldOpacity": 0.678,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.702105707994875,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8235740740740706,
+        "progress": 1,
+        "zoom": 13.933534629408278,
+        "targetZoom": 13.933534629408278,
+        "worldOpacity": 0.781,
+        "hintOpacity": 0,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.7779780433398,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.8543148148148113,
+        "progress": 1,
+        "zoom": 13.64080820510163,
+        "targetZoom": 13.64080820510163,
+        "worldOpacity": 0.866,
+        "hintOpacity": 0,
+        "uiOpacity": 0.000227868,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.83520190159001,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.89446296296296,
+        "progress": 1,
+        "zoom": 13.367407946913422,
+        "targetZoom": 13.367407946913422,
+        "worldOpacity": 0.946,
+        "hintOpacity": 0,
+        "uiOpacity": 0.158376,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.88054938316329,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9344814814814769,
+        "progress": 1,
+        "zoom": 13.223643388502017,
+        "targetZoom": 13.223643388502017,
+        "worldOpacity": 0.988,
+        "hintOpacity": 0,
+        "uiOpacity": 0.617262,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.88020441550079,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      },
+      {
+        "reduced": false,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0.9715370370370335,
+        "progress": 1,
+        "zoom": 13.183611981800027,
+        "targetZoom": 13.183611981800027,
+        "worldOpacity": 0.999,
+        "hintOpacity": 0,
+        "uiOpacity": 0.949648,
+        "background": "linear-gradient(150deg, rgb(32, 39, 53), rgb(48, 55, 71))",
+        "actionsVisible": false,
+        "scheme": true,
+        "paint": {
+          "tx": 33.819251074054414,
+          "ty": -436.15000000000003,
+          "depth": 5290,
+          "opacity": 0
+        }
+      }
+    ]
+  },
+  "reducedRelease": {
+    "state": {
+      "reduced": true,
+      "release": "off",
+      "arrival": "off",
+      "lost": "off",
+      "sheet": "sent",
+      "transaction": null,
+      "letters": 4,
+      "draft": false,
+      "flight": 0,
+      "progress": 0,
+      "zoom": 9.366443458892093,
+      "targetZoom": 9.366443458892093,
+      "worldOpacity": 1,
+      "hintOpacity": 1,
+      "uiOpacity": 0.968803,
+      "background": "linear-gradient(150deg, rgb(240, 236, 226), rgb(226, 229, 227))",
+      "actionsVisible": false,
+      "scheme": false,
+      "paper": {
+        "width": 680,
+        "height": 385,
+        "rgba": [
+          [
+            252,
+            251,
+            250,
+            255
+          ],
+          [
+            250,
+            249,
+            248,
+            255
+          ]
+        ],
+        "ink": "rgba(43, 43, 47, 0.92)",
+        "candle": "none"
+      }
+    },
+    "releaseSamples": [
+      {
+        "reduced": true,
+        "release": "fly",
+        "arrival": "off",
+        "lost": "off",
+        "sheet": null,
+        "transaction": {
+          "phase": "committed"
+        },
+        "letters": 4,
+        "draft": false,
+        "flight": 0,
+        "progress": 0,
+        "zoom": 11.801718758204037,
+        "targetZoom": 11.801718758204037,
+        "worldOpacity": 0,
+        "hintOpacity": 1,
+        "uiOpacity": 0,
+        "background": "linear-gradient(150deg, rgb(240, 236, 226), rgb(226, 229, 227))",
+        "actionsVisible": false,
+        "scheme": false,
+        "paint": null
+      }
+    ]
+  },
+  "passed": true,
+  "checks": [
+    "actual production desktop/mobile gestures",
+    "short swipe returns held paper",
+    "one durable send per gesture",
+    "storage failure stays held; cancel/reload retains draft",
+    "identical white substrate across schemes with separate candle light",
+    "globe/paper fade overlap and exact final zoom",
+    "late UI return matches approved curve",
+    "background stays continuous"
+  ],
+  "limits": [
+    "Synthetic memory-only profile and fixture network",
+    "390 px browser viewport, not a physical phone benchmark",
+    "No deployment or messages sent"
+  ]
+}

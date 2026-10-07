@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>drift — โมเมนต์หาย</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,7 +132,7 @@ $('#app').addEventListener('load',()=>{
   /* รอให้แอปตั้งตัวก่อน — องก์ต้องการลูกโลกที่วาดแล้วและขนาดจอที่วัดแล้ว */
   setTimeout(()=>{
     try{
-      APP.eval('(function(){ try{ localStorage.clear(); }catch(e){}'
+      APP.eval('(function(){ try{ DRIFT_LOCAL.clear(); }catch(e){}'
              + ' store.setMe({name:"กอล์ฟ", lat:13.69, lng:101.07, place:"ฉะเชิงเทรา"});'
              + ' try{ closeSheet(); }catch(e){} })()');
       ready = true;

@@ -6,16 +6,18 @@ drift — ตัวดึงลมล่วงหน้าเก็บเป็�
 ซึ่งเกิน 600 คำขอ/นาที ทันทีที่ส่ง 3 ฉบับติดกัน และมือถือไทยใช้ CGNAT
 คนจำนวนมากจึงใช้โควตาก้อนเดียวกันโดยไม่รู้ตัว
 
-ตัวนี้ดึงลมทั้งภูมิภาคไว้ล่วงหน้าเป็นไฟล์เดียว แล้วแอปไปอ่านจากไฟล์แทน
-ราคาจึงคงที่ต่อวัน ไม่โตตามจำนวนผู้ใช้
+ตัวนี้ดึงสนามลมทั้งภูมิภาคไว้ล่วงหน้า แล้วแอปไปอ่านจากไฟล์แทน
+งบสนามลมจึงคงที่ต่อวัน; 13 จุดบนเส้นทางยังดึงสดต่อจดหมายเมื่อแคชใช้ได้
 
 รันทุก 6 ชั่วโมง — ไม่ใช่ 1-2 ชั่วโมง เพราะแบบจำลองต้นทางเองอัปเดตทุก 3-6 ชม.
 และหนึ่งคำขอได้พยากรณ์ล่วงหน้า 96 ชม.อยู่แล้ว ดึงถี่กว่านั้นได้ข้อมูลชุดเดิมกลับมา
 
 ใช้ไลบรารีมาตรฐานล้วน ไม่มี dependency
 """
-import json, math, os, sys, time, zlib, urllib.request, urllib.error
+import json, math, os, sys, time, zlib, hashlib, tempfile, urllib.request, urllib.error
+import re
 from datetime import datetime, timedelta, timezone
+from validate_wind import validate
 
 # คอนโซลวินโดวส์เป็น cp874 พิมพ์ตัวอักษรนอกชุดแล้วสคริปต์ตายทั้งตัว
 # ทั้งที่ไฟล์เขียนเสร็จแล้ว — บังคับ UTF-8 และไม่ให้การพิมพ์ล้มงานได้
@@ -41,7 +43,7 @@ TILES = [
 SLICES = 24      # จำนวนช่วงเวลาที่เก็บ
 STEP_H = 3       # ห่างกันกี่ชั่วโมง → 24 × 3 = 72 ชม.ข้างหน้า
 CHUNK = 380      # พิกัดต่อคำขอ (Open-Meteo รับ 400 ตรวจแล้ว เผื่อไว้เล็กน้อย)
-PAUSE = 35       # วินาทีระหว่างคำขอ — กันชนเพดาน 600 ครั้ง/นาที
+PAUSE = 61       # กัน 380 + 380 พิกัดอยู่ในหน้าต่าง 60 วินาทีเดียวกัน; เผื่อ 1 วินาที
 FORECAST_DAYS = 4
 NVARS = 6        # จำนวนชั้นในไฟล์ — แอปอ่านค่านี้จาก manifest ห้ามฝังตัวเลขไว้สองที่
 
@@ -74,12 +76,16 @@ def fetch(chunk):
                 return j if isinstance(j, list) else [j]
         except urllib.error.HTTPError as e:
             # 429 = ยิงถี่เกิน ไม่ใช่ของเสีย — ถอยแล้วลองใหม่
-            wait = 60 * (attempt + 1) if e.code == 429 else 10 * (attempt + 1)
+            if attempt == 3:
+                break
+            wait = max(PAUSE, 60 * (attempt + 1))
             print('  HTTP %d - wait %ds, retry (%d/4)' % (e.code, wait, attempt + 1))
             time.sleep(wait)
         except Exception as e:
-            print('  %s - wait 15s, retry (%d/4)' % (e, attempt + 1))
-            time.sleep(15)
+            if attempt == 3:
+                break
+            print('  %s - wait %ds, retry (%d/4)' % (e, PAUSE, attempt + 1))
+            time.sleep(PAUSE)
     raise SystemExit('ดึงข้อมูลไม่สำเร็จหลังลอง 4 ครั้ง')
 
 
@@ -99,6 +105,18 @@ def build(t):
         raise SystemExit('ได้ข้อมูลกลับมา %d จุด แต่ขอไป %d' % (len(rows), len(pts)))
 
     times = rows[0]['hourly']['time']
+    required = ('wind_speed_10m', 'wind_direction_10m', 'precipitation',
+                'wind_gusts_10m', 'weather_code', 'pressure_msl')
+    for r in rows:
+        h = r.get('hourly', {})
+        if h.get('time') != times:
+            raise ValueError('forecast timestamps differ between locations')
+        for var in required:
+            values = h.get(var)
+            if not isinstance(values, list) or len(values) != len(times):
+                raise ValueError('incomplete hourly variable: ' + var)
+            if any(type(v) not in (int, float) or not math.isfinite(v) for v in values):
+                raise ValueError('missing or non-finite forecast: ' + var)
     base = datetime.strptime(times[0], '%Y-%m-%dT%H:%M').replace(tzinfo=timezone.utc)
 
     # จุดตั้งต้นของแคช = ชั่วโมงปัจจุบันปัดลงให้ลงตัวกับ STEP_H
@@ -131,7 +149,7 @@ def build(t):
             idx = off + s * STEP_H
             for r in rows:
                 v = r['hourly'][var][idx]
-                v = 0.0 if v is None else float(v)
+                v = float(v)
                 if var in ('wind_speed_10m', 'wind_gusts_10m'):
                     b = min(255, int(round(v / 2.0)))
                 elif var == 'wind_direction_10m':
@@ -150,27 +168,62 @@ def build(t):
 
     raw = bytes(buf)
     packed = zlib.compress(raw, 9)
-    os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, t['id'] + '.bin'), 'wb') as f:
-        f.write(packed)
-    print('  %s.bin  raw %d KB -> packed %d KB'
-          % (t['id'], len(raw) // 1024, len(packed) // 1024))
+    digest = hashlib.sha256(packed).hexdigest()
+    filename = t['id'] + '-' + digest[:16] + '.bin'
+    print('  %s  raw %d KB -> packed %d KB'
+          % (filename, len(raw) // 1024, len(packed) // 1024))
 
-    return dict(id=t['id'], file=t['id'] + '.bin',
+    return dict(id=t['id'], file=filename, sha256=digest,
                 la0=t['la0'], la1=t['la1'], lo0=t['lo0'], lo1=t['lo1'],
                 step=t['step'], nx=nx, ny=ny,
                 t0=t0.strftime('%Y-%m-%dT%H:%M'), stepH=STEP_H, slices=SLICES,
-                nv=NVARS, bytes=len(packed), calls=len(pts))
+                nv=NVARS, bytes=len(packed), calls=len(pts)), packed
+
+
+def atomic_write(filename, data):
+    fd, staged = tempfile.mkstemp(prefix='.wind-', dir=OUT)
+    try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(staged, os.path.join(OUT, filename))
+    finally:
+        if os.path.exists(staged):
+            os.unlink(staged)
+
+
+def publish_bundle(man, payloads):
+    validate(man, payloads.__getitem__)
+    if set(payloads) != {t['file'] for t in man['tiles']}:
+        raise ValueError('unexpected publication file')
+    os.makedirs(OUT, exist_ok=True)
+    # Immutable filenames prevent an older manifest from reading a newer tile.
+    # Publish manifest last; a failed build leaves the previous bundle usable.
+    previous = []
+    try:
+        with open(os.path.join(OUT, 'index.json'), encoding='utf-8') as f:
+            previous = [t['file'] for t in json.load(f)['tiles']]
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    for name, data in payloads.items():
+        atomic_write(name, data)
+    atomic_write('index.json', json.dumps(man, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+    # Retain current + previous tile versions for clients refreshing their manifest.
+    keep = set(payloads) | set(previous)
+    for name in os.listdir(OUT):
+        if name not in keep and any(name.startswith(t['id'] + '-') for t in TILES):
+            if re.fullmatch(r'[A-Za-z0-9_-]+-[0-9a-f]{16}\.bin', name):
+                os.unlink(os.path.join(OUT, name))
 
 
 def main():
-    made = [build(t) for t in TILES]
+    built = [build(t) for t in TILES]
+    made = [m for m, _ in built]
     man = dict(v=3,   # v3 = มีรหัสอากาศกับความกดอากาศแล้ว (ข้อ 119)
                issued=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M'),
                tiles=made)
-    os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, 'index.json'), 'w', encoding='utf-8') as f:
-        json.dump(man, f, ensure_ascii=False, separators=(',', ':'))
+    publish_bundle(man, {m['file']: data for m, data in built})
     total = sum(m['calls'] for m in made)
     print('total %d calls per run -> %d per day at 6h interval (free cap 10,000)'
           % (total, total * 4))

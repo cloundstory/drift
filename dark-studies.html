@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<script src="tools/study-storage.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1b2233">
 <title>drift — แบบศึกษาโหมดมืด</title>
@@ -355,9 +356,9 @@ app.addEventListener('load', () => { apply(); });
 try{
   /* ⚠️ แอปเปิดโหมดมืดแล้ว (ข้อ 159) — ต้องบังคับ iframe เข้าโหมดมืดของแอปเองด้วย
      ไม่งั้น CSS เป็นชุดสว่างแต่ SKIN ถูกดันเป็นค่ามืด = จูนจากภาพที่ไม่มีอยู่จริง */
-  localStorage.setItem('lw.v1.scheme','dark');
-  localStorage.setItem('lw.v1.intro','1');
-  sessionStorage.setItem('lw.v1.splash','1');
+  DRIFT_LOCAL.setItem('lw.v1.scheme','dark');
+  DRIFT_LOCAL.setItem('lw.v1.intro','1');
+  DRIFT_SESSION.setItem('lw.v1.splash','1');
 }catch(e){}
 /* ⚠️ service worker แคชแอปไว้ — iframe จะได้ไฟล์เก่าแล้วเราจะนึกว่าโค้ดที่เพิ่งแก้ไม่ทำงาน
    เป็นกฎ "reload สองครั้ง" เดิมที่โผล่มาในรูปใหม่ · ที่นี่ต้องเห็นของสดเสมอ (ข้อ 129) */

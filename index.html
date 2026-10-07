@@ -7,6 +7,10 @@
      iOS อ่านค่าจาก meta ตัวนี้ ไม่ใช่จาก manifest (ข้อ 109.8) -->
 <meta name="theme-color" content="#f9f0e5">
 <script>
+/* Embedded studies share only the parent's synthetic memory store. */
+const DRIFT_IS_STUDY=(()=>{ try{ return parent!==window && !!parent.DriftStudy; }catch(e){ return false; } })();
+const DRIFT_LOCAL=(()=>{ try{ return DRIFT_IS_STUDY?parent.DriftStudy.local:window.localStorage; }catch(e){ return null; } })();
+const DRIFT_SESSION=(()=>{ try{ return DRIFT_IS_STUDY?parent.DriftStudy.session:window.sessionStorage; }catch(e){ return null; } })();
 /* หน้า splash — ตัดสินตั้งแต่ก่อน <body> วาด (ข้อ 124.2)
    ⛔ คนที่กดลิงก์จดหมายมาต้องไม่เจอ (ข้อ 105.5) · คนใหม่ไปหน้าเปิดเลย ไม่งั้นเห็นโลโก้สองรอบ
    ⚠️ คีย์ต้องตรงกับ K ที่ประกาศทีหลังในไฟล์ — ที่นี่อ่านเองเพราะ store ยังไม่เกิด */
@@ -14,14 +18,14 @@
   var no=function(){ document.documentElement.className+=' nosp'; };
   try{
     if(location.hash.length>10) return no();                    /* ลิงก์มาก่อนเสมอ */
-    if(sessionStorage.getItem('lw.v1.splash')==='1') return no(); /* เห็นไปแล้วรอบนี้ */
-    var L=localStorage.getItem('lw.v1.letters'), M=localStorage.getItem('lw.v1.me'), me=null;
+    if(DRIFT_SESSION.getItem('lw.v1.splash')==='1') return no(); /* เห็นไปแล้วรอบนี้ */
+    var L=DRIFT_LOCAL.getItem('lw.v1.letters'), M=DRIFT_LOCAL.getItem('lw.v1.me'), me=null;
     try{ me=M?JSON.parse(M):null; }catch(e){}
-    var known = localStorage.getItem('lw.v1.intro')==='1'
+    var known = DRIFT_LOCAL.getItem('lw.v1.intro')==='1'
              || (L && L!=='[]' && L.length>2)
              || (me && (me.name || me.lat!=null));
     if(!known) return no();                                      /* คนใหม่ → หน้าเปิด */
-    sessionStorage.setItem('lw.v1.splash','1');
+    DRIFT_SESSION.setItem('lw.v1.splash','1');
     document.documentElement.className+=' spin';   /* ลูกโลกรอเข้าฉาก (ข้อ 126) */
   }catch(e){ return no(); }   /* ที่เก็บของพัง = ไม่แสดงดีกว่าค้าง */
 })();
@@ -52,7 +56,11 @@
   text-align:center;pointer-events:none;display:flex;flex-direction:column;gap:7px}
 #driftWord{font-size:var(--t-sub);letter-spacing:.34em;color:var(--dim)}
 #driftHint i{font-style:normal;font-size:var(--t-tiny);letter-spacing:.03em;color:var(--faint)}
-body.drifting header.bar,body.drifting #play{opacity:0;pointer-events:none;transition:opacity .3s}
+#releaseActions{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:16px;right:16px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#releaseActions[hidden]{display:none}
+#releaseActions button{padding:9px 13px;background:var(--paper);font-size:var(--t-tiny)}
+body.drifting header.bar,body.drifting #play,body.drifting #status,body.drifting #btnWrite{opacity:var(--release-ui,0);pointer-events:none;transition:none}
+body.drifting #driftHint{opacity:var(--release-hint,1);transition:none}
 @media (prefers-reduced-motion:reduce){#driftHint{transition:none}}
 
 :root{
@@ -315,7 +323,7 @@ textarea{min-height:200px;resize:vertical;line-height:2}
 
 #bottom{padding:6px 16px calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:center}
 #btnWrite{min-width:148px;padding:12px 26px;border-radius:14px;font-size:var(--t-body);letter-spacing:.02em}
-body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transition:opacity .3s}
+body.drifting #status,body.drifting #bottom{opacity:var(--release-ui,0);pointer-events:none;transition:none}
 
 /* แถวในเมนูกับในกล่อง — สูง 46px ทั้งแถวแตะได้ ไม่ใช่แค่ตัวหนังสือ */
 .mrow[hidden]{display:none}
@@ -512,6 +520,9 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   #cBar{padding:6px 12px calc(env(safe-area-inset-bottom) + 7px)}
 }
 @media (prefers-reduced-motion:reduce){#cSheet{transform:none !important}}
+.rm .sheet.on{animation:none}
+.rm #stage,.rm .veil,.rm #splash,.rm #spMark,.rm #spWord{transition:none}
+.rm #cSheet{transform:none !important}
 
 
 /* ---------- ม่านคลุมจดหมายที่อาจทำร้ายผู้อ่าน (ข้อ 103) ----------
@@ -564,10 +575,10 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   html.dm #cSheet::before,
   html.dm .ptext::before{
     content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
-    background:radial-gradient(128% 94% at var(--cnd-x,50%) var(--cnd-y,-7%),
-      rgba(255,206,138,var(--cnd-a,.15)),
-      rgba(255,176,96,calc(var(--cnd-a,.15) * .38)) 42%,
-      transparent 70%);
+    background:radial-gradient(105% 92% at var(--cnd-x,50%) var(--cnd-y,-7%),
+      rgba(255,178,73,calc(var(--cnd-a,.15) * 1.35)),
+      rgba(255,200,128,calc(var(--cnd-a,.15) * .46)) 38%,
+      transparent 72%);
   }
   html.dm /* เนื้อหาต้องอยู่เหนือแสง ไม่งั้นตัวหนังสือถูกฉาบจนซีด */
   #cSheet .ink,
@@ -642,6 +653,8 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
   html.dm #cSheet input::placeholder,
   html.dm #cSheet textarea::placeholder{color:rgba(var(--paper-ink-rgb),.38)}
   html.dm .wline .lb{color:rgba(var(--paper-ink-rgb),.9)}
+  html.dm #cSheet,html.dm .ptext{--paper-ink-rgb:43,43,47;--ink-rgb:43,43,47;background:#fdfdfc}
+  html.dm #cSheet .meta{color:rgba(43,43,47,.55)}
   html.dm .ptext{color:rgba(var(--paper-ink-rgb),.9)}
   html.dm .sig{color:rgba(var(--paper-ink-rgb),.6)}
 
@@ -901,6 +914,13 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
         <button data-v="dark">มืด</button>
       </div>
     </div>
+    <div class="mrow seg"><b>รายละเอียดภาพ</b>
+      <div class="segs" id="segQuality" role="group" aria-label="รายละเอียดภาพ">
+        <button data-v="auto" aria-pressed="true">อัตโนมัติ</button>
+        <button data-v="high" aria-pressed="false">ละเอียด</button>
+        <button data-v="low" aria-pressed="false">เบา</button>
+      </div>
+    </div>
     <button class="mrow" id="mAccount"><b>บัญชี</b><em>ชื่อ · ต้นทาง · ข้อมูล</em></button>
     <button class="mrow" id="mInstall"><b>เพิ่มลงหน้าจอโฮม</b><em id="mInstallNote"></em></button>
     <button class="mrow" id="mBug"><b>แจ้งปัญหา</b><em id="mBugNote"></em></button>
@@ -995,7 +1015,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <div class="warn" id="fcOffline" hidden>ตอนนี้ถามสายลมสดไม่ได้ ใช้ลมที่เก็บไว้แทน<br>
       <span style="color:var(--dim);font-size:var(--t-sub)">เที่ยวนี้จะไม่มีหิมะ หมอก หรือพายุหมุน — รอต่อเน็ตแล้วส่งใหม่จะได้อากาศจริง</span></div>
     <div class="warn" style="border-color:rgba(198,154,84,.55)">ปิดแอปไปได้ ลมไม่หยุดตามเรา<br>
-      <span style="color:var(--dim);font-size:var(--t-sub)">จดหมายจะเปิดอ่านไม่ได้จนกว่าจะถึงจริง</span></div>
+      <span style="color:var(--dim);font-size:var(--t-sub)">หน้าแอปจะรอให้ถึงปลายทางก่อนเปิดอ่าน</span></div>
     <div id="fcChoice"></div>
     <button class="btn wide gold" id="btnConfirm">ส่ง</button>
     <button class="btn wide ghost" data-close style="margin-top:6px">ขอกลับไปนั่งคิดอีกครั้ง</button>
@@ -1004,12 +1024,17 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 
 
 <!-- องก์ปล่อย "let's drift" (ข้อ 44, 61.3) — เต็มจอ ไม่มีอะไรให้เลื่อนอ่าน ท่าทางจึงกินทั้งจอได้ -->
-<section id="drift" aria-hidden="true">
+<section id="drift">
   <canvas id="flycv"></canvas>
   <!-- ⚠️ บรรทัดล่างเป็นคำสั่งของ *องก์ปล่อย* เท่านั้น — ต้องล้างเมื่อองก์อื่นใช้จอนี้
        ของเดิมตรึงไว้เป็นข้อความคงที่ จึงโผล่ทั้งตอนจดหมายร่อนลงมาและตอนถูกลมพัดหาย
        ซึ่งบอกให้ผู้ใช้ทำสิ่งที่ตอนนั้นทำไม่ได้ (ข้อ 120.3) -->
   <div id="driftHint"><span id="driftWord">let's drift</span><i id="driftSub">ปัดขึ้นเพื่อปล่อย</i></div>
+  <div id="releaseActions" hidden>
+    <button class="btn ghost" id="releaseBack">กลับไปเขียน</button>
+    <button class="btn ghost" id="releaseBackup" hidden>เก็บร่างเป็นไฟล์</button>
+    <button class="btn gold" id="releaseNow">ปล่อยจดหมาย</button>
+  </div>
 </section>
 <section class="sheet" id="sent">
   <button class="close" data-close>ปิด</button>
@@ -1022,7 +1047,7 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
       <button class="btn" id="btnShare">ส่งต่อ…</button>
     </div>
     <button class="btn wide" id="btnFile" style="margin-top:8px">บันทึกเป็นไฟล์ (ส่งแทนลิงก์ได้)</button>
-    <div class="warn" id="sentWarn">ลิงก์นี้คือตัวจดหมาย ส่งให้ผู้รับทางแชท — เขาเปิดเมื่อไหร่ก็ได้ จดหมายเดินทางต่อเองแม้ยังไม่มีใครเปิด และจะอ่านได้ก็ต่อเมื่อลมพาไปถึงแล้ว<br><br>ถ้าแอปแชทตัดลิงก์ขาด ให้ส่งเป็นไฟล์แทน — ผู้รับกด “คลัง → Import” ได้ผลเหมือนกัน</div>
+    <div class="warn" id="sentWarn">ลิงก์นี้คือตัวจดหมาย ส่งให้ผู้รับทางแชท — จดหมายเดินทางต่อเองแม้ยังไม่มีใครเปิด หน้าแอปรอให้ลมพาไปถึงก่อนเปิดอ่าน แต่เนื้อหาในลิงก์ยังไม่เข้ารหัส ผู้ถือลิงก์อ่านได้ก่อนถึง จึงควรส่งให้ผู้รับที่คุณตั้งใจให้เท่านั้น<br><br>ถ้าแอปแชทตัดลิงก์ขาด ให้ส่งเป็นไฟล์แทน — ผู้รับกด “ตั้งค่า → บัญชี → Import JSON” ได้ผลเหมือนกัน</div>
   </div>
 </section>
 
@@ -1077,18 +1102,19 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
     <div class="rule" style="margin-top:16px"></div>
     <div class="note" style="line-height:1.7">
       <b style="font-weight:normal">อะไรออกจากเครื่องนี้บ้าง</b><br>
-      · <b style="font-weight:normal">พิกัดโดยประมาณ</b> ของต้นทางและปลายทาง ถูกส่งไปยัง Open-Meteo
-        เพื่อขอลมและอากาศ — ปัดให้หยาบราว 11 กม. ก่อนส่งเสมอ ระดับอำเภอ ไม่ใช่ระดับบ้าน<br>
+      · <b style="font-weight:normal">ต้นทางและปลายทางโดยประมาณ พร้อมจุดตามเส้นทาง</b> ถูกส่งไปยัง Open-Meteo
+        เพื่อขอลมและอากาศ — ตำแหน่งที่คุณตั้งใหม่ปัดให้หยาบราว 11 กม. ก่อนเก็บ<br>
       · <b style="font-weight:normal">ชื่อสถานที่ที่คุณพิมพ์ค้นหา</b> ถูกส่งไปยัง Open-Meteo เพื่อหาพิกัด<br>
       · <b style="font-weight:normal">พิกัดหยาบของคุณ</b> ถูกส่งไปยัง OpenStreetMap เมื่อกด
         “ใช้ตำแหน่งปัจจุบัน” เพื่อแปลงกลับเป็นชื่ออำเภอ — ถามครั้งเดียวต่อพื้นที่แล้วจำไว้ในเครื่อง
-        · พิมพ์ชื่อเมืองเองก็ได้ ไม่ต้องส่งอะไรเลย<br>
+        · เลือกค้นชื่อเมืองแทนการใช้ตำแหน่งปัจจุบันได้<br>
       · <b style="font-weight:normal">ชื่อที่แสดงกับต้นทางหยาบของคุณ</b> ออกไปกับ
         <b style="font-weight:normal">ลิงก์ที่อยู่</b> ที่คุณแจกเอง — ใครถือลิงก์นั้นก็เห็น
         ไม่ได้ผ่านเซิร์ฟเวอร์ของเรา เพราะยังไม่มีเซิร์ฟเวอร์<br>
-      · <b style="font-weight:normal">รายชื่อคนที่คุณเก็บไว้</b> อยู่ในเครื่องนี้เท่านั้น ไม่เคยออกไปไหน<br>
-      · <b style="font-weight:normal">เนื้อจดหมายไม่เคยถูกส่งไปไหนทั้งสิ้น</b>
-        อยู่ในเครื่องนี้กับในลิงก์ที่คุณส่งเองเท่านั้น ไม่มีเซิร์ฟเวอร์ของเราอยู่ในภาพ
+      · <b style="font-weight:normal">รายชื่อและจดหมาย</b> เก็บในเบราว์เซอร์ และรวมอยู่ในไฟล์สำรองที่คุณส่งออกเอง<br>
+      · <b style="font-weight:normal">เนื้อจดหมายอยู่ในลิงก์ที่คุณส่ง</b> ผู้ถือลิงก์หรือไฟล์อ่านเนื้อหาได้
+        แม้หน้าแอปจะยังรอให้เดินทางถึง รุ่นนี้ยังไม่เข้ารหัสแบบ E2EE
+        และข้อมูลในเบราว์เซอร์กับไฟล์สำรองเป็นข้อความที่อ่านได้
     </div>
     <div class="note" style="margin-top:12px;line-height:1.7">
       ลมและอากาศทั้งหมดมาจาก <b style="font-weight:normal">Open-Meteo</b>
@@ -1100,6 +1126,178 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
 </section>
 
 <div id="toast"></div>
+<script>
+/* BEGIN RELEASE_CHOREOGRAPHY */
+/* Approved departure math. Pure viewport framing; no delivery clock, storage, network or RAF. */
+(function(root){
+ 'use strict';
+ const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+ const ease=x=>{x=clamp(x);return x*x*x*(x*(6*x-15)+10);};
+ const PI=Math.PI;
+ function releaseFrame(flight,height,pose,direction='B'){
+   const q=clamp(flight/.70),follow=Math.pow(Math.sin(q*PI),2)*(direction==='C'?.19:.30);
+   const lifted=clamp((-pose.ty-height*.10)/(height*.45));
+   // Follow the distance traveled beyond the held sheet, not its initial
+   // camera distance. This prevents an eased lift from creeping back to hand.
+   return {...pose,tx:pose.tx*(1-follow*.42),ty:pose.ty+height*.13*follow*lifted,tz:-90+(pose.tz+90)*(1-follow*.43)};
+ }
+ // A longer hand-to-wind departure followed by a soft dissolve. The world is
+ // already emerging before the tiny distant sheet fades completely; its zoom
+ // and opacity settle with zero velocity before returning to the app loop.
+ function releaseTransition(flight,direction='B'){
+   const q=clamp(flight),worldProgress=clamp((q-.50)/.49);
+   return {duration:direction==='C'?4600:5400,travel:ease(q/.72),
+     paperOpacity:1-ease((q-.55)/.17),worldProgress,worldOpacity:ease(worldProgress),
+     zoomFactor:1+.26*(1-ease(worldProgress)),
+     hintOpacity:1-ease((q-.28)/.34),uiOpacity:ease((q-.85)/.15)};
+ }
+
+ const api={releaseFrame,releaseTransition};
+ if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DriftRelease=api;
+})(typeof globalThis!=='undefined'?globalThis:this);
+/* END RELEASE_CHOREOGRAPHY */
+</script>
+<script>
+/* BEGIN PENCIL_MATH */
+'use strict';
+// Shared pencil-world math. Embedded in the offline app and used by the study.
+(function(root,factory){
+  const api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.DriftStudyLines=api;
+})(typeof window==='object'?window:this,function(){
+  function poseKey(g,sun,dpr){
+    return [g.rotY,g.rotX,g.zoom,g.R,g.CX,g.CY,g.W,g.H,dpr,sun].join(',');
+  }
+  function clipHorizon(a,b,front,g){
+    const aVisible=front?a.z>=0:a.z<=0,bVisible=front?b.z>=0:b.z<=0;
+    if(!aVisible&&!bVisible)return null;
+    if(aVisible&&bVisible)return {a,b,t0:0,t1:1};
+    const t=a.z/(a.z-b.z),x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+    const len=Math.hypot(x,y);
+    if(len<1e-10)return null;
+    // The horizon is on the circle, not the interior of its straight chord.
+    const edge={x:x/len,y:y/len,z:0,px:g.CX+x/len*g.R,py:g.CY-y/len*g.R};
+    return aVisible?{a,b:edge,t0:0,t1:t}:{a:edge,b,t0:t,t1:1};
+  }
+  // Exact rotation coefficients are shared by all vertices at the same pose.
+  function createProjector(){
+    let y,x,cy,sy,cx,sx;
+    return function projectInto(g,v,out){
+      if(y!==g.rotY||x!==g.rotX){y=g.rotY;x=g.rotX;cy=Math.cos(y);sy=Math.sin(y);cx=Math.cos(x);sx=Math.sin(x);}
+      const rx=v.x*cy-v.z*sy,rz=v.x*sy+v.z*cy;
+      out.x=rx;out.y=v.y*cx-rz*sx;out.z=v.y*sx+rz*cx;
+      out.px=g.CX+out.x*g.R;out.py=g.CY-out.y*g.R;
+    };
+  }
+  function createPainter({projectInto}={}){
+    const projected=new WeakMap(),pressures=new WeakMap(),bins=160;
+    return function paint(g,c,lines,baseA,lw,front,rgb,shade,{pressure=false}={}){
+      let weights;
+      if(pressure){
+        weights=pressures.get(lines);
+        if(!weights){weights=lines.map(vertices=>vertices.map(v=>v.pencilWeight??(.98+.15*Math.sin(v.x*18+v.y*13+v.z*7)+.06*Math.sin(v.z*31-v.y*19+v.x*11))));pressures.set(lines,weights);}
+      }
+      const widthSteps=pressure?3:1;
+      const key=poseKey(g,'geometry',1);
+      let cached=projected.get(lines);
+      if(!cached){
+        cached={key:null,lines:lines.map(vertices=>vertices.map(()=>({x:0,y:0,z:0,px:0,py:0})))};
+        projected.set(lines,cached);
+      }
+      if(cached.key!==key){
+        for(let k=0;k<lines.length;k++)for(let i=0;i<lines[k].length;i++){
+          const v=lines[k][i],out=cached.lines[k][i];
+          if(projectInto)projectInto(g,v,out);
+          else {const r=g.rotate(v),p=g.project(r);out.x=r.x;out.y=r.y;out.z=r.z;out.px=p.x;out.py=p.y;}
+        }
+        cached.key=key;
+      }
+      const batches=new Map();
+      for(let k=0;k<lines.length;k++){
+        const vertices=lines[k],points=cached.lines[k];
+        let previousAlpha=points.length?baseA*shade.call(g,vertices[0],points[0].z)*(pressure?weights[k][0]:1):0;
+        for(let i=1;i<points.length;i++){
+          const alpha=baseA*shade.call(g,vertices[i],points[i].z)*(pressure?weights[k][i]:1);
+          const p0=points[i-1],p1=points[i];
+          const visible0=front?p0.z>=0:p0.z<=0,visible1=front?p1.z>=0:p1.z<=0;
+          if(visible0||visible1){
+            // Most segments never cross the horizon. Reuse their endpoints;
+            // only the few crossing segments need an intersection object.
+            const cut=visible0&&visible1?null:clipHorizon(p0,p1,front,g);
+            if(!(visible0&&visible1)&&!cut){previousAlpha=alpha;continue;}
+            const a=cut?cut.a:p0,b=cut?cut.b:p1;
+            const outside=(a.px<-8&&b.px<-8)||(a.px>g.W+8&&b.px>g.W+8)
+              ||(a.py<-8&&b.py<-8)||(a.py>g.H+8&&b.py>g.H+8);
+            if(!outside){
+              const meanT=cut?(cut.t0+cut.t1)*.5:.5;
+              const bucket=Math.round((previousAlpha+(alpha-previousAlpha)*meanT)*bins);
+              if(bucket>0){
+                // Width is attached to the world segment, never camera/time/LOD.
+                const weight=pressure?(weights[k][i-1]+weights[k][i])*.5:1;
+                const width=pressure?(weight<.90?0:weight<1.07?1:2):0,batchKey=bucket*widthSteps+width;
+                let batch=batches.get(batchKey);if(!batch)batches.set(batchKey,batch=[]);
+                batch.push(a.px,a.py,b.px,b.py);
+              }
+            }
+          }
+          previousAlpha=alpha;
+        }
+      }
+      c.save();c.lineWidth=lw;c.lineCap='round';c.lineJoin='round';
+      for(const [batchKey,batch] of batches){
+        const bucket=Math.floor(batchKey/widthSteps),width=batchKey%widthSteps;
+        c.lineWidth=lw*(pressure?[.76,.95,1.13][width]:1);
+        c.strokeStyle='rgba('+rgb+','+(bucket/bins).toFixed(5)+')';c.beginPath();
+        for(let i=0;i<batch.length;i+=4){c.moveTo(batch[i],batch[i+1]);c.lineTo(batch[i+2],batch[i+3]);}
+        c.stroke();
+      }
+      c.restore();
+    };
+  }
+  // Screen-space sphere shape is static. Keep its normals, edge weights and
+  // output pixels; only lighting changes during a camera turn.
+  function createSurface(size){
+    const pixels=[],data=new Uint8ClampedArray(size*size*4);
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      const nx=(x+.5)/size*2-1,ny=1-(y+.5)/size*2,q=nx*nx+ny*ny;
+      if(q>=1)continue;
+      const nz=Math.sqrt(1-q);
+      pixels.push({nx,ny,nz,i:(y*size+x)*4,edge:Math.pow(1-nz,3),form:Math.pow(1-nz,2.1),glaze:Math.pow(1-nz,1.5)});
+    }
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    return function render({light,dark,variant,sheen,pencil}){
+      const halfLength=Math.hypot(light.x,light.y,light.z+1);
+      const half=halfLength>1e-5?{x:light.x/halfLength,y:light.y/halfLength,z:(light.z+1)/halfLength}:{x:0,y:0,z:1};
+      const base=dark?[68,85,107]:[155,170,181],night=dark?[19,25,39]:[105,119,143];
+      const gain=dark?[125,120,107]:[75,66,42],pearl=[255,250,234];
+      for(const p of pixels){
+        const {nx,ny,nz,i}=p,dot=nx*light.x+ny*light.y+nz*light.z,day=Math.max(0,dot);
+        const facing=Math.max(0,nx*half.x+ny*half.y+nz*half.z);
+        if(variant==='first'){
+          const gloss=Math.pow(facing,22)*.34*Math.min(1,day*6),lift=Math.pow(day,.8)*.13;
+          const shade=p.glaze*.21*(.35+.65*Math.min(1,day*4));
+          const value=(lift+gloss-shade)*sheen*(dark?1:.8),rgb=value>=0?[255,243,215]:[13,23,40];
+          data[i]=rgb[0];data[i+1]=rgb[1];data[i+2]=rgb[2];data[i+3]=Math.round(Math.min(.65,Math.abs(value))*255);
+        }else{
+          const k=clamp((dot+.40)/.25,0,1),lit=k*k*(3-2*k),diffuse=Math.pow(day,.7);
+          const dawn=clamp((dot+.20)/.40,0,1),warm=dawn*dawn*(3-2*dawn);
+          const reflection=(Math.pow(facing,10)*.36+Math.pow(facing,42)*.58)*Math.min(1,day*5);
+          const edge=p.edge*day,form=pencil?p.form*(.10+.13*(1-day)):0;
+          for(let channel=0;channel<3;channel++){
+            const body=night[channel]+(base[channel]-night[channel])*warm+gain[channel]*diffuse-edge*(channel===0?14:8);
+            data[i+channel]=Math.round((body+(pearl[channel]-body)*reflection)*(1-form));
+          }
+          data[i+3]=Math.round(clamp(.88*lit*sheen,0,1)*255);
+        }
+      }
+      return data;
+    };
+  }
+  return {poseKey,clipHorizon,createPainter,createProjector,createSurface};
+});
+/* END PENCIL_MATH */
+</script>
 <script>
 /* ============================================================
    drift — เฟส 1 (no-backend)
@@ -1115,15 +1313,36 @@ body.drifting #status,body.drifting #bottom{opacity:0;pointer-events:none;transi
    ⛔ ไม่ส่งไปไหนทั้งสิ้น — ไม่มีเซิร์ฟเวอร์ และถึงมีก็จะไม่ส่ง
       เก็บไว้ในเครื่องให้ผู้ใช้ *เลือกเอง* ว่าจะคัดลอกไปบอกเราไหม
       เพราะข้อความผิดพลาดพ่วงชื่อฟังก์ชันและบางครั้งพ่วงข้อมูลผู้ใช้มาด้วย */
-const APP_VER='2026-09-05';
+const APP_VER='2026-10-05';
 const K_ERR='drift.err';
 let ERR_SHOWN=false;
+function diagnosticMessage(msg){
+  const s=String(msg||'');
+  if(['พื้นที่เก็บข้อมูลมีปัญหา','การเชื่อมต่อหมดเวลา','การเชื่อมต่อมีปัญหา',
+      'ไม่พบส่วนประกอบที่โค้ดเรียกใช้','ข้อมูลหรือส่วนประกอบยังไม่พร้อม',
+      'อ่านรูปแบบข้อมูลไม่สำเร็จ','เกิดข้อผิดพลาดขณะทำงาน'].includes(s)) return s;
+  if(/quota|storage/i.test(s)) return 'พื้นที่เก็บข้อมูลมีปัญหา';
+  if(/timeout|timed out/i.test(s)) return 'การเชื่อมต่อหมดเวลา';
+  if(/network|offline|fetch/i.test(s)) return 'การเชื่อมต่อมีปัญหา';
+  if(/not defined/i.test(s)) return 'ไม่พบส่วนประกอบที่โค้ดเรียกใช้';
+  if(/null|undefined|properties/i.test(s)) return 'ข้อมูลหรือส่วนประกอบยังไม่พร้อม';
+  if(/syntax|parse|json/i.test(s)) return 'อ่านรูปแบบข้อมูลไม่สำเร็จ';
+  return 'เกิดข้อผิดพลาดขณะทำงาน';
+}
+function diagnosticLocation(where){
+  const found=String(where||'').match(/[A-Za-z0-9_.-]+\.html?:\d+(?::\d+)?|[A-Za-z0-9_.-]+\.js:\d+(?::\d+)?/g);
+  const known=(found||[]).filter(s=>/^(index\.html|sw\.js|study-storage\.js):/.test(s));
+  return known.length?known[known.length-1]:'';
+}
 function logErr(kind,msg,where){
   try{
-    const a=JSON.parse(localStorage.getItem(K_ERR)||'[]');
-    a.push({t:new Date().toISOString().slice(0,16), k:kind, m:String(msg).slice(0,300), w:String(where||'').slice(0,160)});
+    const old=JSON.parse(DRIFT_LOCAL.getItem(K_ERR)||'[]');
+    const a=Array.isArray(old)?old.filter(e=>e&&typeof e==='object').map(e=>({
+      t:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(e.t)?e.t:'',
+      k:e.k==='promise'?'promise':'error',m:diagnosticMessage(e.m),w:diagnosticLocation(e.w)})):[];
+    a.push({t:new Date().toISOString().slice(0,16), k:kind==='promise'?'promise':'error', m:diagnosticMessage(msg), w:diagnosticLocation(where)});
     while(a.length>12) a.shift();           /* เก็บแค่ล่าสุด — ไม่ใช่ที่เก็บประวัติ */
-    localStorage.setItem(K_ERR, JSON.stringify(a));
+    DRIFT_LOCAL.setItem(K_ERR, JSON.stringify(a));
   }catch(e){}
   /* บอกครั้งเดียวต่อการเปิดหนึ่งครั้ง — เตือนซ้ำ ๆ ระหว่างที่คนกำลังเขียนจดหมายคือการรบกวน */
   if(!ERR_SHOWN){
@@ -1284,24 +1503,126 @@ function seeded(seed){
 }
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
+/* Prepared paper is not a journey. Commit once at the launch gesture boundary. */
+function createReleaseTransaction(prepared,deps){
+  let phase='prepared', flight=null, result=null, epoch=0;
+  const fail=code=>Object.assign(new Error(code),{code});
+  return {
+    snapshot:()=>({phase}),
+    cancel(){if(phase==='committed') return false; epoch++; phase='cancelled'; return true;},
+    commit(){
+      if(phase==='committed') return Promise.resolve(result);
+      if(phase==='cancelled') return Promise.reject(fail('cancelled'));
+      if(flight) return flight;
+      const token=epoch, rec=Object.assign({},prepared,{s:deps.now()});
+      phase='committing';
+      flight=(async()=>{
+        if(!deps.fresh()) throw fail('stale');
+        const payload=await deps.pack(rec);
+        if(token!==epoch||phase==='cancelled') throw fail('cancelled');
+        if(!deps.save(rec)) throw fail('storage');
+        result={rec,payload}; phase='committed'; return result;
+      })().catch(e=>{if(phase!=='cancelled') phase='prepared'; throw e;})
+        .finally(()=>{flight=null;});
+      return flight;
+    }
+  };
+}
+const DRAFT_KEY='lw.v1.draft';
+function sanitizeDraft(d){
+  if(!d||d.v!==1||typeof d.ownerPid!=='string'||d.ownerPid.length>80
+     ||!Number.isFinite(d.preparedAt)) return null;
+  const rec=sanitizeRec(d.record); if(!rec) return null;
+  return {v:1,ownerPid:d.ownerPid,preparedAt:d.preparedAt,record:rec,
+    tp:typeof d.tp==='string'&&/^[A-Za-z0-9_-]{8,80}$/.test(d.tp)?d.tp:null};
+}
+function readPreparedDraft(){
+  try{const d=sanitizeDraft(JSON.parse(LS.get(DRAFT_KEY)||'null'));
+    return d&&store.letters().some(l=>l.id===d.record.id)?null:d;
+  }catch(e){return null;}
+}
+function saveReleasedRecord(rec,tp){
+  const rows=store.letters();
+  if(rows.some(l=>l.id===rec.id)) throw new Error('duplicate release');
+  rows.push(Object.assign({dir:'out'},rec,tp?{tp}:{}));
+  const before=LS.get(K.LETTERS);
+  // One critical storage write is the durable boundary. Draft cleanup can fail
+  // or be interrupted; readPreparedDraft hides ids already present in letters.
+  const ok=LS.set(K.LETTERS,JSON.stringify(rows));
+  if(!ok) memo[K.LETTERS]=before;
+  else LS.set(DRAFT_KEY,'null');
+  // Appending a new id changes no recorded weather/geometry. Keep the prepared
+  // caches so the release frame does not rebuild them. Replacement/import/wipe
+  // still invalidate all journey caches through their existing paths.
+  LIST_CACHE.clear(); store.saved=ok;
+  return ok;
+}
+
 /* ---------- storage ----------
    localStorage ใช้ไม่ได้ในบางบริบท (data: URL, private mode) → fallback ในหน่วยความจำ
    เพื่อไม่ให้แอปพังทั้งใบ แต่เตือนผู้ใช้ว่าประวัติจะไม่ถูกเก็บ */
 const memo = {};
+const LIST_CACHE=new Map();
 let LS_OK = true;
 const LS = {
-  get(k){ try{ return localStorage.getItem(k); }catch(e){ LS_OK=false; return memo[k]||null; } },
+  get(k){
+    if(Object.prototype.hasOwnProperty.call(memo,k)) return memo[k];
+    try{ return DRIFT_LOCAL.getItem(k); }catch(e){ LS_OK=false; return null; }
+  },
   /* ⚠️ ต้องคืนค่าว่าสำเร็จไหม — ของเดิมกลืน QuotaExceededError เงียบ ๆ
      แล้วผู้ใช้เห็นจดหมายออกเดินทางทั้งที่มันไม่เคยถูกบันทึก (ข้อ 115.1)
      ⛔ ห้ามทำให้ set เงียบอีก ไม่ว่าจะเพื่อความสะอาดของโค้ดแค่ไหน */
-  set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ LS_OK=false; memo[k]=v; return false; } },
-  del(k){ try{ localStorage.removeItem(k); }catch(e){ delete memo[k]; } }
+  set(k,v){
+    try{ DRIFT_LOCAL.setItem(k,v); delete memo[k]; return true; }
+    catch(e){ LS_OK=false; memo[k]=String(v); return false; }
+  },
+  del(k){
+    try{ DRIFT_LOCAL.removeItem(k); delete memo[k]; return true; }
+    catch(e){ LS_OK=false; memo[k]=null; return false; }
+  },
+  batch(entries){
+    const before=[];
+    try{
+      for(const [k,v] of entries){ before.push([k,DRIFT_LOCAL.getItem(k)]); DRIFT_LOCAL.setItem(k,v); }
+      for(const [k] of entries) delete memo[k];
+      return true;
+    }catch(e){
+      for(const [k,v] of before.reverse()){
+        try{ v===null?DRIFT_LOCAL.removeItem(k):DRIFT_LOCAL.setItem(k,v); }catch(ignore){}
+      }
+      for(const [k,v] of entries) memo[k]=v;
+      LS_OK=false; return false;
+    }
+  }
 };
+function storageNotice(ok){
+  if(!ok) toast('เบราว์เซอร์บันทึกข้อมูลไม่ได้ — เก็บไว้ได้เฉพาะรอบนี้ กรุณาส่งออกไฟล์สำรอง');
+  return ok;
+}
+function readList(key,hydrate){
+  try{
+    const raw=LS.get(key)||'[]', cached=LIST_CACHE.get(key);
+    if(cached && cached.raw===raw) return cached.rows.map(r=>Object.assign({},r));
+    const a=JSON.parse(raw);
+    const rows=Array.isArray(a)?a.map(hydrate).filter(Boolean):[];
+    LIST_CACHE.set(key,{raw,rows});
+    return rows.map(r=>Object.assign({},r));
+  }catch(e){ return []; }
+}
+function invalidateJourneyCaches(){
+  for(const c of [_driftCache,_streamCache,_wfCache,_rainCache,_rainMarks,_ssCache]) c.clear();
+}
+function cachePut(cache,key,value,max=64){
+  if(cache.has(key)) cache.delete(key);
+  cache.set(key,value);
+  while(cache.size>max) cache.delete(cache.keys().next().value);
+  return value;
+}
 const store = {
-  letters(){ try{ return JSON.parse(LS.get(K.LETTERS)||'[]'); }catch(e){ return []; } },
+  letters(){ return readList(K.LETTERS,hydrateLetter); },
   saveAll(a){
     const ok=LS.set(K.LETTERS, JSON.stringify(a));
-    _driftCache.clear(); _streamCache.clear(); _wfCache.clear();
+    invalidateJourneyCaches();
     return ok;
   },
   put(rec){
@@ -1314,16 +1635,17 @@ const store = {
   },
   me(){
     try{
-      const m=JSON.parse(LS.get(K.ME)||'null');
+      const raw=JSON.parse(LS.get(K.ME)||'null'), m=sanitizeMe(raw);
       /* ของเก่าที่เคยเก็บพิกัดละเอียดไว้ ต้องถูกลบทิ้งจริง ไม่ใช่แค่ไม่เอาไปใช้ */
-      if(m&&m.lat!=null){
-        const c=coarseLL(m);
-        if(c.lat!==m.lat||c.lng!==m.lng){ LS.set(K.ME, JSON.stringify(c)); return c; }
-      }
+      if(m && JSON.stringify(m)!==JSON.stringify(raw)) LS.set(K.ME,JSON.stringify(m));
       return m;
     }catch(e){ return null; }
   },
-  setMe(m){ LS.set(K.ME, JSON.stringify(m)); }
+  setMe(m){
+    const clean=sanitizeMe(m);
+    if(!clean){ toast('ข้อมูลต้นทางไม่ถูกต้อง'); return false; }
+    return storageNotice(LS.set(K.ME,JSON.stringify(clean)));
+  }
 };
 
 /* ---------- URL codec (deflate + base64url ถ้าเบราว์เซอร์รองรับ) ---------- */
@@ -1357,10 +1679,38 @@ async function packPayload(obj){
    ยกเว้น id กับ lg ที่ขาดไม่ได้ ถ้าไม่มีก็ไม่ใช่จดหมาย */
 const _num=(v,lo,hi,d)=>{ const x=(typeof v==='number'&&isFinite(v))?v:NaN; return isNaN(x)?d:clamp(x,lo,hi); };
 const _str=(v,max)=>String(v==null?'':v).slice(0,max);
+const DATA_LIMIT={PAYLOAD_CHARS:64000,PAYLOAD_BYTES:48000,FILE_BYTES:16*1024*1024,RECORDS:2000};
+function sanitizeMe(m){
+  if(!m||typeof m!=='object'||Array.isArray(m)) return null;
+  const out={name:_str(m.name,40),place:_str(m.place,80)};
+  if(m.lat!=null || m.lng!=null){
+    if(typeof m.lat!=='number'||typeof m.lng!=='number'||!isFinite(m.lat)||!isFinite(m.lng)
+       ||m.lat<-90||m.lat>90||m.lng<-180||m.lng>180) return null;
+    out.lat=coarseLat(m.lat); out.lng=coarseLat(m.lng);
+  }
+  if(m.pid!=null){
+    if(typeof m.pid!=='string'||!/^[0-9A-Z]{16}$/.test(m.pid)) return null;
+    out.pid=m.pid;
+  }
+  return out;
+}
+function hydrateLetter(r){
+  const clean=sanitizeRec(r); if(!clean) return null;
+  clean.dir=r.dir==='out'?'out':'in';
+  for(const k of ['read','nf','pk','gs','sw']) if(r[k]) clean[k]=true;
+  if(typeof r.tp==='string' && /^[0-9A-Z]{1,32}$/.test(r.tp)) clean.tp=r.tp;
+  return clean;
+}
 function sanitizeRec(r){
   if(!r||typeof r!=='object'||Array.isArray(r)) return null;
   if(typeof r.id!=='string'||!r.id||r.id.length>40) return null;
   if(!Array.isArray(r.lg)||!r.lg.length||r.lg.length>64) return null;
+  /* Reject broken timing; do not repair it by changing a delivered letter's
+     arrival time. Legacy totals allow the historic per-leg rounding error. */
+  if(!r.lg.every(l=>Array.isArray(l)&&typeof l[0]==='number'&&isFinite(l[0])&&l[0]>0&&l[0]<=240
+       &&typeof l[1]==='number'&&isFinite(l[1])&&l[1]>=0&&l[1]<=48)) return null;
+  const total=r.lg.reduce((s,l)=>s+l[0]+l[1],0);
+  if(typeof r.th!=='number'||!isFinite(r.th)||r.th<=0||r.th>24*60||Math.abs(total-r.th)>.15) return null;
   const pt=q=>({ n:_str(q&&q.n,60), p:_str(q&&q.p,80),
                  la:_num(q&&q.la,-90,90,0), lo:_num(q&&q.lo,-180,180,0) });
   const lg=r.lg.map(l=>{
@@ -1388,21 +1738,47 @@ function sanitizeRec(r){
   return out;
 }
 async function unpackPayload(str){
+  if(typeof str!=='string'||str.length>DATA_LIMIT.PAYLOAD_CHARS||!/^[zr][A-Za-z0-9_-]+$/.test(str)) throw new Error('bad payload');
   const mode=str[0], data=unb64u(str.slice(1));
   let bytes=data;
   if(mode==='z'){
     const ds=new DecompressionStream('deflate-raw');
-    const buf=await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
-    bytes=new Uint8Array(buf);
+    bytes=await readBounded(new Blob([data]).stream().pipeThrough(ds),DATA_LIMIT.PAYLOAD_BYTES);
   }
+  if(bytes.length>DATA_LIMIT.PAYLOAD_BYTES) throw new Error('payload too large');
   return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function readBounded(stream,max){
+  const reader=stream.getReader(), chunks=[]; let size=0;
+  try{
+    for(;;){
+      const {value,done}=await reader.read(); if(done) break;
+      size+=value.length;
+      if(size>max){ await reader.cancel(); throw new Error('data too large'); }
+      chunks.push(value);
+    }
+  }finally{ reader.releaseLock(); }
+  const bytes=new Uint8Array(size); let at=0;
+  for(const c of chunks){ bytes.set(c,at); at+=c.length; }
+  return bytes;
 }
 
 /* ---------- Open-Meteo ---------- */
-async function geocode(q){
+async function requestData(url,options={},binary=false){
+  const ac=new AbortController(), outer=options.signal;
+  const abort=()=>ac.abort();
+  if(outer){ if(outer.aborted) abort(); else outer.addEventListener('abort',abort,{once:true}); }
+  const timer=setTimeout(abort,15000);
+  try{
+    const r=await fetch(url,Object.assign({},options,{signal:ac.signal}));
+    if(!r.ok) throw new Error('network '+r.status);
+    const bytes=await readBounded(r.body,16*1024*1024);
+    return binary?bytes.buffer:JSON.parse(new TextDecoder().decode(bytes));
+  }finally{ clearTimeout(timer); if(outer) outer.removeEventListener('abort',abort); }
+}
+async function geocode(q,signal){
   const u='https://geocoding-api.open-meteo.com/v1/search?count=6&language=th&format=json&name='+encodeURIComponent(q);
-  const r=await fetch(u); if(!r.ok) throw new Error('geo');
-  const j=await r.json();
+  const j=await requestData(u,{signal});
   return (j.results||[]).map(x=>({
     name:x.name, lat:x.latitude, lng:x.longitude,
     place:[x.name,x.admin1,x.country].filter(Boolean).join(', ')
@@ -1452,10 +1828,9 @@ async function reverseName(lat,lng){
        zoom 10 คืน "ตำบลช้างม่อย" / "แขวงบางอ้อ" ซึ่งเล็กกว่า 11 กม. ที่ปัดไว้ในข้อ 76
        เท่ากับได้ตำแหน่งที่ละเอียดกว่าที่ตั้งใจเปิดเผยกลับมาฟรี ๆ แล้วเอาไปแปะบนจดหมาย
        zoom 8 คืนระดับอำเภอ/เขต ซึ่งพอดีกับความหยาบที่ตั้งใจไว้ */
-    const r=await fetch('https://nominatim.openstreetmap.org/reverse'
+    const j=await requestData('https://nominatim.openstreetmap.org/reverse'
       +'?format=json&zoom=8&accept-language=th&lat='+lat+'&lon='+lng);
-    if(r.ok){
-      const j=await r.json();
+    if(j){
       const n=j.name || (j.address && (j.address.city||j.address.county||j.address.state));
       if(n){ rgeoPut(key,n); return n; }
     }
@@ -1466,27 +1841,34 @@ async function reverseName(lat,lng){
    เดิมทุกครั้งที่ส่งจดหมาย แอปยิง Open-Meteo 238 พิกัด → ส่ง 3 ฉบับในนาทีเดียวก็ชนเพดาน 600/นาที
    และมือถือไทยใช้ CGNAT คนจำนวนมากจึงแบ่งโควตาก้อนเดียวกันโดยไม่รู้ตัว
    ตอนนี้มีตัวดึงล่วงหน้า (tools/fetch_wind.py) เก็บลมทั้งภูมิภาคเป็นไฟล์เดียวทุก 6 ชม.
-   แอปอ่านจากไฟล์นั้นแทน → ราคาคงที่ต่อวัน ไม่โตตามจำนวนผู้ใช้
+   สนามลมอ่านจากไฟล์นั้น → งบสนามคงที่ต่อวัน; 13 จุดเส้นทางยังดึงสดต่อฉบับ
 
    สิ่งที่ *ไม่* เปลี่ยน: ผู้ส่งยังเข้ารหัสสิ่งที่ตัวเองใช้ลง wf ในลิงก์เหมือนเดิม
    ผู้รับยังเล่นจากลิงก์และไม่เคยแตะ API — ความตรงกันสองฝั่งไม่ถูกแตะเลย
 
    แผ่นแคชเป็น "รายการ" ตั้งแต่วันแรก เผื่อวันหน้าเพิ่มแผ่นหยาบที่ครอบกว้างกว่า
    แอปเลือกแผ่นที่ละเอียดที่สุดที่ครอบจุดทั้งหมดได้ ไม่มีแผ่นไหนครอบก็ยิงตรงเหมือนเดิม */
-const WCACHE={ DIR:'wind/', COVER_H:36 };   /* แคชต้องมีลมล่วงหน้าอย่างน้อยเท่านี้ ไม่งั้นยิงตรง */
-let _wcMan=null;
+const WCACHE={ DIR:'wind/', COVER_H:36, TTL:5*60000 };   /* ต้องมีลมล่วงหน้าพอและ revalidate ใน session */
+let _wcMan=null, _wcUntil=0;
 function wcManifest(){
-  if(!_wcMan) _wcMan=(async()=>{
+  if(!_wcMan || Date.now()>=_wcUntil){
+    _wcUntil=Date.now()+WCACHE.TTL;
+    _wcMan=(async()=>{
     try{
-      const r=await fetch(WCACHE.DIR+'index.json',{cache:'no-cache'});
-      if(!r.ok) return null;
-      const m=await r.json();
+      const m=await requestData(WCACHE.DIR+'index.json',{cache:'no-cache'});
       /* v2 = มีชั้นลมกระโชก (ข้อ 62) · v3 = มีรหัสอากาศกับความกดอากาศด้วย (ข้อ 119)
          ⚠️ รับรุ่นที่ใหม่กว่าได้ เพราะจำนวนชั้นอ่านจาก tile.nv ไม่ได้ฝังไว้
             ตรึงไว้ที่ ===2 เมื่อไหร่ แคชรุ่นถัดไปจะถูกปฏิเสธทั้งที่อ่านได้ */
-      return (m&&m.v>=2&&Array.isArray(m.tiles)&&m.tiles.length)?m:null;
-    }catch(e){ return null; }     /* ไม่มีแคชก็ไม่ใช่ความผิดพลาด แค่ถอยไปทางเดิม */
-  })();
+      if(!(m&&m.v>=2&&Array.isArray(m.tiles)&&m.tiles.length&&typeof m.issued==='string')) return null;
+      m.tiles=m.tiles.filter(t=>t && /^[A-Za-z0-9_-]+\.bin$/.test(t.file)
+        &&['nx','ny','slices','stepH','step','la0','la1','lo0','lo1'].every(k=>typeof t[k]==='number'&&isFinite(t[k]))
+        &&Number.isInteger(t.nx)&&Number.isInteger(t.ny)&&Number.isInteger(t.slices)
+        &&t.nx>0&&t.ny>0&&t.nx*t.ny<=20000&&t.slices>1&&t.slices<=96&&t.stepH>0&&t.step>0
+        &&[4,6].includes(t.nv||4)&&isFinite(Date.parse(t.t0+':00Z')));
+      return m.tiles.length?m:null;
+    }catch(e){ _wcUntil=Date.now()+30000; return null; } /* retry transient failures */
+    })();
+  }
   return _wcMan;
 }
 /* แผ่นที่ละเอียดที่สุดที่ครอบทุกจุด และมีลมล่วงหน้าพอสำหรับการเดินทาง */
@@ -1508,16 +1890,20 @@ function wcPick(man,pts){
 }
 async function wcLoad(man,t){
   if(t._d) return t._d;
-  const r=await fetch(WCACHE.DIR+t.file+'?v='+encodeURIComponent(man.issued));
-  if(!r.ok) throw new Error('tile '+r.status);
-  const raw=new Uint8Array(await r.arrayBuffer());
+  if(t._loading) return t._loading;
+  t._loading=(async()=>{
+  const raw=new Uint8Array(await requestData(WCACHE.DIR+t.file+'?v='+encodeURIComponent(man.issued),{},true));
   /* zlib.compress ของ python มีหัว zlib จึงเป็น 'deflate' ไม่ใช่ 'deflate-raw' */
   const ds=new DecompressionStream('deflate');
-  const out=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(ds)).arrayBuffer());
   /* จำนวนชั้นมาจาก manifest — แคชรุ่นก่อนไม่มีฟิลด์นี้ แปลว่าสี่ชั้น */
   const nv=t.nv||4;
+  const expected=nv*t.slices*t.nx*t.ny;
+  if(!Number.isSafeInteger(expected)||expected<=0||expected>16*1024*1024) throw new Error('tile size');
+  const out=await readBounded(new Blob([raw]).stream().pipeThrough(ds),expected);
   if(out.length!==nv*t.slices*t.nx*t.ny) throw new Error('tile size');
   t._d=out; return out;
+  })();
+  try{ return await t._loading; }finally{ delete t._loading; }
 }
 /* อ่านลมของพิกัดหนึ่งออกมาในรูปเดียวกับที่ Open-Meteo คืนมา
    sampleWx() จึงใช้ต่อได้โดยไม่รู้ว่าข้อมูลมาจากไหน */
@@ -1595,13 +1981,13 @@ async function fetchWx(pts){
       }
     }
   }catch(e){ /* แคชมีปัญหาไม่ใช่เหตุให้ส่งจดหมายไม่ได้ */ }
+  if(!fieldWx){
+    // Full field already includes route points. Spend one request, not 13 + 238.
+    const all=await fetchWxLive(pts);
+    WX_SRC='api'; return all;
+  }
   try{
     const routeWx=await fetchWxLive(route);
-    if(!fieldWx){
-      /* ไม่มีแคช — ยิงสดทั้งหมด ยังถูกต้องเสมอ แค่ใช้โควตามากกว่า */
-      const all=await fetchWxLive(pts);
-      WX_SRC='api'; return all;
-    }
     WX_SRC=src+'+api'; return fieldWx.concat(routeWx);
   }catch(e){
     /* ยิงสดไม่ได้ (ออฟไลน์) — ถอยไปใช้แคชทั้งหมด
@@ -1626,14 +2012,9 @@ async function fetchWxLive(pts){
     +'&hourly=wind_speed_10m,wind_direction_10m,precipitation,wind_gusts_10m,weather_code,pressure_msl'
     +'&wind_speed_unit=kmh&forecast_days=4&timezone=UTC';
   /* คำขอที่ค้างจะค้างตลอดไป ผู้ใช้เห็นแค่ปุ่มกดไม่ได้ — ต้องมีเพดานเวลาเสมอ */
-  const ac=new AbortController();
-  const timer=setTimeout(()=>ac.abort(),15000);
-  let r;
-  try{ r=await fetch(u,{signal:ac.signal}); }
-  catch(e){ throw new Error(ac.signal.aborted?'wx timeout':'wx offline'); }
-  finally{ clearTimeout(timer); }
-  if(!r.ok) throw new Error('wx '+r.status);
-  const j=await r.json();
+  let j;
+  try{ j=await requestData(u); }
+  catch(e){ throw new Error(e.name==='AbortError'?'wx timeout':e.message||'wx offline'); }
   return Array.isArray(j)?j:[j];
 }
 function sampleWx(loc,hoursFromNow){
@@ -1703,8 +2084,8 @@ function holdOf(gst){
    ลมพาอ้อมไกลขึ้น = ใช้เวลานานขึ้น (ตัดสินไว้ 23 ส.ค.) */
 /* ดัชนีจุดแนวกลางในทางเดินลม — แนวกลางคือคอลัมน์ตรงกลางของแต่ละแถว */
 const wfMid = i => WF.NG*WF.NG + i;   /* จุดแนวเส้นทางอยู่ต่อท้ายตารางสนาม */
-/* cwx = พยากรณ์ของ "ทางเดินลมทั้งชุด" (13×5 = 65 จุด) ดึงมาในคำขอเดียว
-   แนวกลาง 13 จุดคือชุดเดิมที่เคยดึงแยก จึงไม่มีคำขอเพิ่ม */
+/* cwx = สนามลม 15×15 = 225 จุด ต่อท้ายด้วย 13 จุดบนเส้นทาง
+   fetchWx ใช้แคชสนาม + API เส้นทาง หรือดึงครบ 238 จุดครั้งเดียวเมื่อไม่มีแคช */
 function simulate(cpts, cwx, dist, ct, seedId){
   const A=cpts[wfMid(0)], B=cpts[wfMid(CFG.SEGS)];
   /* ไก่กับไข่: เวลาที่ใช้สุ่มลมขึ้นกับเส้นทาง แต่เส้นทางขึ้นกับลม
@@ -1967,7 +2348,7 @@ function rainOf(L){
     }
     out={v, pts:wfPoints({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo})};
   }
-  _rainCache.set(L.id,out);
+  cachePut(_rainCache,L.id,out);
   return out;
 }
 function WT_RT(){ return WF.RT; }
@@ -1997,6 +2378,22 @@ function rainAt(field,lat,lng,tf){
    (เม็ดฝนเป็นภาษาของการ์ดพยากรณ์ที่มองจากพื้น ไม่ใช่ของแผนที่ที่มองจากบน) */
 const _rainMarks=new Map();
 function rainMarks(L,tf){
+  const job=buildRainMarks(L,tf); let step;
+  do{step=job.next();}while(!step.done);
+  return step.value;
+}
+async function warmRainMarks(L,tf,isCurrent=()=>true,yieldTask=()=>new Promise(resolve=>setTimeout(resolve,0))){
+  const job=buildRainMarks(L,tf);
+  while(isCurrent()){
+    const start=performance.now(); let step;
+    do{
+      step=job.next(); if(step.done) return true;
+    }while(performance.now()-start<3);
+    await yieldTask();
+  }
+  job.return(); return false;
+}
+function* buildRainMarks(L,tf){
   const f=rainOf(L);
   if(!f) return null;
   const bucket=Math.round(clamp(tf||0,0,1)*6);
@@ -2031,9 +2428,12 @@ function rainMarks(L,tf){
       const g=(px,py)=>hs(px*157.31+py*311.7+13.1);
       return g(xi,yi)*(1-u)*(1-v)+g(xi+1,yi)*u*(1-v)+g(xi,yi+1)*(1-u)*v+g(xi+1,yi+1)*u*v;
     };
-    for(let r=0;r<NZ;r++) for(let c=0;c<NZ;c++){
+    for(let r=0;r<NZ;r++){
+      for(let c=0;c<NZ;c++){
       const x=r/NZ, y=c/NZ;
       nz[r*NZ+c]=vn(x*3,y*3)*0.55+vn(x*7.3+11,y*7.3+5)*0.30+vn(x*17.1+23,y*17.1+29)*0.15;
+      }
+      yield;
     }
   }
   const nzAt=(al,cr)=>{
@@ -2127,7 +2527,8 @@ function rainMarks(L,tf){
      เก็บเป็นรางไว้ล่วงหน้า (จุดบนทรงกลม 8 จุดต่อราง) ตอนวาดแค่เลือกช่วงตามเฟส
      จึงไม่ต้องคำนวณพิกัดใหม่ทุกเฟรม — เฟรมหนึ่งเสียแค่ rotate+project 2 จุดต่อราง */
   const RN=96, CORE=0.62, rcell=half*2/RN, RK=8, fall=[];
-  for(let r=0;r<RN;r++) for(let c=0;c<RN;c++){
+  for(let r=0;r<RN;r++){
+    for(let c=0;c<RN;c++){
     const al0=((r+0.5)/RN-0.5)*2*half;
     const cr0=((c+0.5+(r%2)*0.5)/RN-0.5)*2*half;
     const p0=llAt(al0,cr0);
@@ -2151,6 +2552,8 @@ function rainMarks(L,tf){
     }
     /* ช้าลงราวหนึ่งในสาม — กอล์ฟ 25 ส.ค.: "อยากให้มันนิ่มกว่านี้หน่อย" */
     fall.push({p:track, sp:0.28+0.22*hs(n*9.1), ph:hs(n*11.3), w:0.5+0.5*d});
+    }
+    yield;
   }
   out.fall=fall;
 
@@ -2165,6 +2568,7 @@ function rainMarks(L,tf){
     const w=WX[wi];
     if(w.kind===2){
       for(let k=0;k<240;k++){
+        if(k%16===0) yield;
         const n=wi*991+k*17.3;
         const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.1))*wxR);
         const brg=hs(n*7.7)*360, track=[];
@@ -2178,6 +2582,7 @@ function rainMarks(L,tf){
       }
     } else if(w.kind===3){
       for(let k=0;k<140;k++){
+        if(k%16===0) yield;
         const n=wi*733+k*29.7;
         const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.3))*wxR);
         const brg=hs(n*7.1)*360, track=[];
@@ -2187,12 +2592,14 @@ function rainMarks(L,tf){
         ice.push({p:track, sp:0.42+0.26*hs(n*11.7), ph:hs(n*13.1), w:0.5+0.5*hs(n*17.9)});
       }
       for(let k=0;k<40;k++){
+        if(k%16===0) yield;
         const n=wi*311+k*41.3;
         const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*5.1))*wxR*0.95);
         crack.push({a:toXYZ(q0.lat,q0.lng), s:0.55+0.55*hs(n*3.9), ph:hs(n*7.7)*6.283});
       }
     } else if(w.kind===4){
       for(let k=0;k<52;k++){
+        if(k%16===0) yield;
         const n=wi*577+k*23.1;
         const q0=destPoint(w.lat,w.lng,hs(n)*360,Math.sqrt(hs(n*3.7))*wxR*1.15);
         fogp.push({a:toXYZ(q0.lat,q0.lng), r:wxR*(0.24+0.20*hs(n*5.9)),
@@ -2204,7 +2611,7 @@ function rainMarks(L,tf){
 
   const HN=340, HS=46, hatch=[];
   const HR=half*1.45, dU=2*HR/HS;
-  const layer=(angDeg,minMM,gain,base,offFrac,seed)=>{
+  const layer=function*(angDeg,minMM,gain,base,offFrac,seed){
     const ang0=angDeg*RAD;
     for(let i=0;i<HN;i++){
       const off=((i+0.5+offFrac)/HN-0.5)*2*HR;
@@ -2234,6 +2641,7 @@ function rainMarks(L,tf){
         const q1=llAt(u1*ca-off*sa, u1*sa+off*ca);
         hatch.push({a:toXYZ(q0.lat,q0.lng), b:toXYZ(q1.lat,q1.lng), w:0.5+0.5*d});
       }
+      yield;
     }
   };
   /* ค่าพวกนี้ปรับจาก *การกระจายจริงของฝน* ไม่ได้เดา — วัดสนามหนึ่งได้
@@ -2246,19 +2654,18 @@ function rainMarks(L,tf){
   /* ⚠️ ชั้นแรก base 0.85 ไม่ใช่ 0.60 — ตรงไหนนับว่ามีเมฆ ต้องถูกถม *เกือบเต็ม* ที่ระยะห่างพื้นฐาน
      ที่ 0.60 มันข้ามตำแหน่งไป 40% ซึ่งเป็นเหตุผลที่ยังดูโปร่งแม้เส้นจะชิดขึ้นแล้ว
      ความมืดที่เพิ่มขึ้นตามปริมาณฝน มาจากชั้น 2-6 ที่ซ้อนทับ ไม่ใช่จากการเติมช่องว่างของชั้นแรก */
-  layer(-28, 0.10, 0.55, 0.85, 0.00,   0);     /* ชั้น 1 — ถมทั่วบริเวณที่มีเมฆ */
-  layer(-28, 0.22, 0.60, 0.45, 0.50, 991);     /* ชั้น 2 — แทรกกลางเส้นเดิม ตรงที่หนักขึ้น */
-  layer(-13, 0.30, 0.70, 0.40, 0.25, 557);     /* ชั้น 3 — เอียงต่างนิดหน่อย */
-  layer( 46, 0.55, 0.80, 0.35, 0.00, 313);     /* ชั้น 4 — ตัดขวาง เฉพาะแกนที่หนักจริง */
+  yield* layer(-28, 0.10, 0.55, 0.85, 0.00,   0);     /* ชั้น 1 — ถมทั่วบริเวณที่มีเมฆ */
+  yield* layer(-28, 0.22, 0.60, 0.45, 0.50, 991);     /* ชั้น 2 — แทรกกลางเส้นเดิม ตรงที่หนักขึ้น */
+  yield* layer(-13, 0.30, 0.70, 0.40, 0.25, 557);     /* ชั้น 3 — เอียงต่างนิดหน่อย */
+  yield* layer( 46, 0.55, 0.80, 0.35, 0.00, 313);     /* ชั้น 4 — ตัดขวาง เฉพาะแกนที่หนักจริง */
   /* ⚠️ เพดานความมืด = *จำนวนชั้น* ไม่ใช่ค่า alpha
      สี่ชั้นแรกตันที่ราวสี่รอยต่อช่อง ซึ่งพอสำหรับฝนระดับที่วัดเจอในสนามนี้ (สูงสุด 1.88 มม.)
      แต่ฝนเขตร้อนจริงไปได้ถึงหลักสิบ มม./ชม. — ถ้าไม่มีชั้นต่อ มันจะตันแล้วดูเท่าฝนปานกลาง
      สองชั้นนี้จึงไม่ทำงานเลยกับข้อมูลชุดที่ทดสอบ [ยังไม่ได้ยืนยันกับฝนหนักจริง] */
-  layer(-28, 1.20, 1.50, 0.50, 0.25, 137);     /* ชั้น 5 — ฝนหนัก */
-  layer( 13, 2.50, 2.50, 0.50, 0.75, 701);     /* ชั้น 6 — ฝนหนักมาก */
+  yield* layer(-28, 1.20, 1.50, 0.50, 0.25, 137);     /* ชั้น 5 — ฝนหนัก */
+  yield* layer( 13, 2.50, 2.50, 0.50, 0.75, 701);     /* ชั้น 6 — ฝนหนักมาก */
   out.hatch=hatch;
-  if(_rainMarks.size>40) _rainMarks.clear();
-  _rainMarks.set(key,out);
+  cachePut(_rainMarks,key,out,40);
   return out;
 }
 
@@ -2279,7 +2686,7 @@ function wfOf(L){
       out={pts:wfPoints({lat:L.f.la,lng:L.f.lo},{lat:L.t.la,lng:L.t.lo}), slices};
     }
   }
-  _wfCache.set(L.id,out);
+  cachePut(_wfCache,L.id,out);
   return out;
 }
 /* ลม ณ พิกัดใด ๆ เวลาใดก็ได้ — ถ่วงน้ำหนักผกผันระยะ 4 จุดใกล้สุด แล้วไล่ระดับตามเวลา */
@@ -2427,7 +2834,7 @@ function driftPath(L){
     for(let i=1;i<r.pts.length;i++) cum.push(cum[i-1]+gcDist(r.pts[i-1],r.pts[i]));
     out={pts:r.pts, cum, len:cum[cum.length-1], ratio:r.ratio};
   }
-  _driftCache.set(L.id,out);
+  cachePut(_driftCache,L.id,out);
   return out;
 }
 /* ตำแหน่งบนเส้นทาง ณ สัดส่วน 0-1 — ถอยไปเส้นตรงถ้าจดหมายเก่าไม่มีข้อมูลลม */
@@ -2690,8 +3097,7 @@ function stormStrands(L,tf){
       }
     });
   });
-  if(_ssCache.size>24) _ssCache.clear();
-  _ssCache.set(key,out);
+  cachePut(_ssCache,key,out,24);
   return out;
 }
 
@@ -2776,8 +3182,7 @@ function baseStreams(L,tf){
     }
     out=lines;
   }
-  _streamCache.set(key,out);
-  if(_streamCache.size>60) _streamCache.clear();
+  cachePut(_streamCache,key,out,60);
   return out;
 }
 /* รอยข้างหลัง (ข้อ 2) — วาดเฉพาะทางที่เดินมาแล้ว ไม่ใช่ทั้งเส้น
@@ -2883,7 +3288,108 @@ function kindWord(k,wc){
    ============================================================ */
 const col = a => 'rgba(84,90,104,'+a+')';
 const frac = v => v-Math.floor(v);
-const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOTION_QUERY=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
+let REDUCED=!!(MOTION_QUERY&&MOTION_QUERY.matches);
+document.documentElement.classList.toggle('rm',REDUCED);
+
+/* Adaptive quality affects secondary atmosphere only. Geometry, geographic
+   weather, paper, hero timing and input keep their existing resolution/clock. */
+const QUALITY_LEVELS=[
+  {name:'high',foreground:1,distant:1,atmosphere:1,weather:1},
+  {name:'balanced',foreground:.45,distant:.65,atmosphere:1,weather:1},
+  {name:'low',foreground:.25,distant:.40,atmosphere:.75,weather:.65}
+];
+function createRenderQuality(initial='auto'){
+  let mode='auto',stage=0,revision=0,window=[],windowStart=null,entered=null,lastChange=null,bad=0,good=0;
+  const metrics=new Map(),changes=[];
+  const percentile=(values,p)=>{if(!values.length)return null;const sorted=values.slice().sort((a,b)=>a-b);return sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))];};
+  function change(next,now,reason){
+    if(stage===next)return;stage=next;revision++;lastChange=now;bad=good=0;
+    changes.push({level:QUALITY_LEVELS[stage].name,reason});if(changes.length>8)changes.shift();
+  }
+  function setMode(next){
+    next=['auto','high','low'].includes(next)?next:'auto';if(next===mode)return;
+    mode=next;stage=next==='low'?2:0;revision++;window=[];windowStart=entered=lastChange=null;bad=good=0;
+  }
+  function observe({costMs,gapMs,nowMs,scene}){
+    if(!Number.isFinite(costMs)||costMs<0||!Number.isFinite(nowMs))return;
+    scene=['globe','hero','forecast','sheet'].includes(scene)?scene:'sheet';
+    let record=metrics.get(scene);if(!record){record={count:0,totalCostMs:0,maxCostMs:0,firstCostMs:costMs,histogram:new Uint32Array(2001),samples:[]};metrics.set(scene,record);}
+    record.count++;record.totalCostMs+=costMs;record.maxCostMs=Math.max(record.maxCostMs,costMs);
+    record.histogram[Math.min(2000,Math.ceil(costMs*10))]++;
+    record.samples.push({costMs,gapMs:Number.isFinite(gapMs)&&gapMs>0&&gapMs<250?gapMs:null});
+    if(record.samples.length>180)record.samples.shift();
+    if(scene!=='globe'||!Number.isFinite(gapMs)||gapMs<=0||gapMs>=250){window=[];windowStart=entered=null;bad=good=0;return;}
+    if(mode!=='auto')return;
+    if(entered===null)entered=nowMs;
+    if(windowStart===null)windowStart=nowMs;
+    window.push(costMs);if(window.length>240)window.shift();
+    if(nowMs-windowStart<1000||window.length<30)return;
+    const p90=percentile(window,.90);window=[];windowStart=nowMs;
+    // Measured draw cost, not refresh rate: a 30 Hz display alone cannot lower
+    // quality. Warm-up, persistent pressure and cooldown prevent flapping.
+    if(nowMs-entered<2000)return;
+    bad=p90>12?bad+1:0;good=p90<7?good+1:0;
+    const dwell=lastChange===null?Infinity:nowMs-lastChange;
+    if(bad>=2&&stage<2&&dwell>=8000)change(stage+1,nowMs,'sustained-draw-cost');
+    else if(good>=20&&stage>0&&dwell>=20000)change(stage-1,nowMs,'sustained-headroom');
+  }
+  function snapshot(){
+    const scenes={};
+    for(const [name,record] of metrics){
+      const costs=record.samples.map(s=>s.costMs),gaps=record.samples.map(s=>s.gapMs).filter(v=>v!==null);
+      let bucket=0,total=0;const target=Math.ceil(record.count*.95);
+      while(bucket<2000&&(total+=record.histogram[bucket])<target)bucket++;
+      scenes[name]={count:record.count,sampleCount:costs.length,firstCostMs:record.firstCostMs,
+        meanCostMs:record.totalCostMs/record.count,p95CostMs:bucket===2000?record.maxCostMs:Math.min(record.maxCostMs,bucket/10),maxCostMs:record.maxCostMs,
+        p95CostResolutionMs:.1,recentP95CostMs:percentile(costs,.95),
+        meanCallbackGapMs:gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:null,p95CallbackGapMs:percentile(gaps,.95)};
+    }
+    return {mode,level:QUALITY_LEVELS[stage].name,revision,effects:{...QUALITY_LEVELS[stage]},scenes,changes:changes.slice()};
+  }
+  setMode(initial);
+  return {setMode,observe,snapshot,effects:()=>QUALITY_LEVELS[stage],resetMetrics:()=>metrics.clear()};
+}
+const K_QUALITY='lw.v1.quality';
+const QUALITY=createRenderQuality(LS.get(K_QUALITY)||'auto');
+function qualityCount(count,kind){return Math.max(0,Math.round(count*QUALITY.effects()[kind]));}
+function paintQuality(){
+  const mode=QUALITY.snapshot().mode;
+  document.querySelectorAll('#segQuality button').forEach(b=>{const on=b.dataset.v===mode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+}
+function setRenderQuality(mode){
+  const before=QUALITY.snapshot().mode;QUALITY.setMode(mode);
+  const next=QUALITY.snapshot().mode;if(before!==next)storageNotice(LS.set(K_QUALITY,next));
+  paintQuality();RENDER.start();
+}
+function syncRenderQuality(){QUALITY.setMode(LS.get(K_QUALITY)||'auto');paintQuality();RENDER.start();}
+
+/* One continuous frame owner; visual time pauses while hidden. Journey time
+   still uses Date.now() in letterState/simulation, never this clock. */
+function createRenderRuntime({request,cancel,hidden,draw,observe,clock=()=>performance.now()}){
+  let active=false, raf=null, last=null, elapsed=0, frames=0;
+  function schedule(){ if(active&&!hidden()&&raf===null) raf=request(tick); }
+  function tick(stamp){
+    raf=null;
+    if(!active||hidden()){ last=null; return; }
+    const gapMs=last===null?null:Math.max(0,stamp-last);
+    const dt=gapMs===null?0:Math.min(.05,gapMs/1000);
+    last=stamp; elapsed+=dt*1000; frames++;
+    const began=observe?clock():0;
+    try{ draw(elapsed,dt); }finally{
+      try{if(observe)observe({costMs:clock()-began,gapMs,nowMs:stamp});}finally{schedule();}
+    }
+  }
+  return {
+    start(){ if(!active){ active=true; last=null; } schedule(); },
+    stop(){ active=false; if(raf!==null) cancel(raf); raf=null; last=null; },
+    syncVisibility(){
+      if(raf!==null) cancel(raf); raf=null; last=null; schedule();
+    },
+    now(){ return elapsed; },
+    snapshot(){ return {active,scheduled:raf!==null,hidden:!!hidden(),elapsed,frames}; }
+  };
+}
 
 /* ---------- ชุดสภาพอากาศ 5 ระดับ ---------- */
 function wxClear(ctx,cx,cy,t,scale){
@@ -3414,24 +3920,31 @@ const G = {
     if(chord<1e-6) return CFG.ZOOM_MAX;
     return clamp((CFG.ZOOM_FIT*this.fitBox())/(chord*this.R0), 1, CFG.ZOOM_MAX);
   },
-  step(){
+  step(dt=1/60){
+    const n=dt*60, zoomEase=1-Math.pow(.88,n), turnEase=1-Math.pow(.90,n);
+    if(REDUCED){
+      this.zoom=this.zTarget; this.R=this.R0*this.zoom;
+      if(this.target){ this.rotY=this.target.y; this.rotX=this.target.x; this.target=null; }
+      this.vY=this.vX=0; return;
+    }
     /* ซูมไหลเข้าหาเป้าเสมอ ไม่ว่าจะกำลังหมุนไปหาเป้าหรือไม่ */
     if(Math.abs(this.zTarget-this.zoom)>1e-4){
-      this.zoom+=(this.zTarget-this.zoom)*.12;
+      this.zoom+=(this.zTarget-this.zoom)*zoomEase;
       if(Math.abs(this.zTarget-this.zoom)<=1e-4) this.zoom=this.zTarget;
       this.R=this.R0*this.zoom;
     }
     if(this.target){
       let dy=this.target.y-this.rotY;
       while(dy>Math.PI) dy-=Math.PI*2; while(dy<-Math.PI) dy+=Math.PI*2;
-      this.rotY+=dy*.10; this.rotX+=(this.target.x-this.rotX)*.10;
+      this.rotY+=dy*turnEase; this.rotX+=(this.target.x-this.rotX)*turnEase;
       if(Math.abs(dy)<.002&&Math.abs(this.target.x-this.rotX)<.002) this.target=null;
       return;
     }
     if(!this.drag){
-      this.rotY+=this.vY; this.rotX+=this.vX;
+      const decay=Math.pow(.94,n), travel=(1-decay)/.06;
+      this.rotY+=this.vY*travel; this.rotX+=this.vX*travel;
       this.rotX=clamp(this.rotX,-1.3,1.3);
-      this.vY*=.94; this.vX*=.94;
+      this.vY*=decay; this.vX*=decay;
       if(Math.abs(this.vY)<2e-4) this.vY=0;
       if(Math.abs(this.vX)<2e-4) this.vX=0;
     }
@@ -4288,7 +4801,177 @@ const G = {
 };
 
 /* ---------- จดหมาย = กระดาษคลี่ (mesh warp จาก letter-flutter) ---------- */
-function meshPoints(W,H,t,wind,cols,rows){
+function globePaperMotion(speed,gust,t,phase,reduced,kinematics){
+  const mean=clamp(Number.isFinite(speed)?speed:18,0,120);
+  const peak=clamp(Number.isFinite(gust)?gust:mean,mean,140);
+  const time=reduced?0:t;
+  // Recorded gust is a peak, not a live sample. These smooth, offset waves
+  // express intermittent gusts without changing the journey's physical path.
+  const envelope=(.5+.5*Math.sin(time*.73+phase))*(.6+.4*Math.sin(time*1.17+phase*1.7));
+  const kick=reduced?0:(peak-mean)/100*envelope;
+  const drive=clamp(Math.sqrt(mean/90)+kick*.65,0,1);
+  // Smooth seeded noise changes the size and drift of each turn. No random
+  // frame samples, fixed circular loop, or changes to the recorded route.
+  const noise=(time,channel)=>{
+    const i=Math.floor(time),f=time-i,s=f*f*f*(f*(f*6-15)+10);
+    const hash=n=>{const v=Math.sin(n*127.1+phase*93.7+channel*311.7)*43758.5453;return (v-Math.floor(v))*2-1;};
+    return hash(i)*(1-s)+hash(i+1)*s;
+  };
+  const glideAt=time=>{
+    const n=noise(time*.19,1),m=noise(time*.137,2);
+    const angle=(kinematics?kinematics.orbitPhase:time*(.48+Math.sqrt(mean/90)*.52))+phase*3
+      +1.5*Math.sin(time*.113+phase)+noise(time*.097,3)*2.8;
+    const turn=.15+.85*(noise(time*.121,4)*.5+.5);
+    const radius=(7+drive*24)*(.65+.35*(noise(time*.163,5)*.5+.5));
+    return {x:radius*(n*.40+Math.cos(angle)*turn*.65),
+      y:radius*(m*.36+Math.sin(angle)*turn*.52),angle,turn};
+  };
+  const glide=glideAt(time);
+  return {profile:'globe',phase,reduced,drive,kick,
+    flap:reduced?0:(kinematics?kinematics.flapPhase:time*(1+Math.sqrt(mean/90)*3.6)),
+    x:reduced?0:glide.x,y:reduced?0:glide.y,
+    roll:(drive-.35)*.12+(reduced?0:Math.sin(glide.angle)*glide.turn*(.22+drive*.54)+noise(time*.23,6)*.16),
+    pitch:reduced?0:Math.sin(time*(.9+drive*.8)+phase*1.9)*(.08+drive*.28)};
+}
+// Visual-only dynamics in local east/north coordinates. The journey record,
+// arrival clock and geographic path are never changed by these forces.
+const GLOBE_PAPER_STATES=new Map();
+function paperSpring(position,velocity,target,omega,dt){
+  const q=position-target,c=velocity+omega*q,decay=Math.exp(-omega*dt);
+  return {position:target+(q+c*dt)*decay,velocity:(velocity-omega*c*dt)*decay};
+}
+// Prefix exposure is rebuilt only when the immutable route record changes.
+// Partial legs (including holds) count only time already travelled. Snow/ice
+// do not imply liquid water; the historical reading-paper renderer stays intact.
+function globePaperCondition(L,st,cache){
+  const legs=L.lg||[];
+  if(!cache||cache.legs!==legs){
+    const prefix=[{hours:0,rain:0,fold:0}];
+    for(const leg of legs){
+      const prior=prefix[prefix.length-1],hours=Math.max(0,leg[0]||0)+Math.max(0,leg[1]||0);
+      const liquid=wcx(leg[8])===0?Math.max(0,leg[4]||0):0;
+      const fold=leg[6]>=2?1.2:leg[6]>0?.35:0;
+      prefix.push({hours:prior.hours+hours,rain:prior.rain+liquid*hours,fold:prior.fold+fold*hours});
+    }
+    cache={legs,prefix};
+  }
+  const elapsed=clamp(Number.isFinite(st.elapsed)?st.elapsed:0,0,cache.prefix[legs.length].hours);
+  let lo=0,hi=legs.length;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(cache.prefix[mid].hours<=elapsed)lo=mid;else hi=mid-1;}
+  const i=lo,start=cache.prefix[i],leg=legs[i];
+  const partial=leg?clamp(elapsed-start.hours,0,cache.prefix[i+1].hours-start.hours):0;
+  let rain=start.rain,fold=start.fold;
+  if(leg){rain+=(wcx(leg[8])===0?Math.max(0,leg[4]||0):0)*partial;fold+=(leg[6]>=2?1.2:leg[6]>0?.35:0)*partial;}
+  const ct=L.ct|0;
+  return {cache,condition:{wet:ct>=1?0:clamp(rain/40,0,1),crease:ct===2?0:clamp(fold/2,0,1),age:clamp(elapsed/(24*7),0,1)}};
+}
+function stepGlobePaper(state,wind,t,phase,reduced,condition={wet:0,crease:0,age:0}){
+  const e=Number.isFinite(wind.e)?wind.e:0,n=Number.isFinite(wind.n)?wind.n:0;
+  const gust=Number.isFinite(wind.gust)?wind.gust:Math.hypot(e,n);
+  if(!state||reduced||state.reduced||t<state.time){
+    state={time:t,e,n,gust,x:0,y:0,vx:0,vy:0,bank:0,bankV:0,pitch:0,pitchV:0,
+      orbitPhase:0,flapPhase:0,wet:condition.wet,crease:condition.crease,reduced};
+  }
+  const elapsed=clamp(t-state.time,0,.1),steps=Math.max(1,Math.ceil(elapsed*120-1e-8)),h=elapsed/steps;
+  let motion;
+  for(let i=0;i<steps;i++){
+    const u=reduced?0:state.time+(i+1)*h,k=1-Math.exp(-h/1.1);
+    state.e+=(e-state.e)*k;state.n+=(n-state.n)*k;state.gust+=(gust-state.gust)*k;
+    const materialK=1-Math.exp(-h/1.8);
+    state.wet+=(condition.wet-state.wet)*materialK;state.crease+=(condition.crease-state.crease)*materialK;
+    const response=1+state.wet*.65+state.crease*.20;
+    const speed=Math.hypot(state.e,state.n),strength=clamp(Math.sqrt(speed/90),0,1);
+    state.orbitPhase+=(.48+strength*.52)*h/Math.sqrt(response);
+    state.flapPhase+=(1+strength*3.6)*h*(1-state.wet*.28-state.crease*.12);
+    motion=globePaperMotion(speed,state.gust,u,phase,reduced,state);
+    const norm=speed>1e-6?speed:1,alongE=state.e/norm,alongN=state.n/norm;
+    // The same gust drives drift, bank and edge deformation. A small downstream
+    // bias lets a turn open out into a glide instead of circling a fixed center.
+    const along=(motion.y+motion.drive*(5+motion.kick*12))*(1+state.wet*.12),cross=motion.x;
+    const targetE=alongE*along+alongN*cross,targetN=alongN*along-alongE*cross;
+    const beforeX=state.vx,beforeY=state.vy;
+    const omega=3.2/Math.sqrt(response);
+    const sx=paperSpring(state.x,state.vx,targetE,omega,h),sy=paperSpring(state.y,state.vy,targetN,omega,h);
+    state.x=sx.position;state.vx=sx.velocity;state.y=sy.position;state.vy=sy.velocity;
+    const crossVelocity=state.vx*alongN-state.vy*alongE;
+    const crossAcceleration=h>0?((state.vx-beforeX)*alongN-(state.vy-beforeY)*alongE)/h:0;
+    const bankTarget=clamp(crossVelocity*.032+crossAcceleration*.012,-.70,.70);
+    const bank=paperSpring(state.bank,state.bankV,bankTarget,4.5,h);
+    state.bank=bank.position;state.bankV=bank.velocity;
+    const pitch=paperSpring(state.pitch,state.pitchV,clamp((state.vx*alongE+state.vy*alongN)*.017+motion.kick*.35,-.30,.30),4.5,h);
+    state.pitch=pitch.position;state.pitchV=pitch.velocity;
+  }
+  state.time=t;
+  motion.x=reduced?0:state.x;motion.y=reduced?0:state.y;
+  motion.roll=reduced?0:state.bank;motion.pitch=reduced?0:state.pitch;
+  motion.velocity={e:state.vx,n:state.vy};
+  motion.condition={wet:state.wet,crease:state.crease,age:condition.age};
+  return {state,motion};
+}
+function globeLetterWind(L,st,position){
+  const leg=L.lg&&L.lg[st.legIdx],speed=leg&&Number.isFinite(leg[2])?leg[2]:18;
+  const gust=leg&&Number.isFinite(leg[7])?leg[7]:speed;
+  const field=wfOf(L);
+  if(field){
+    const ll=fromXYZ(position),prior=CUR_STORMS;
+    let wind;
+    try{CUR_STORMS=stormsOf(L);wind=wfAt(field,ll.lat,ll.lng,st.prog);}
+    finally{CUR_STORMS=prior;}
+    if(wind&&Number.isFinite(wind.e)&&Number.isFinite(wind.n))return {e:wind.e,n:wind.n,gust,source:'recorded-field'};
+  }
+  // Wind direction in the record means "from"; add 180 degrees to get flow.
+  const direction=leg&&Number.isFinite(leg[3])?leg[3]:null,angle=(direction+180)*Math.PI/180;
+  return {e:direction===null?0:Math.sin(angle)*speed,n:direction===null?0:Math.cos(angle)*speed,gust,source:direction===null?'unknown':'recorded-leg'};
+}
+function projectGlobePaper(position,motion,rotate){
+  const len=Math.hypot(position.x,position.y,position.z)||1;
+  const longitude=Math.atan2(position.x,position.z),s=clamp(position.y/len,-1,1),c=Math.sqrt(Math.max(0,1-s*s));
+  const east=rotate({x:Math.cos(longitude),y:0,z:-Math.sin(longitude)});
+  const north=rotate({x:-s*Math.sin(longitude),y:c,z:-s*Math.cos(longitude)});
+  return Object.assign({},motion,{x:motion.x*east.x+motion.y*north.x,
+    y:-(motion.x*east.y+motion.y*north.y),
+    roll:motion.roll*(east.x*north.y-east.y*north.x)});
+}
+function globePaperForLetter(L,st,position,t,reduced){
+  const wind=globeLetterWind(L,st,position),phase=(seedOf(L.id)%6283)/1000;
+  const prior=GLOBE_PAPER_STATES.get(L.id),exposure=globePaperCondition(L,st,prior&&prior.conditionCache);
+  const rewound=prior&&Number.isFinite(st.elapsed)&&st.elapsed<prior.journeyElapsed;
+  const result=stepGlobePaper(rewound?null:prior,wind,t,phase,reduced,exposure.condition);
+  result.state.conditionCache=exposure.cache;
+  result.state.journeyElapsed=st.elapsed;
+  GLOBE_PAPER_STATES.set(L.id,result.state);
+  const motion=projectGlobePaper(position,result.motion,v=>G.rotate(v));
+  motion.wind=wind;
+  motion.effectiveWind={e:result.state.e,n:result.state.n,gust:result.state.gust};
+  motion.recordedCondition=exposure.condition;
+  result.state.motion=motion;
+  return motion;
+}
+function meshPoints(W,H,t,wind,cols,rows,motion){
+  if(motion&&motion.profile==='globe'){
+    const drive=motion.drive,kick=motion.kick;
+    const wet=motion.condition?.wet||0,crease=motion.condition?.crease||0;
+    const sway=Math.min(W,H)*(.14+.66*drive+.12*kick)*(1-wet*.22-crease*.16),flap=motion.flap+motion.phase;
+    const pts=[];
+    for(let r=0;r<=rows;r++){
+      const row=[],v=r/rows;
+      for(let c=0;c<=cols;c++){
+        const u=c/cols,edge=u*u;
+        const wave=Math.sin(u*(1.05+drive*.65)*Math.PI*2-v*1.1-flap);
+        const twist=Math.sin(flap*.47+v*3.2-u*1.7);
+        const tip=Math.sin(flap*.83-u*5.3+v*4.1);
+        const foldAxis=.38+.10*Math.sin(motion.phase)+v*.16;
+        const fold=(Math.abs(u-foldAxis)-Math.abs(.5-foldAxis))*crease*W*.14;
+        const droop=wet*H*.065*(v*v-.25);
+        const z=sway*(wave*.55*edge+twist*.24*Math.sin(v*Math.PI)*(u-.5)+tip*.21*edge*Math.abs(v-.5)*2)+fold+droop;
+        const x=(u-.5)*W+wave*sway*.07*(.15+edge);
+        const y=(v-.5)*H+z*.46+(u-.5)*motion.pitch*H*.22;
+        row.push({x,y,z,u,v});
+      }
+      pts.push(row);
+    }
+    return {pts,sway};
+  }
   const sway=8+wind*46, freq=1.2+wind*3.2, speed=.6+wind*2.6, flap=wind*wind;
   const pts=[];
   for(let r=0;r<=rows;r++){
@@ -4332,14 +5015,15 @@ const PAPER = {
   sheetAged:  [216,203,171],
 };
 
-function drawFlutter(ctx,cx,cy,W,H,t,wind,age,traces){
-  const cols=12, rows=15;
-  const {pts,sway}=meshPoints(W,H,t,wind,cols,rows);
+function drawFlutter(ctx,cx,cy,W,H,t,wind,age,traces,motion){
+  const globe=motion&&motion.profile==='globe',cols=globe?8:12,rows=globe?10:15;
+  const {pts,sway}=meshPoints(W,H,t,wind,cols,rows,motion);
   const tilt=(wind-.35)*.5;
   const base=mix(PAPER.fresh,PAPER.aged,age*.85);
+  if(globe){const wet=motion.condition?.wet||0;base[0]-=wet*5;base[1]-=wet*5;base[2]-=wet*4;}
   ctx.save();
-  ctx.translate(cx+Math.sin(t*.4)*(4+wind*16), cy+Math.sin(t*.33+9.1)*(3+wind*9));
-  ctx.rotate(tilt*.4+Math.sin(t*.5+3)*.03);
+  ctx.translate(cx+(globe?motion.x:Math.sin(t*.4)*(4+wind*16)), cy+(globe?motion.y:Math.sin(t*.33+9.1)*(3+wind*9)));
+  ctx.rotate(globe?motion.roll:tilt*.4+Math.sin(t*.5+3)*.03);
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     const p00=pts[r][c],p10=pts[r][c+1],p11=pts[r+1][c+1],p01=pts[r+1][c];
     const zAvg=(p00.z+p10.z+p11.z+p01.z)/4;
@@ -4357,8 +5041,9 @@ function drawFlutter(ctx,cx,cy,W,H,t,wind,age,traces){
     ctx.stroke();
   }
   if(traces&&traces.rain>0.02) rainBlooms(ctx,traces.rain,(u,v)=>pts[Math.round(v*rows)][Math.round(u*cols)],1);
-  if(wind>.5){
-    ctx.strokeStyle='rgba('+PAPER.edge+','+((wind-.5)*.5)+')';ctx.lineWidth=1.2;
+  const edgeWind=globe?motion.drive:wind;
+  if(edgeWind>.5){
+    ctx.strokeStyle='rgba('+PAPER.edge+','+((edgeWind-.5)*.5)+')';ctx.lineWidth=1.2;
     ctx.beginPath();
     for(let r=0;r<=rows;r++){ const p=pts[r][cols]; r===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
     ctx.stroke();
@@ -4777,7 +5462,8 @@ function drawPaper(cv,traces){
   if(load>1.35){ const d=1.35/load; wetK*=d; stormK*=d; gustK*=d; iceK*=d; }
   const sd=seedOf(traces.id);
   const S=W/300;
-  const base=mix(PAPER.sheetFresh,PAPER.sheetAged,age*.72);
+  // White substrate in both schemes; candle illumination is a separate layer.
+  const base=[253-age*4,253-age*4,252-age*4];
   const g=ctx.createLinearGradient(0,0,W,H);
   g.addColorStop(0,'rgb('+c255(base[0]+4)+','+c255(base[1]+4)+','+c255(base[2]+4)+')');
   g.addColorStop(1,'rgb('+c255(base[0]-6)+','+c255(base[1]-7)+','+c255(base[2]-8)+')');
@@ -4827,8 +5513,9 @@ function drawPaper(cv,traces){
    ============================================================ */
 const $ = s => document.querySelector(s);
 const stage = $('#stage'), sctx = stage.getContext('2d');
-let W=0,H=0,DPR=1,T=0,lastFrame=performance.now();
+let W=0,H=0,DPR=1,T=0;
 let sheetOpen=null, selected=null, pending=null, current=null, logOpen=false;
+let releaseSession=null, prepareEpoch=0, preparingSend=false;
 /* ---------- โหมดจำลอง ----------
    จดหมายจริงเดินตามเวลาจริง (ชั่วโมงถึงวัน) จะดูการเดินทางทั้งเส้นจึงต้องย่อเวลา
    ไม่แตะข้อมูลอะไรเลย — แค่ป้อน "เวลาปลอม" ให้ letterState() กับนาฬิกาแสงเท่านั้น
@@ -4840,8 +5527,8 @@ function selKm(){
   return L?fitKm(L):0;
 }
 const PLAY_SEC=40;                /* เล่นทั้งการเดินทางจบใน 40 วินาที */
-function nowFor(L){
-  return (PREVIEW && PREVIEW.id===L.id) ? L.s + PREVIEW.h*3600000 : Date.now();
+function nowFor(L,wallTime=Date.now()){
+  return (PREVIEW && PREVIEW.id===L.id) ? L.s + PREVIEW.h*3600000 : wallTime;
 }
 function previewOn(L){
   PREVIEW={id:L.id, h:0, play:true};
@@ -4894,7 +5581,8 @@ function sizeStage(){
 function sizeCanvas(cv,h){
   const dpr=Math.min(devicePixelRatio||1,2);
   const w=cv.clientWidth, hh=h||cv.clientHeight;
-  cv.width=w*dpr; cv.height=hh*dpr;
+  const pw=Math.round(w*dpr), ph=Math.round(hh*dpr);
+  if(cv.width!==pw||cv.height!==ph){ cv.width=pw; cv.height=ph; }
   const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
   return {ctx:c,w,h:hh};
 }
@@ -4904,13 +5592,39 @@ function toast(msg){
   const el=$('#toast'); el.textContent=msg; el.classList.add('on');
   clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200);
 }
-function openSheet(id){ closeSheet(); sheetOpen=id; $('#'+id).classList.add('on'); }
-function closeSheet(){
+let sheetReturnFocus=null;
+function openSheet(id){
+  if(heroActive()) resetHero();
+  if(!sheetOpen) sheetReturnFocus=document.activeElement;
+  closeSheet(false); sheetOpen=id;
+  const el=$('#'+id); el.classList.add('on');
+  el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.tabIndex=-1;
+  const title=el.querySelector('h2');
+  if(title){ if(!title.id) title.id=id+'Title'; el.setAttribute('aria-labelledby',title.id); }
+  el.focus({preventScroll:true});
+}
+function closeSheet(restore=true){
+  if(sheetOpen==='compose') prepareEpoch++;
   if(sheetOpen){ $('#'+sheetOpen).classList.remove('on'); sheetOpen=null; }
   /* คืนความสูงที่คีย์บอร์ดกินไป ไม่งั้นหน้าแรกเตี้ยค้างหลังปิดหน้าเขียน */
   document.documentElement.style.setProperty('--kb','0px');
+  if(restore && sheetReturnFocus){
+    const el=sheetReturnFocus; sheetReturnFocus=null;
+    (el.isConnected&&el.getClientRects().length?el:$('#btnWrite')).focus({preventScroll:true});
+  }
 }
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheet);
+addEventListener('keydown',e=>{
+  if(!sheetOpen) return;
+  if(e.key==='Escape'){ e.preventDefault(); closeSheet(); return; }
+  if(e.key!=='Tab') return;
+  const el=$('#'+sheetOpen), items=[...el.querySelectorAll('button,input,textarea,select,a[href],[tabindex]')]
+    .filter(n=>!n.disabled&&n.tabIndex>=0&&n.getClientRects().length);
+  if(!items.length){ e.preventDefault(); el.focus(); return; }
+  const first=items[0], last=items[items.length-1], active=document.activeElement;
+  if(e.shiftKey&&(active===first||!items.includes(active))){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&(active===last||!items.includes(active))){ e.preventDefault(); first.focus(); }
+});
 
 /* ---------- ปัดหมุนโลก ---------- */
 let tapX=0, tapY=0, tapT=0;
@@ -5179,14 +5893,20 @@ function sanitizePort(o){
    gave = เราส่งที่อยู่ของเรากลับไปให้เขาแล้วหรือยัง
    ⚠️ ขั้นนี้รู้ได้แค่ว่า *เราส่งไปแล้ว* ไม่รู้ว่า *เขาเก็บไว้ไหม* — ป้ายต้องพูดตามที่รู้จริง */
 Object.assign(store,{
-  ports(){ try{ return JSON.parse(LS.get(K.PORTS)||'[]'); }catch(e){ return []; } },
+  ports(){ return readList(K.PORTS,hydratePort); },
   putPort(p){
     const a=this.ports(), i=a.findIndex(x=>x.i===p.i);
-    if(i>=0) a[i]=Object.assign(a[i],p); else a.push(Object.assign({gave:0,at:Date.now()},p));
-    LS.set(K.PORTS, JSON.stringify(a)); return p;
+    const clean=hydratePort(Object.assign({gave:0,at:Date.now()},i>=0?a[i]:{},p));
+    if(!clean) return null;
+    if(i>=0) a[i]=clean; else a.push(clean);
+    storageNotice(LS.set(K.PORTS,JSON.stringify(a))); return clean;
   },
-  delPort(id){ LS.set(K.PORTS, JSON.stringify(this.ports().filter(x=>x.i!==id))); }
+  delPort(id){ return storageNotice(LS.set(K.PORTS,JSON.stringify(this.ports().filter(x=>x.i!==id)))); }
 });
+function hydratePort(p){
+  const clean=sanitizePort(p); if(!clean) return null;
+  return Object.assign(clean,{gave:p.gave?1:0,at:_num(p.at,0,Date.now()+864e5,Date.now())});
+}
 
 /* ---------- อากาศ ณ จุดหนึ่ง จากแคชลมก้อนเดิม ----------
    ⚠️ ราคา 0 คำขอ ถ้าจุดนั้นอยู่ในกล่องแคช (ข้อ 99.6) · นอกกล่อง = ไม่รู้ ซึ่งพูดตรง ๆ ได้
@@ -5384,7 +6104,9 @@ function stars(ctx,dt){
   const cloud = RAIN_HERE>0 ? Math.max(.06, 1-clamp(RAIN_HERE*.95,0,.94)) : 1;
   if(cloud<=.07 && RAIN_HERE>1.2) return;      /* ฝนหนักจริง ไม่ต้องเสียเฟรมวาดของที่มองไม่เห็น */
 
-  for(const p of STARS){
+  const starCount=qualityCount(STARS.length,'distant');
+  for(let i=0;i<starCount;i++){
+    const p=STARS[i];
     const px=p.x*W, py=p.y*H;
     if(Math.hypot(px-G.CX,py-G.CY)<keep) continue;      /* ลูกโลกกินที่ตรงนั้นอยู่ */
     /* ยิ่งใกล้ดวงอาทิตย์ ฟ้ายิ่งสว่าง ดาวยิ่งหาย — ระยะบนจอ ไม่ใช่ระยะจริง */
@@ -5417,6 +6139,7 @@ function stars(ctx,dt){
   /* ---- ดาวตก ----
      ⛔ เป็นสิ่งเดียวในฉากที่ไม่ได้มาจากของจริง และนั่นเป็นการตัดสินใจ (ข้อ 174.5)
         ฝนดาวตกจริงมีปีละไม่กี่ครั้ง ผูกกับของจริงแล้วผู้ใช้แทบไม่มีวันเห็น */
+  if(REDUCED){ SH_ONE=null; return; }
   starNext-=dt;
   if(starNext<=0){ SH_ONE=mkShoot(); starNext=STAR.every*(.6+Math.random()*.8); }
   if(!SH_ONE) return;
@@ -5483,11 +6206,13 @@ function dust(ctx,dt){
      ⓘ อย่าลืมว่า p.a (.25-1) คูณซ้ำอีกชั้น ความเร็วจริงจึงเหลือราวสองในสาม
      เป้าหมาย: ข้ามจอราวหนึ่งนาทีครึ่งที่ลมปกติ — ช้าพอจะสงบ แต่เห็นว่าเคลื่อน */
   const sp=(.010+clamp(nowSpd/45,0,1)*.040)*dt;
+  const visibleDust=qualityCount(DUST.length,'foreground');
   ctx.fillStyle='rgba('+SKIN.dust+',1)';
   DUST.forEach((p,i)=>{
     p.x+=vx*sp*p.a; p.y+=vy*sp*p.a;
     if(p.x<-.05)p.x=1.05; if(p.x>1.05)p.x=-.05;
     if(p.y<-.05)p.y=1.05; if(p.y>1.05)p.y=-.05;
+    if(i>=visibleDust)return;
     /* หายใจช้า ๆ ไม่พร้อมกัน — ฝุ่นจริงไม่กะพริบเป็นจังหวะเดียว */
     /* ⚠️ ไล่มาสามค่าแล้ว และสองค่าแรกมาจากการวัดที่ผิดพิกัด (ข้อ 154.3 · 156)
          .030-.070  →  7/255   เท่ากับไม่มีอยู่จริง
@@ -5579,7 +6304,7 @@ function snow(ctx,dt){
   const on=snowNow();
   snowT+=dt;
   if(on && WIND_DIR!==null){
-    const n=Math.round(clamp(RAIN_HERE*26,8,42));
+    const n=Math.max(4,qualityCount(Math.round(clamp(RAIN_HERE*26,8,42)),'weather'));
     while(SNOW.length<n) SNOW.push(mkFlake());
     SNOW.length=n;
     const th=(WIND_DIR+180)*RAD;
@@ -5638,7 +6363,7 @@ function snow(ctx,dt){
    ⓘ นาน ๆ ที ตามที่กอล์ฟสั่ง — 14-46 วินาที ไม่ใช่ทุกสองสามวินาที */
 let boltNext=6+Math.random()*20, boltA=0;
 function bolt(ctx,dt){
-  if(!thunderNow()){ boltA=0; return; }
+  if(REDUCED || !thunderNow()){ boltA=0; return; }
   boltNext-=dt;
   if(boltNext<=0){ boltA=1; boltNext=14+Math.random()*32; }
   if(boltA<=0) return;
@@ -5675,7 +6400,7 @@ function rain(ctx,dt){
         ⓘ ฝนแข็งตัว (wcx 2) ยังใช้เส้นฝน ถูกแล้ว เพราะมันตกลงมาเป็นน้ำ */
   if(snowNow()) return;
   /* 0.1 mm = พรำ · 1.8 mm = ตกหนักสุดของวันนี้ — คุมไม่ให้เกิน 40 เส้น */
-  const n=Math.round(clamp(RAIN_HERE*22,6,40));
+  const n=Math.max(4,qualityCount(Math.round(clamp(RAIN_HERE*22,6,40)),'weather'));
   while(RAIN.length<n) RAIN.push({x:Math.random(), y:Math.random(), s:.6+Math.random()*.7});
   RAIN.length=n;
   const th=(WIND_DIR+180)*RAD;
@@ -5696,7 +6421,7 @@ function rain(ctx,dt){
          ปล่อยไว้จะกลายเป็นแถบเดือด ไม่ใช่ฝนกระทบพื้น */
       /* ⚠️ ยกขึ้นเหนือผิว 3px — วงแบน .30 ทำให้ครึ่งบนสูงแค่ราว 3px
          ถ้าวางที่ขอบพอดี ครึ่งล่างจมหายไปในวัตถุจนแทบไม่เหลืออะไรให้เห็น */
-      if(SPLASH.length<14)
+      if(SPLASH.length<qualityCount(14,'weather'))
         SPLASH.push({x:p.x*W, y:hit.y-3, t:0,
                      life:.34+Math.random()*.26, w:.55+p.s*.6});
       p.y=-.05; p.x=Math.random();
@@ -5736,17 +6461,39 @@ function grain(ctx){
   ctx.drawImage(GRAIN,0,0);
 }
 
-let _lastFrame=0;
-function renderGlobe(){
-  sctx.clearRect(0,0,W,H);
-  G.step();
-  paintSky();
+/* Globe layers share one ephemeral frame. Only preparation reads records;
+   drawing keeps the original environment → world/fog → weather → wind/routes
+   → letters order. Position caches live for this frame, never in persistence. */
+function globeFramePosition(rec){
+  return rec.position||(rec.position=posVAt(rec.L,rec.st.prog));
+}
+function prepareGlobeJourneys(frame){
+  const list=store.letters();
+  /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
+  if(PREVIEW){
+    const P=list.find(x=>x.id===PREVIEW.id);
+    SUN_MS = P ? P.s+PREVIEW.h*3600000 : null;
+    if(!P) previewOff();
+  }
+  frame.wallTime=Date.now();
+  const all=[], flying=[];
+  list.forEach(L=>{
+    const st=letterState(L,nowFor(L,frame.wallTime));
+    const rec={L,st,A:llOf(L.f),B:llOf(L.t)};
+    all.push(rec);
+    if(!st.arrived&&!st.gone) flying.push(rec);
+  });
+  frame.all=all;frame.flying=flying;
+  frame.sel=frame.selectedId ? all.find(x=>x.L.id===frame.selectedId) : null;
+
+}
+function renderGlobeEnvironment(frame){
+  const sctx=frame.ctx;
   /* ⚠️ ชั้นหลังลูกโลก วาดก่อนเสมอ เรียงจากไกลไปใกล้
      ดาว → เนื้อกระดาษ (พื้นผิว) → ฝุ่น → ฝน/หิมะ → ฟ้าคะนอง → เงา → ลูกโลกทับทั้งหมด
      ⛔ ฝนอยู่ *หลัง* ลูกโลก แม้ตามความจริงมันตกอยู่ระหว่างเรากับลูกโลก
         เพราะกฎของหน้านี้คือลูกโลกต้องเด่นที่สุด — ฝนบังหน้าจะแย่งไป */
-  const now=performance.now();
-  const dt=Math.min(.05,(now-_lastFrame)/1000)||0; _lastFrame=now;
+  const dt=frame.ambientDt;
   stars(sctx,dt);         /* ⛔ ก่อน grain — ดาวอยู่ไกลกว่าทุกอย่างในฉาก (ข้อ 176) */
   grain(sctx);
   dust(sctx,dt);
@@ -5756,22 +6503,9 @@ function renderGlobe(){
   splash(sctx,dt);
   bolt(sctx,dt);          /* ⛔ ต้องอยู่ *ก่อน* ลูกโลก ไม่งั้นฟ้าสว่างฉาบทับลูกโลกทั้งใบ */
   globeShade(sctx);
-  const list=store.letters();
-  /* นาฬิกาแสงต้องเดินตามเวลาที่กำลังดูอยู่ ไม่ใช่เวลาจริง ตอนอยู่ในโหมดจำลอง */
-  if(PREVIEW){
-    const P=list.find(x=>x.id===PREVIEW.id);
-    SUN_MS = P ? P.s+PREVIEW.h*3600000 : null;
-    if(!P) previewOff();
-  }
-  const all=[], flying=[];
-  list.forEach(L=>{
-    const st=letterState(L,nowFor(L));
-    const rec={L,st,A:llOf(L.f),B:llOf(L.t)};
-    all.push(rec);
-    if(!st.arrived&&!st.gone) flying.push(rec);
-  });
-  const sel = selected ? all.find(x=>x.L.id===selected) : null;
-
+}
+function renderGlobeWorld(frame){
+  const sctx=frame.ctx,sel=frame.sel;
   /* ---------- ชั้นที่หมอกบังได้: โลก + อากาศบนผิวโลก ---------- */
   G.sphere(sctx);
   /* พายุไม่ถูกวาดตรงนี้อีกแล้ว (ข้อ 62.7) — มันเป็นกระแสวนในสนามลม
@@ -5785,12 +6519,15 @@ function renderGlobe(){
   let hole=null;
   /* ตอนย้อนดู ฉบับที่ถึงแล้วต้องมีวงเปิดเหมือนกำลังบินจริง — st มาจากเวลาที่กำลังดูอยู่แล้ว */
   if(sel && !sel.st.arrived && !sel.st.gone){
-    const p=G.pipeV(posVAt(sel.L,sel.st.prog));
+    const p=G.pipeV(globeFramePosition(sel));
     const lg=sel.L.lg&&sel.L.lg[sel.st.legIdx];
     if(p.z>=-0.05) hole={x:p.x, y:p.y, r:G.R*Math.sin(revealKm(sel.L, lg?lg[6]:0)/ER)};
   }
   G.fog(sctx,hole);
   G.restoreNight(sctx,hole);
+}
+function renderGlobeWeather(frame){
+  const sctx=frame.ctx,sel=frame.sel;
   /* ข้อ 31 — ลมทะลุหมอกเสมอ จึงต้องวาดหลังลบความทึบ
      เฉพาะฉบับที่เลือก ไม่งั้นหลายเส้นทางจะทับกันจนอ่านไม่ออกว่าลมไปทางไหน */
   if(sel && !sel.st.arrived && !sel.st.gone){
@@ -5814,13 +6551,18 @@ function renderGlobe(){
     G.snowFall(sctx, rm, 1);
     G.iceFall(sctx, rm, 1);
     G.bolts(sctx, sel.L, sel.st);
-    G.streams(sctx, driftStreams(sel.L, sel.st.prog), 1);
   }
 
+}
+function renderGlobeRoutes(frame){
+  const sctx=frame.ctx,all=frame.all,sel=frame.sel,selected=frame.selectedId;
+  // Wind remains above the cloud/fog layers, before trails and endpoint marks.
+  if(sel&&!sel.st.arrived&&!sel.st.gone)G.streams(sctx,driftStreams(sel.L,sel.st.prog),1);
   HITS.length=0;
   /* ---------- ชั้นจดหมาย: อยู่เหนือหมอกเสมอ ----------
      หมอกปิดโลก ไม่ได้ปิดจดหมาย · ข้อ 7 หน้าเริ่มต้น = หมอก + จุดทอง + จุดปลายทาง */
-  all.forEach(({L,st,A,B})=>{
+  all.forEach(rec=>{
+    const {L,st,A,B}=rec;
     /* ⚠️ ชดเชยหมอกที่ลดลง (ข้อ 139) — พื้นชัดขึ้นแล้วรอยเด่นน้อยลง 12%
        วัดด้วยการเทียบภาพก่อน/หลังวาดรอย: .48 เคยได้ 119.8 ที่หมอก .72
        พอหมอกเป็น .48 เหลือ 105.6 · ต้องใช้ .58 ถึงจะกลับมา 120.6
@@ -5833,10 +6575,16 @@ function renderGlobe(){
       G.node(sctx,G.pipe(A.lat,A.lng),false);
     }
     G.node(sctx,G.pipe(B.lat,B.lng),true);
-    if(st.gone) G.ghost(sctx,G.pipeV(posVAt(L,st.prog)));
+    if(st.gone) G.ghost(sctx,G.pipeV(globeFramePosition(rec)));
   });
-  flying.slice(0,CFG.MAX_ANIM).forEach(({L,st})=>{
-    const p=G.pipeV(posVAt(L,st.prog));
+}
+function renderGlobeLetters(frame){
+  const sctx=frame.ctx,flying=frame.flying,selected=frame.selectedId;
+  const activePaper=new Set();
+  flying.slice(0,CFG.MAX_ANIM).forEach(rec=>{
+    const {L,st}=rec;
+    const p=G.pipeV(globeFramePosition(rec));
+    const routeX=p.x,routeY=p.y;
     const pulse=1;
     /* ---------- จดหมายที่ไปต่อไม่ได้ (ข้อ 96) ----------
        ของเดิมกะพริบอยู่กับที่ แล้วเขียนว่า "จอดรอให้พายุสงบ"
@@ -5873,21 +6621,44 @@ function renderGlobe(){
        ไม่งั้นเส้นในจังหวัดจะไม่มีวันเห็นกระดาษ เพราะซูมพอดีของมันอยู่ที่ 16 เท่าแล้ว */
     const fitz = selected===L.id ? G.fitZoom(fitKm(L)) : 0;
     const paper = fitz ? clamp(G.zoom/fitz-1.3, 0, 1) : 0;
-    if(p.z>=0) HITS.push({id:L.id,x:p.x,y:p.y});
+    const leg=L.lg&&L.lg[st.legIdx];
+    const motion=paper>0&&p.z>=0?globePaperForLetter(L,st,globeFramePosition(rec),frame.visualTime,REDUCED):null;
+    if(motion)activePaper.add(L.id);
+    // Blend the glide in as the dot becomes paper; tapping follows its visible center.
+    if(motion){
+      // Visible paper owns its wind response; blend out the older held-dot cue.
+      motion.x=(motion.x-(p.x-routeX))*paper;
+      motion.y=(motion.y-(p.y-routeY))*paper;
+    }
+    if(p.z>=0) HITS.push({id:L.id,x:p.x+(motion?motion.x:0),y:p.y+(motion?motion.y:0)});
     if(paper<1) G.dot(sctx,p,pulse*(1-paper), selected===L.id);
     if(paper>0 && p.z>=0){
-      const wnd=(L.lg&&L.lg[st.legIdx]) ? clamp(L.lg[st.legIdx][2]/90,.1,1) : .3;
+      const wnd=leg?clamp(leg[2]/90,.1,1):.3;
       const ps=26+40*paper;
       sctx.save(); sctx.globalAlpha=paper;
-      drawFlutter(sctx,p.x,p.y,ps*.72,ps,T,wnd,0,null);
+      drawFlutter(sctx,p.x,p.y,ps*.72,ps,frame.visualTime,wnd,motion?motion.condition.age:0,null,motion);
       sctx.restore();
     }
   });
-  flying.slice(CFG.MAX_ANIM).forEach(({L,st})=>{
-    const q=G.pipeV(posVAt(L,st.prog));
+  for(const id of GLOBE_PAPER_STATES.keys())if(!activePaper.has(id))GLOBE_PAPER_STATES.delete(id);
+  flying.slice(CFG.MAX_ANIM).forEach(rec=>{
+    const {L,st}=rec;
+    const q=G.pipeV(globeFramePosition(rec));
     if(q.z>=0) HITS.push({id:L.id,x:q.x,y:q.y});
     G.dot(sctx,q,1,selected===L.id);
   });
+}
+function renderGlobe(dt=1/60){
+  const frame={ctx:sctx,width:W,height:H,ambientDt:REDUCED?0:dt,visualTime:T,selectedId:selected};
+  frame.ctx.clearRect(0,0,frame.width,frame.height);
+  G.step(dt);
+  paintSky();
+  renderGlobeEnvironment(frame);
+  prepareGlobeJourneys(frame);
+  renderGlobeWorld(frame);
+  renderGlobeWeather(frame);
+  renderGlobeRoutes(frame);
+  renderGlobeLetters(frame);
 }
 
 /* ---------- ท้องฟ้าในหน้าพยากรณ์ ---------- */
@@ -5916,10 +6687,9 @@ function renderSky(){
 }
 
 /* ---------- loop ---------- */
-function frame(now){
-  const dt=Math.min(.05,(now-lastFrame)/1000); lastFrame=now;
-  if(!document.hidden){
-    T += REDUCED ? dt*0.25 : dt;
+function frame(now,dt){
+    const motionDt=REDUCED?0:dt;
+    T += motionDt;
     if(PREVIEW && PREVIEW.play){
       const L=store.letters().find(x=>x.id===PREVIEW.id);
       if(L){
@@ -5928,10 +6698,40 @@ function frame(now){
         syncPlay();
       }else previewOff();
     }
-    if(sheetOpen==='forecast'||sheetOpen==='sent') renderSky();
-    else if(!sheetOpen) renderGlobe();
-  }
-  requestAnimationFrame(frame);
+    /* Exactly one active scene draws. Helpers never schedule their own loop. */
+    if(dPHASE!=='off') dTick(dt);
+    else if(aPHASE!=='off') aTick(dt);
+    else if(xPHASE!=='off') xTick(dt);
+    else if(sheetOpen==='forecast'||sheetOpen==='sent') renderSky();
+    else if(!sheetOpen) renderGlobe(dt);
+    else if(sheetOpen==='compose') writeLoop(motionDt);
+    if(sheetOpen==='compose'||sheetOpen==='read') candleStep(motionDt);
+}
+const RENDER=createRenderRuntime({request:cb=>requestAnimationFrame(cb),cancel:id=>cancelAnimationFrame(id),
+  hidden:()=>document.hidden,draw:frame,observe:sample=>QUALITY.observe({...sample,
+    scene:heroActive()?'hero':sheetOpen==='forecast'||sheetOpen==='sent'?'forecast':!sheetOpen?'globe':'sheet'})});
+function heroActive(){ return dPHASE!=='off'||aPHASE!=='off'||xPHASE!=='off'; }
+function resetHero(){
+  const wasActive=heroActive();
+  if(releaseSession){ releaseSession.tx.cancel(); releaseSession=null; }
+  $('#releaseActions').hidden=true;
+  dPHASE=aPHASE=xPHASE='off'; dRAF=aRAF=xRAF=null;
+  dDone=aDone=xDone=null; dDrag=false; dHold=false;
+  $('#drift').classList.remove('on'); document.body.classList.remove('drifting');
+  resetReleaseLight();
+  stage.style.opacity='1';
+  if(wasActive) previewOff();
+}
+function setMotionPreference(reduced){
+  REDUCED=!!reduced; document.documentElement.classList.toggle('rm',REDUCED);
+  if(REDUCED){ SH_ONE=null; boltA=0; G.vX=G.vY=0; }
+  const paper=$('#cSheet'); if(paper) paper.style.transform='none';
+  candleSet(50,-7,.15); RENDER.start();
+}
+function syncMotion(){ setMotionPreference(MOTION_QUERY&&MOTION_QUERY.matches); }
+if(MOTION_QUERY){
+  if(MOTION_QUERY.addEventListener) MOTION_QUERY.addEventListener('change',syncMotion);
+  else if(MOTION_QUERY.addListener) MOTION_QUERY.addListener(syncMotion);
 }
 
 /* ---------- หน้าแรก: บรรทัดสถานะ · เมนู · กล่องจดหมาย (ข้อ 100.2) ----------
@@ -6528,16 +7328,17 @@ async function openPort(pt){
   if(viewPort!==pt) return;
   $('#p1Sky').textContent = w
     ? wxWord(w)+' · ลม '+Math.round(w.spd)+' กม./ชม.'
-    : 'ไม่รู้ฟ้าที่นั่น — อยู่นอกเขตที่แอปเก็บลมไว้';
+    : 'ยังไม่มีข้อมูลอากาศที่ใช้ได้สำหรับที่นั่น';
 }
 
-$('#btnMenu').onclick=()=>{ syncBugNote(); paintSegs(); openSheet('menu'); };
+$('#btnMenu').onclick=()=>{ syncBugNote(); paintSegs(); paintQuality(); openSheet('menu'); };
 /* ⚠️ ผูกที่ตัวกลุ่มไม่ใช่ทีละปุ่ม — ปุ่มถูกวาดจาก markup คงที่ก็จริง
    แต่ event เดียวคุมทั้งสามอันได้ และเพิ่มทางเลือกที่สี่ทีหลังไม่ต้องแก้ตรงนี้ */
 $('#segScheme').onclick=e=>{
   const b=e.target.closest('button[data-v]'); if(!b) return;
   setSchemePref(b.dataset.v);
 };
+$('#segQuality').onclick=e=>{const b=e.target.closest('button[data-v]');if(b)setRenderQuality(b.dataset.v);};
 $('#mAccount').onclick=()=>{ showMe(); openSheet('vault'); };
 $('#mInstall').onclick=openInstall;
 
@@ -6775,7 +7576,15 @@ const QR=(()=>{
 })();
 
 /* ---------- แจ้งปัญหา (ข้อ 115.2) ---------- */
-function errList(){ try{ return JSON.parse(localStorage.getItem(K_ERR)||'[]'); }catch(e){ return []; } }
+function errList(){
+  try{
+    const a=JSON.parse(LS.get(K_ERR)||'[]');
+    return Array.isArray(a)?a.slice(-12).map(e=>({
+      t:/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(e.t)?e.t:'—',
+      k:e.k==='promise'?'promise':'error',m:diagnosticMessage(e.m),w:diagnosticLocation(e.w)
+    })):[];
+  }catch(e){ return []; }
+}
 function bugText(){
   const errs=errList();
   const L=[
@@ -6820,7 +7629,7 @@ function openBug(){
     catch(e){ toast('กดค้างที่ข้อความเพื่อคัดลอกเอง'); }
   };
   $('#btnBugClear').onclick=()=>{
-    try{ localStorage.removeItem(K_ERR); }catch(e){}
+    try{ DRIFT_LOCAL.removeItem(K_ERR); }catch(e){}
     $('#bugInfo').textContent=bugText(); syncBugNote(); toast('ล้างแล้ว');
   };
 }
@@ -6861,13 +7670,16 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 /* ---------- ค้นหาสถานที่ ---------- */
 function wireSearch(inputSel,hitsSel,onPick){
   const inp=$(inputSel), hits=$(hitsSel);
-  let timer=null;
+  let timer=null, request=null, revision=0;
   inp.addEventListener('input',()=>{
-    clearTimeout(timer); const q=inp.value.trim();
+    clearTimeout(timer); if(request) request.abort();
+    const rev=++revision, q=inp.value.trim();
     if(q.length<2){ hits.innerHTML=''; return; }
     timer=setTimeout(async()=>{
+      const ac=new AbortController(); request=ac;
       try{
-        const rs=await geocode(q);
+        const rs=await geocode(q,ac.signal);
+        if(rev!==revision) return;
         hits.innerHTML='';
         rs.forEach(r=>{
           const b=document.createElement('button');
@@ -6877,7 +7689,8 @@ function wireSearch(inputSel,hitsSel,onPick){
           hits.appendChild(b);
         });
         if(!rs.length) hits.innerHTML='<div class="hit"><small>ไม่พบสถานที่นี้</small></div>';
-      }catch(e){ hits.innerHTML='<div class="hit"><small>ค้นหาไม่ได้ — ตรวจอินเทอร์เน็ต</small></div>'; }
+      }catch(e){ if(rev===revision && !ac.signal.aborted) hits.innerHTML='<div class="hit"><small>ค้นหาไม่ได้ — ตรวจอินเทอร์เน็ต</small></div>'; }
+      finally{ if(request===ac) request=null; }
     },450);
   });
 }
@@ -6936,12 +7749,20 @@ function askOff(){ sendOK=false; $('#cAsk').classList.remove('on'); $('#btnSend'
 function openCompose(){
   const me=store.me();
   if(me) $('#cFrom').value=me.name||'';
+  const draft=readPreparedDraft();
+  if(!$('#cBody').value.trim()&&draft&&me&&draft.ownerPid===me.pid){
+    const rec=draft.record;
+    $('#cTo').value=rec.t.n; $('#cBody').value=rec.bd; $('#cFrom').value=rec.f.n;
+    $('#cPlace').value=rec.t.p; pendTo={lat:rec.t.la,lng:rec.t.lo,place:rec.t.p};
+    pendPortTo=draft.tp?store.ports().find(p=>p.i===draft.tp)||null:null;
+    $('#cBody').style.height='';
+  }
   syncOriginNote(); syncDist(); askOff();
   typeMode=false; fillWho();
   openSheet('compose');
   document.documentElement.style.setProperty('--kb','0px');
   paintWritePaper(); syncKB(); windHere(); candleOn();
-  if(!wRaf) writeLoop();
+  RENDER.start();
 }
 /* ตัวนับโผล่เฉพาะตอนใกล้เพดาน — นั่งนับให้ดูตลอดเวลาทำให้คนเขียนสั้นลงโดยไม่จำเป็น */
 $('#cBody').addEventListener('input',()=>{
@@ -6957,6 +7778,7 @@ let penDown=false, wTick=0, wRaf=null, WIND_HERE=null, WIND_DIR=null, WIND_GUST=
 /* ⛔ ปริมาณฝนไม่บอกชนิด — หิมะก็ทำให้ precipitation > 0 เหมือนกัน
       ก่อนข้อ 175 ฉากจึงวาดเส้นฝนทับหิมะโดยไม่มีอะไรฟ้อง */
 let WC_HERE=null;
+let _windEpoch=0, _windUntil=0, _windRequest=null;
 /* ⚠️ windHere() ล้มเหลวได้สี่ทางและทุกทางเงียบสนิท — ฝุ่น ฝน กระดาษหายใจ เปลวเทียน
       หายพร้อมกันโดยไม่มีอะไรฟ้อง (ตระกูลเดียวกับข้อ 104.5)
    ⓘ ค่านี้ไปโผล่ในหน้าแจ้งปัญหา เพื่อให้ตรวจจากมือถือได้โดยไม่ต้องเปิด console */
@@ -7012,20 +7834,20 @@ if(window.visualViewport){
 
    ⚠️ และหายใจเฉพาะตอนรู้ลมจริง — ถ้าดึงลมไม่ได้ กระดาษนิ่งไปเลย
    ดีกว่าแกว่งด้วยตัวเลขที่แต่งขึ้น ซึ่งจะเป็นการโกหกเล็ก ๆ ที่ไม่มีใครจับได้ */
-function breatheWrite(){
+function breatheWrite(dt=1/60){
   const box=$('#cSheet'); if(!box) return;
-  if(WIND_HERE===null || penDown){ box.style.transform='none'; return; }
+  if(REDUCED || WIND_HERE===null || penDown){ box.style.transform='none'; return; }
   const w=clamp(WIND_HERE/45,0,1);
-  wTick+=1/60;
+  wTick+=dt;
   const a=0.7+w*2.3;
   const rx=Math.sin(wTick*0.62)*a*0.9, ry=Math.sin(wTick*0.47+1.3)*a;
   const rz=Math.sin(wTick*0.31+2.6)*a*0.25, ty=Math.sin(wTick*0.53+0.7)*a*0.9;
   box.style.transform='perspective(1400px) translateY('+ty.toFixed(2)+'px) '
     +'rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) rotateZ('+rz.toFixed(2)+'deg)';
 }
-function writeLoop(){
+function writeLoop(dt=1/60){
   if(sheetOpen!=='compose'){ wRaf=null; return; }
-  wRaf=requestAnimationFrame(writeLoop); breatheWrite();
+  breatheWrite(dt);
 }
 
 /* ---------- แสงเทียน (ข้อ 134) ----------
@@ -7039,12 +7861,11 @@ function candleSet(x,y,a){
   r.setProperty('--cnd-y', y.toFixed(1)+'%');
   r.setProperty('--cnd-a', a.toFixed(3));
 }
-function candleStep(){
-  if(!DARK_MODE || !SCHEME.matches || (sheetOpen!=='compose' && sheetOpen!=='read')){ cndRaf=null; return; }
-  cndRaf=requestAnimationFrame(candleStep);
-  if(WIND_HERE===null){ candleSet(50,-7,.15); return; }   /* ไม่รู้ลม = เปลวนิ่ง */
+function candleStep(dt=1/60){
+  if(!DARK_MODE || !schemeNow || (sheetOpen!=='compose' && sheetOpen!=='read')){ cndRaf=null; return; }
+  if(REDUCED || WIND_HERE===null){ candleSet(50,-7,.15); return; }   /* ไม่รู้ลม / reduced motion = เปลวนิ่ง */
   const w=clamp(WIND_HERE/45,0,1);
-  cndTick+=1/60;
+  cndTick+=dt;
   const k=0.5+w*2.4;
   candleSet(50+Math.sin(cndTick*0.71)*k*1.5,
             -7+Math.sin(cndTick*0.53+1.1)*k*0.7,
@@ -7052,7 +7873,7 @@ function candleStep(){
 }
 function candleOn(){
   windHere();                       /* หน้าอ่านไม่เคยเรียก — เทียนจะนิ่งตลอดถ้าไม่เรียกที่นี่ */
-  if(!cndRaf) candleStep();
+  RENDER.start();
 }
 
 /* ลม ณ ต้นทาง — อ่านจากแคชลมก้อนเดิมที่แอปโหลดอยู่แล้ว ไม่ใช่คำขอใหม่
@@ -7061,21 +7882,28 @@ function candleOn(){
    ⚠️ ต้องล้างทั้งสี่ค่า ไม่ใช่แค่ WIND_HERE — ไม่งั้นได้ลมที่ใหม่ปนฝนที่เก่า
    ⓘ ราคายังคง 0 คำขอ เพราะอ่านจากแคชก้อนเดิมที่โหลดไว้แล้ว (ข้อ 172.5) */
 function windAgain(){
-  WIND_HERE=null; WIND_DIR=null; WIND_GUST=null; RAIN_HERE=null;
+  _windEpoch++; _windUntil=0; _windRequest=null;
+  WIND_HERE=null; WIND_DIR=null; WIND_GUST=null; RAIN_HERE=null; WC_HERE=null;
   DUST.length=0;                    /* ฝุ่นเก่าเดินตามลมเก่า ปล่อยให้ dust() ก่อใหม่ */
   WH_NOTE='ยังไม่ได้เรียก';
   windHere();
 }
 
 async function windHere(){
-  if(WIND_HERE!==null){ return; }
+  if(Date.now()<_windUntil) return;
+  if(_windRequest) return _windRequest;
   const me=store.me();
   if(!me){ WH_NOTE='ยังไม่มีข้อมูลตัวเอง'; return; }
   if(me.lat==null){ WH_NOTE='ยังไม่ได้ตั้งต้นทาง'; return; }
   /* ⚠️ ของเดิมอ่าน s[0].spd ทั้งที่ wcSeries คืน {hourly:{...}} ไม่ใช่อาร์เรย์
      เงื่อนไขจึงเป็นเท็จเสมอ และกระดาษไม่เคยหายใจเลยตั้งแต่ข้อ 102
      บั๊กแบบนี้ไม่มีใครฟ้อง เพราะ "ไม่รู้ลม = นิ่ง" เป็นพฤติกรรมที่ตั้งใจอยู่แล้ว */
+  const epoch=_windEpoch;
+  WIND_HERE=null; WIND_DIR=null; WIND_GUST=null; RAIN_HERE=null; WC_HERE=null;
+  const job=(async()=>{
   const w=await wxAt(me.lat,me.lng);
+  if(epoch!==_windEpoch) return;
+  _windUntil=Date.now()+(w?WCACHE.TTL:30000);
   if(!w){ WH_NOTE='ต้นทางมีพิกัดแต่แคชลมให้ค่าไม่ได้'; return; }
   WH_NOTE='รู้ลมแล้ว';
   if(w && typeof w.spd==='number') WIND_HERE=w.spd;
@@ -7085,6 +7913,9 @@ async function windHere(){
   if(w && typeof w.gst==='number') WIND_GUST=w.gst;
   if(w && typeof w.pre==='number') RAIN_HERE=w.pre;
   if(w && typeof w.wc==='number') WC_HERE=w.wc;
+  })();
+  _windRequest=job;
+  try{ await job; }finally{ if(_windRequest===job) _windRequest=null; }
 }
 /* หิมะตกอยู่จริงไหม ณ ที่ที่ผู้ใช้ยืน — ต้องมีทั้งของที่ร่วงลงมา *และ* รหัสที่บอกว่าเป็นหิมะ */
 function snowNow(){ return RAIN_HERE>0 && WC_HERE!==null && wcx(WC_HERE)===1; }
@@ -7109,6 +7940,7 @@ addEventListener('orientationchange',()=>{ if(sheetOpen==='compose') setTimeout(
 
 
 async function doSend(){
+  if(preparingSend) return;
   const me=store.me();
   const to=$('#cTo').value.trim(), body=$('#cBody').value.trim(), from=$('#cFrom').value.trim();
   /* ⚠️ ฉบับแรกไม่ต้องมีผู้รับและไม่ต้องลงชื่อ (ข้อ 94.1)
@@ -7133,18 +7965,22 @@ async function doSend(){
   /* จำชื่อไว้ ไม่งั้นต้องพิมพ์ใหม่ทุกฉบับ ซึ่งข้อ 94.3 จัดว่าเป็นหนึ่งในสามจุดที่คนสะดุด */
   if(from && from!==me.name){ me.name=from; store.setMe(me); showMe(); }
   const btn=$('#btnSend'); btn.disabled=true; btn.textContent='กำลังถามสายลม…';
+  preparingSend=true; const epoch=++prepareEpoch;
   try{
     const A={lat:me.lat,lng:me.lng}, B={lat:pendTo.lat,lng:pendTo.lng};
     const dist=gcDist(A,B);
-    /* ดึงทางเดินลม 13×5 = 65 จุดในคำขอเดียว — แนวกลางคือชุด 13 จุดเดิม
-       Open-Meteo รับได้ถึง 400 พิกัดต่อคำขอ (ตรวจแล้ว) จึงไม่ต้องยิงสองรอบ */
+    /* 225 จุดรอบเส้นทาง + 13 จุดบนเส้นทาง; fetchWx เลือกแคช/สด
+       หลายพิกัดใน HTTP request เดียวก็ใช้งบ API ตามจำนวนพิกัด */
     const pts=wfPoints(A,B);
     const wx=await fetchWx(pts);
+    if(epoch!==prepareEpoch||sheetOpen!=='compose') return;
     const id=uid();
     const sim0=simulate(pts,wx,dist,0,id);
-    pending={ id, dist, pts, wx, A, B, me, to, from, body,
+    pending={ id, dist, pts, wx, A, B, me, to, from, body, preparedAt:Date.now(),
               place:pendTo.place, tp:(pendPortTo&&pendPortTo.i)||null,
               sim:sim0, sims:[sim0,null,null], ct:0 };
+    const draft={v:1,ownerPid:me.pid||'',preparedAt:pending.preparedAt,record:preparedRecord(pending),tp:pending.tp};
+    if(!LS.set(DRAFT_KEY,JSON.stringify(draft))) toast('เก็บร่างในเครื่องไม่ได้ — เก็บเป็นไฟล์ก่อนปิดแอป');
     showForecast();
     openSheet('forecast');
   }catch(e){
@@ -7153,7 +7989,7 @@ async function doSend(){
     if(m.indexOf('429')>=0) toast('สายลมกำลังยุ่ง — รอสักครู่แล้วลองใหม่');
     else if(m.indexOf('timeout')>=0) toast('ถามสายลมนานเกินไป — ลองใหม่อีกครั้ง');
     else toast('ถามสายลมไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่');
-  }finally{ btn.disabled=false; btn.textContent='ปล่อยให้ลมพา'; }
+  }finally{ preparingSend=false; btn.disabled=false; btn.textContent='ปล่อยให้ลมพา'; }
 }
 
 function showForecast(){
@@ -7239,27 +8075,56 @@ function ctLeft(){
   return Math.max(0, CFG.CT_QUOTA-used);
 }
 
-async function confirmSend(){
-  const p=pending; if(!p) return;
+function preparedRecord(p){
   const sim=p.sim;
-  const rec={
+  return {
     id:p.id,
     f:{n:p.from, la:coarseLat(p.me.lat), lo:coarseLat(p.me.lng), p:p.me.place},
     t:{n:p.to,   la:coarseLat(p.B.lat),  lo:coarseLat(p.B.lng),  p:p.place},
     s:Date.now(), th:sim.total, ct:p.ct, lg:sim.legs, lo:sim.lost, wf:sim.wf, bd:p.body
   };
+}
+function confirmSend(){
+  const p=pending; if(!p) return;
+  if(releaseSession) return;
+  const rec=preparedRecord(p);
   /* ⛔ ห้ามใส่ tp ลงใน rec — rec คือ *สิ่งที่เดินทาง* ทั้งลิงก์และไฟล์จดหมายถูกสร้างจากก้อนนี้
      รหัส port ของผู้รับต้องอยู่แค่ในสำเนาของผู้ส่ง ไม่ออกจากเครื่องนี้ (ข้อ 140.7)
      ⚠️ เดิมเขียน rec.tp=p.tp แล้วคอมเมนต์ว่า "ไม่ได้เข้าลิงก์" ซึ่งไม่จริง —
         ลิงก์ที่ถูกส่งต่อผิดคนจะพารหัส port ของผู้รับไปให้เขาเขียนถึงได้โดยเจ้าตัวไม่เคยให้
         ขัดกับที่หน้า mine เขียนไว้เองว่า "ไม่มีใครหาคุณเจอ ถ้าคุณไม่ให้เอง" */
-  store.put(Object.assign({dir:'out'}, rec, p.tp?{tp:p.tp}:{}));
-  /* ---------- บันทึกไม่ลง ต้องบอกตรงนี้ (ข้อ 115.1) ----------
-     ⚠️ ลิงก์ยังใช้ได้เสมอ เพราะมันพกจดหมายไปเอง — สิ่งที่หายคือ *สำเนาของผู้ส่ง*
-     ต้องพูดให้ตรงตามนั้น ไม่ใช่บอกว่า "ส่งไม่สำเร็จ" ซึ่งไม่จริงและทำให้เขาส่งซ้ำ */
-  if(store.saved===false)
-    toast('พื้นที่ในเครื่องเต็ม — จดหมายยังส่งได้ แต่จะไม่มีสำเนาเก็บไว้ ลองลบฉบับเก่าในกล่องจดหมาย');
-  const payload=await packPayload(rec);
+  const draft={v:1,ownerPid:p.me.pid||'',preparedAt:p.preparedAt,record:rec,tp:p.tp};
+  const draftSaved=LS.set(DRAFT_KEY,JSON.stringify(draft));
+  const previousSelected=selected, wasFirst=firstRun;
+  const tx=createReleaseTransaction(rec,{now:()=>Date.now(),pack:packPayload,
+    fresh:()=>Date.now()-p.preparedAt<=WCACHE.TTL,save:r=>saveReleasedRecord(r,p.tp)});
+  closeSheet();
+  openDrift(rec,()=>openSheet(wasFirst?'ask':'sent'));
+  const session=releaseSession={p,tx,previousSelected,wasFirst,draft};
+  dPHASE='prepare';
+  $('#releaseActions').hidden=false; $('#releaseBackup').hidden=draftSaved;
+  $('#releaseNow').disabled=true; $('#releaseBack').disabled=false;
+  $('#driftSub').textContent='สายลมกำลังพร้อม — กลับไปเขียนได้';
+  $('#drift').setAttribute('role','dialog'); $('#drift').setAttribute('aria-modal','true');
+  $('#drift').setAttribute('aria-labelledby','driftWord'); $('#drift').tabIndex=-1;
+  $('#drift').focus({preventScroll:true});
+  if(!draftSaved) toast('เก็บร่างในเครื่องไม่ได้ — เก็บเป็นไฟล์ก่อนปิดแอป');
+  warmRainMarks(rec,0,()=>releaseSession===session).then(async ready=>{
+    if(!ready||releaseSession!==session) return;
+    // A separate task keeps the remaining wind-curve build out of the release
+    // callback and out of the last weather-building time slice.
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(!ready||releaseSession!==session) return;
+    driftStreams(rec,0);
+    dPHASE='wait'; $('#releaseNow').disabled=false;
+    $('#driftSub').textContent='ปัดขึ้นเพื่อปล่อย';
+  }).catch(()=>{
+    if(releaseSession!==session) return;
+    cancelPreparedRelease(); toast('เตรียมภาพสายลมไม่สำเร็จ — ร่างยังอยู่ กลับมาลองอีกครั้ง');
+  });
+}
+function completeRelease(session,result){
+  const {p}=session, {rec,payload}=result, sim=p.sim;
   const base=location.href.split('#')[0];
   const url=base+'#'+payload;
   $('#sentSub').textContent='ถึง '+p.to+' · '+fmtDur(sim.total);
@@ -7281,15 +8146,21 @@ async function confirmSend(){
   $('#cBody').style.height=''; $('#cCount').textContent=''; $('#cCount').className='';
   $('#cDist').textContent=''; pendTo=null; pendPortTo=null;
   selected=rec.id; refreshDock();
-  /* ---------- องก์ปล่อย (ข้อ 44) ----------
-     จดหมายถูกบันทึกแล้วก่อนเริ่มแอนิเมชัน — ถ้าผู้ใช้ปิดแอปกลางทาง จดหมายก็ยังออกเดินทางแล้วจริง
-     ลูกโลกต้องมีจดหมายที่ "เพิ่งส่ง" อยู่จริง ไม่งั้นไม่มีหมอก ไม่มีริ้วลม ไม่มีจุดทอง */
-  closeSheet();
-  /* ⚠️ ฉบับแรกไม่มีใครให้ส่งลิงก์ไปหา หน้า "ออกเดินทางแล้ว" ที่มีลิงก์ให้คัดลอก
-     จึงเป็นคำตอบผิดคำถาม — พาไปที่คำถามเดียวที่สำคัญตอนนั้นแทน (ข้อ 94.1) */
-  const wasFirst=firstRun; firstRun=false;
-  openDrift(store.letters().find(x=>x.id===rec.id)||rec,
-            ()=>openSheet(wasFirst?'ask':'sent'));
+  pending=null; firstRun=false;
+  dLET=store.letters().find(x=>x.id===rec.id)||rec;
+  previewOn(dLET); if(PREVIEW){PREVIEW.h=0;PREVIEW.play=false;}
+}
+function cancelPreparedRelease(){
+  const session=releaseSession;
+  if(!session||session.tx.snapshot().phase==='committing'||!session.tx.cancel()) return;
+  const oldSelected=session.previousSelected;
+  resetHero(); pending=null; selected=oldSelected; previewOff(); refreshDock(); openCompose();
+}
+function exportPreparedDraft(){
+  const session=releaseSession; if(!session) return;
+  const archive={app:'letter-wind',v:2,me:session.p.me,letters:[],ports:[],draft:session.draft};
+  download(new Blob([JSON.stringify(archive,null,2)],{type:'application/json'}),'drift-draft.json');
+  toast('เก็บร่างเป็นไฟล์แล้ว');
 }
 
 /* ---------- อ่านจดหมาย ---------- */
@@ -7330,7 +8201,7 @@ function openRead(L){
   if(st.gone){
     stage.innerHTML='<div class="waiting"><b>สายลมพัดหลงทาง</b>จดหมายฉบับนี้ไม่ถึงปลายทาง<br>'
       +'มันหายไปกลางพายุเมื่อ '+fmtDur(st.elapsed)+'หลังออกเดินทาง<br><br>'
-      +'<span style="opacity:.7">ข้อความยังอยู่กับคุณ — คัดลอกไปเขียนใหม่ได้</span></div>'
+      +'<span style="opacity:.7">'+(L.dir==='out'?'ข้อความยังอยู่กับคุณ — คัดลอกไปเขียนใหม่ได้':'รอยการเดินทางยังเก็บอยู่บนลูกโลก')+'</span></div>'
       +(L.dir==='out'?'<div class="ptext" style="min-height:0;padding:0 4px">'+esc(L.bd)+'</div>':'');
   }else if(L.dir==='in' && !st.arrived){
     const pct=Math.round(st.prog*100);
@@ -7494,9 +8365,11 @@ async function ingest(payload){
   const L=Object.assign({dir},rec);
   const st=letterState(L,Date.now());
   if(st.arrived||st.gone) L.nf=1;          /* ถึงก่อนเปิดแล้ว ไม่ต้องเด้งเตือนซ้ำ */
-  store.put(L); refreshDock(); selected=L.id;
+  store.put(L); const saved=store.saved;
+  refreshDock(); selected=L.id;
   G.focus(llOf(L.t));
   openRead(L);
+  storageNotice(saved);
   return L;
 }
 async function receiveFromHash(){
@@ -7579,15 +8452,23 @@ function download(blob,name){
   a.href=URL.createObjectURL(blob); a.download=name;
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
+const ARCHIVE_PREFS=['lw.v1.intro','lw.v1.inst','lw.v1.scheme','lw.v1.quality','drift.wf'];
+const OWN_KEYS=[K.LETTERS,K.ME,K.PORTS,DRAFT_KEY,...ARCHIVE_PREFS,'drift.rgeo',K_ERR,'lw.probe','drift.lock'];
+function backupData(){
+  const settings={};
+  for(const key of ARCHIVE_PREFS){ const value=LS.get(key); if(value!==null) settings[key]=value; }
+  return {app:'letter-wind',v:2,at:new Date().toISOString(),me:store.me(),
+    letters:store.letters(),ports:store.ports(),settings,draft:readPreparedDraft()};
+}
 function exportJSON(auto){
-  const data={ app:'letter-wind', v:1, at:new Date().toISOString(), me:store.me(), letters:store.letters() };
+  const data=backupData();
   download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),
            'letter-wind-'+new Date().toISOString().slice(0,10)+'.json');
   if(!auto) toast('บันทึกไฟล์แล้ว');
 }
 /* จดหมายฉบับเดียวเป็นไฟล์ — ทางสำรองเมื่อลิงก์ใช้ไม่ได้ (แชทตัด / คนละ host) */
 function exportOne(rec){
-  const L=Object.assign({},rec); delete L.dir; delete L.read; delete L.nf;
+  const L=sanitizeRec(rec); if(!L) return toast('จดหมายไม่ถูกต้อง ส่งออกไม่ได้');
   download(new Blob([JSON.stringify({app:'letter-wind',v:1,letters:[L]},null,2)],{type:'application/json'}),
            'จดหมายถึง-'+(rec.t.n||'')+'.json');
   toast('บันทึกไฟล์จดหมายแล้ว');
@@ -7595,41 +8476,81 @@ function exportOne(rec){
 $('#btnExport').onclick=()=>exportJSON(false);
 $('#btnImport').onclick=()=>$('#fileIn').click();
 $('#btnCode').onclick=receiveFromCode;
+function importArchive(d){
+  if(!d||typeof d!=='object'||Array.isArray(d)||!Array.isArray(d.letters)
+     ||d.letters.length>DATA_LIMIT.RECORDS||(d.app&&d.app!=='letter-wind')
+     ||(d.v!=null && d.v!==1 && d.v!==2)) throw new Error('bad archive');
+  if(d.ports!=null && (!Array.isArray(d.ports)||d.ports.length>DATA_LIMIT.RECORDS)) throw new Error('bad ports');
+  const importedMe=d.me==null?null:sanitizeMe(d.me);
+  const importedDraft=d.draft==null?null:sanitizeDraft(d.draft);
+  if(d.draft!=null&&!importedDraft) throw new Error('bad draft');
+  if(d.me!=null && !importedMe) throw new Error('bad identity');
+  const mine=store.me()||importedMe;
+  const cur=store.letters(), ids=new Set(cur.map(l=>l.id));
+  let added=0;
+  for(const raw of d.letters){
+    const l=hydrateLetter(raw); if(!l) throw new Error('bad letter');
+    if(ids.has(l.id)) continue;
+    ids.add(l.id);
+    l.dir=(raw.dir==='out'||raw.dir==='in')?raw.dir:((mine&&mine.name&&l.f.n===mine.name)?'out':'in');
+    const st=letterState(l,Date.now());
+    if(st.arrived||st.gone) l.nf=true;
+    cur.push(l); added++;
+  }
+  const ports=store.ports(), portIds=new Set(ports.map(p=>p.i)); let addedPorts=0;
+  for(const raw of d.ports||[]){
+    const p=hydratePort(raw); if(!p) throw new Error('bad port');
+    if(!portIds.has(p.i)){ ports.push(p); portIds.add(p.i); addedPorts++; }
+  }
+  if(cur.length>DATA_LIMIT.RECORDS||ports.length>DATA_LIMIT.RECORDS) throw new Error('archive too large');
+  const entries=[[K.LETTERS,JSON.stringify(cur)],[K.PORTS,JSON.stringify(ports)]];
+  if(!store.me() && importedMe) entries.push([K.ME,JSON.stringify(importedMe)]);
+  if(importedDraft&&!readPreparedDraft()&&mine&&importedDraft.ownerPid===mine.pid)
+    entries.push([DRAFT_KEY,JSON.stringify(importedDraft)]);
+  if(d.settings!=null){
+    if(typeof d.settings!=='object'||Array.isArray(d.settings)) throw new Error('bad settings');
+    for(const key of ARCHIVE_PREFS){
+      const value=d.settings[key]; if(value==null) continue;
+      const valid=key==='lw.v1.scheme'?['auto','light','dark'].includes(value):key==='lw.v1.quality'?['auto','high','low'].includes(value):['0','1'].includes(value);
+      if(!valid) throw new Error('bad preference');
+      if(LS.get(key)===null) entries.push([key,value]);
+    }
+  }
+  const saved=LS.batch(entries); invalidateJourneyCaches();
+  return {added,addedPorts,saved};
+}
+function wipeLocalData(){
+  let ok=true;
+  for(const key of OWN_KEYS) if(!LS.del(key)) ok=false;
+  try{ DRIFT_SESSION.removeItem('lw.v1.splash'); }catch(e){ ok=false; }
+  LIST_CACHE.clear(); invalidateJourneyCaches();
+  return ok;
+}
 $('#fileIn').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
+  if(f.size>DATA_LIMIT.FILE_BYTES){ e.target.value=''; return toast('ไฟล์ใหญ่เกินไป — รับไฟล์สำรองได้ไม่เกิน 16 MB'); }
   const r=new FileReader();
   r.onload=()=>{
     try{
       const d=JSON.parse(r.result);
-      if(!d.letters) throw 0;
-      const cur=store.letters(), ids=new Set(cur.map(l=>l.id));
-      const mine=store.me();
-      let n=0;
-      d.letters.forEach(raw=>{
-        /* ไฟล์ก็เป็นข้อมูลจากภายนอกเหมือนลิงก์ ต้องผ่านตัวตรวจตัวเดียวกัน (ข้อ 57.1) */
-        const l=sanitizeRec(raw); if(!l) return;
-        if(ids.has(l.id)) return;
-        ids.add(l.id);
-        /* ไฟล์จดหมายฉบับเดียวไม่มี dir → ต้องตัดสินจากชื่อผู้ส่ง ไม่งั้นจะอ่านได้ก่อนถึง */
-        l.dir = (raw.dir==='out'||raw.dir==='in') ? raw.dir
-              : ((mine&&mine.name&&l.f.n===mine.name) ? 'out' : 'in');
-        const st=letterState(l,Date.now());
-        if(st.arrived||st.gone) l.nf=1;
-        cur.push(l); n++;
-      });
-      store.saveAll(cur);
-      if(d.me&&!store.me()) store.setMe(d.me);
-      showMe(); refreshDock(); toast('นำเข้า '+n+' ฉบับ');
+      const result=importArchive(d);
+      windAgain(); syncScheme(); syncRenderQuality(); showMe(); syncOriginNote(); refreshDock();
+      if(result.saved) toast('นำเข้า '+result.added+' ฉบับ และ '+result.addedPorts+' ที่อยู่');
+      else storageNotice(false);
     }catch(err){ toast('ไฟล์ไม่ถูกต้อง'); }
     e.target.value='';
   };
+  r.onerror=r.onabort=()=>{ e.target.value=''; toast('อ่านไฟล์ไม่ได้ — ลองเลือกไฟล์สำรองอีกครั้ง'); };
   r.readAsText(f);
 };
 $('#btnWipe').onclick=()=>{
-  if(!confirm('ล้างข้อมูลทั้งหมด? ระบบจะบันทึกไฟล์สำรองให้ก่อน')) return;
+  if(!confirm('ล้างจดหมาย ที่อยู่ และการตั้งค่าของ Drift ทั้งหมด? จะเริ่มดาวน์โหลดไฟล์สำรองให้ก่อน')) return;
   exportJSON(true);
-  LS.del(K.LETTERS); LS.del(K.ME);
-  selected=null; current=null; showMe(); refreshDock(); toast('ล้างแล้ว (มีไฟล์สำรอง)');
+  const ok=wipeLocalData();
+  previewOff(); selected=null; current=null; pending=null; pendPort=null; viewPort=null;
+  pendTo=null; pendPortTo=null; inboxPort=null; inboxMode=null; readyLink=''; meDraft=null;
+  windAgain(); syncScheme(); syncRenderQuality(); showMe(); syncOriginNote(); refreshDock();
+  toast(ok?'ล้างแล้ว — โปรดตรวจไฟล์สำรองที่ดาวน์โหลด':'ล้างในรอบนี้แล้ว แต่เบราว์เซอร์ไม่อนุญาตให้ลบข้อมูลที่เก็บไว้');
 };
 /* ---------- ทำไมหาตำแหน่งไม่ได้ (ข้อ 109) ----------
    ⚠️ บน http:// เบราว์เซอร์ปฏิเสธทันทีโดยไม่ถามผู้ใช้เลย
@@ -7697,7 +8618,7 @@ wireSearch('#vPlace','#vHits',r=>{ meDraft=r; saveMe(); toast('ตั้งต�
   const l=document.createElement('link');
   l.rel='manifest'; l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
   document.head.appendChild(l);
-  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  if(!DRIFT_IS_STUDY && 'serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
   /* ⚠️ http:// ธรรมดา (เช่นเปิดผ่านเลข IP ในวงแลน) ตัดของที่แอปนี้ต้องใช้ออกเกือบหมด
@@ -7722,6 +8643,7 @@ const DRIFT_FOC=820, DRIFT_CUT=0.62, WIND_FULL=45;
 const DRIFT_LIGHT=(()=>{const v=[0.34,-0.46,-0.82];const m=Math.hypot(v[0],v[1],v[2]);return v.map(x=>x/m);})();
 let dTEX=null, dTEX_BACK=null, dTW=0, dTH=0;
 let dPHASE='off', dT=0, dProg=0, dY=0, dDrag=false, dStartY=0, dStartVal=0;
+let dReleaseDirection='B'; // Study C may opt into its shorter cadence.
 let dFly=0, dFlyStart=0, dStreak=0, dLET=null, dSPD=3, dDIR=200, dRAF=null, dDone=null;
 
 /* แรงต้านของการปัด = ลมจริง ณ ที่ที่ผู้ใช้ยืนตอนนั้น (ข้อ 44 · ตกลง 24 ส.ค.)
@@ -7979,27 +8901,42 @@ function dGrain(g,alpha,W,H){
   g.fillStyle=D_PAT; g.fillRect(0,0,W,H); g.restore();
 }
 
+function resetReleaseLight(){
+  document.documentElement.style.removeProperty('--release-ui');
+  document.documentElement.style.removeProperty('--release-hint');
+}
+function settleReleaseWorld(){
+  if(!dLET)return;
+  G.zoom=G.zTarget=G.fitZoom(fitKm(dLET)); G.R=G.R0*G.zoom;
+}
+function prepareReleaseWorld(){
+  if(!dLET)return;
+  const opacity=stage.style.opacity;
+  G.zoom=G.zTarget=G.fitZoom(fitKm(dLET))*DriftRelease.releaseTransition(0,dReleaseDirection).zoomFactor;
+  G.R=G.R0*G.zoom;
+  renderGlobe(0); stage.style.opacity=opacity;
+}
 function dPaint(tx,ty,tz,rx,ry,rz,curl,mwind,op,f){
   const cv=$('#flycv'), W=innerWidth, H=innerHeight, dp=Math.min(devicePixelRatio||1,2);
   if(cv.width!==W*dp||cv.height!==H*dp){ cv.width=W*dp; cv.height=H*dp; }
   const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
   if(!dTEX||op<=0.004) return;
   const depth=Math.max(0,-tz);
-  const bw=Math.min(W*0.86,380), bh=bw*(dTH/dTW);
+  const ratio=dTH/dTW, bw=Math.min(W*0.86,380,H*.64/ratio), bh=bw*ratio;
   const persp=DRIFT_FOC/(DRIFT_FOC+depth);
   const lod = persp>0.55?[13,16] : persp>0.28?[9,11] : [6,7];
   const blow=(dDIR+180)*RAD;
-  dStreaks(g,dStreak,f,blow,true,depth,W,H);
+  dStreaks(g,dStreak*op,f,blow,true,depth,W,H);
   g.globalAlpha=op;
   dWarp(g,W/2+tx,H/2+ty,bw,bh,dT,mwind,ry*RAD,rx*RAD,rz*RAD,depth,curl,lod[0],lod[1]);
   g.globalAlpha=1;
-  dStreaks(g,dStreak,f,blow,false,depth,W,H);
-  dGrain(g,0.085,W,H);
+  dStreaks(g,dStreak*op,f,blow,false,depth,W,H);
+  dGrain(g,0.085*op,W,H);
 }
 
 /* ---------- ท่าทาง ---------- */
 const dAtY=e=>(e.touches?e.touches[0]:e).clientY;
-function dDown(e){ if(dPHASE!=='wait') return; dDrag=true; dStartY=dAtY(e); dStartVal=dY; e.preventDefault(); }
+function dDown(e){ if(dPHASE!=='wait'||e.target?.closest?.('button,a,input,textarea,select')) return; dDrag=true; dStartY=dAtY(e); dStartVal=dY; e.preventDefault(); }
 function dMove(e){
   if(!dDrag||dPHASE!=='wait') return;
   const f=dFeel(dSPD);
@@ -8017,23 +8954,73 @@ function dUp(){
 }
 function dLaunch(){
   if(dPHASE!=='wait') return;
-  dDrag=false; dPHASE='fly'; dFly=0; dFlyStart=performance.now();
+  const session=releaseSession;
+  if(session){
+    dDrag=false; dHold=false; dPHASE='commit';
+    $('#releaseBack').disabled=true; $('#releaseNow').disabled=true;
+    $('#driftWord').textContent='กำลังเตรียมจดหมาย';
+    session.tx.commit().then(result=>{
+      if(releaseSession!==session) return;
+      completeRelease(session,result); dStartFlight();
+    }).catch(e=>{
+      if(releaseSession!==session) return;
+      dPHASE='wait'; dY=0; dProg=0;
+      $('#releaseBack').disabled=false; $('#releaseNow').disabled=false;
+      if(e.code==='stale'){
+        cancelPreparedRelease(); toast('พยากรณ์ชุดนี้เก่าแล้ว — ถามสายลมอีกครั้งก่อนปล่อย');
+      }else{
+        $('#releaseBackup').hidden=false; $('#driftWord').textContent='จดหมายยังอยู่ในมือ';
+        toast(e.code==='storage'?'เก็บสำเนาไม่ได้ — จดหมายยังไม่ออกเดินทาง กรุณาเก็บร่างเป็นไฟล์':'เตรียมลิงก์ไม่สำเร็จ — จดหมายยังอยู่ในมือ ลองอีกครั้ง');
+      }
+    });
+    return;
+  }
+  dStartFlight();
+}
+function dStartFlight(){
+  $('#releaseActions').hidden=true;
+  dDrag=false; dHold=false; dPHASE='fly'; dFly=0; dFlyStart=RENDER.now();
   $('#driftWord').textContent='ลมกำลังรับไว้';
+  $('#driftSub').textContent='จดหมายเริ่มเดินทางแล้ว';
+}
+function paintHeroStill(face,opacity=1){
+  const cv=$('#flycv'), W=innerWidth,H=innerHeight, dp=Math.min(devicePixelRatio||1,2);
+  const pw=Math.round(W*dp),ph=Math.round(H*dp);
+  if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+  if(!dTEX) return;
+  const ratio=dTH/dTW, bw=Math.min(W*.86,380,H*.64/ratio), bh=bw*ratio;
+  g.save(); g.globalAlpha=opacity;
+  if(face||dTEX_BACK) g.drawImage(face?dTEX:dTEX_BACK,(W-bw)/2,(H-bh)/2,bw,bh);
+  else{
+    g.fillStyle='rgb('+PAPER.sheetFresh.join(',')+')'; g.fillRect((W-bw)/2,(H-bh)/2,bw,bh);
+    g.strokeStyle='rgba(84,74,54,.12)'; g.strokeRect((W-bw)/2,(H-bh)/2,bw,bh);
+  }
+  g.restore();
 }
 
-function dTick(){
-  dRAF=requestAnimationFrame(dTick);
-  if(dPHASE==='off') return;
-  dT+=1/60;
+function dTick(dt=1/60){
+  if(dPHASE==='off'){ dRAF=null; return; }
+  if(dHold&&dPHASE==='wait'){
+    const f=dFeel(dSPD); dY+=innerHeight*.375*dt*(1+f.assist);
+    dProg=Math.min(1,dY/f.need); if(dProg>=1) dLaunch();
+  }
+  dT+=REDUCED?0:dt;
+  if(REDUCED){
+    const k=dPHASE==='fly'?Math.min(1,(RENDER.now()-dFlyStart)/180):0;
+    paintHeroStill(true,1-k);
+    if(k>=1){ settleReleaseWorld(); renderGlobe(0); dCloseDrift(); }
+    return;
+  }
   const f=dFeel(dSPD), W=innerWidth, H=innerHeight;
   if(dPHASE==='fly'){
-    const el=performance.now()-dFlyStart;
-    if(el>f.hang) dFly=Math.min(1,(el-f.hang)/2600);
-    if(dFly>=1){ dPHASE='done'; dCloseDrift(); return; }
+    const el=RENDER.now()-dFlyStart;
+    if(el>f.hang) dFly=Math.min(1,(el-f.hang)/DriftRelease.releaseTransition(0,dReleaseDirection).duration);
+    if(dFly>=1){ settleReleaseWorld(); renderGlobe(0); dPHASE='done'; dCloseDrift(); return; }
   }
   const blow=(dDIR+180)*RAD;
   let ty,tx=0,tz,op=1,rz,rx,ry=0,curl,mwind;
-  if(dPHASE==='wait'||dDrag){
+  if(dPHASE==='wait'||dPHASE==='prepare'||dPHASE==='commit'||dDrag){
     /* ---------- ลมก่อนปล่อย (ข้อ 110.2) ----------
        เดิมทุกค่าที่นี่ขึ้นกับ dProg อย่างเดียว — ยังไม่ดัน = ทุกค่าเป็นศูนย์ = กระดาษนิ่งสนิท
        ⚠️ ทั้งที่แอปรู้ลมต้นทางอยู่แล้ว (dSPD → f.w) นี่คือหน้าจอเดียวที่ถือกระดาษไว้กับมือ
@@ -8057,7 +9044,7 @@ function dTick(){
     /* ผิวกระดาษกระเพื่อมตามลมจริง — ตัวนี้คือสิ่งที่ตาอ่านว่า "มีลม" มากกว่าการขยับทั้งแผ่น */
     mwind=0.13+dProg*0.09+f.w*0.12;
   }else{
-    const e=Math.min(1,dFly/DRIFT_CUT);
+    const e=DriftRelease.releaseTransition(dFly,dReleaseDirection).travel;
     const rise=1-Math.pow(1-e,1.5);
     /* ความปั่นป่วนจากคาบสามชั้นที่ไม่ลงตัวกัน ไม่มีรอบไหนซ้ำ แต่คำนวณซ้ำได้ทุกหลัก */
     const gust=(Math.sin(dT*1.37)*0.55+Math.sin(dT*0.83+1.7)*0.30+Math.sin(dT*2.11+4.1)*0.15)*f.w;
@@ -8071,23 +9058,27 @@ function dTick(){
     curl=0.18+Math.pow(rise,1.4)*(0.85+f.w*1.70)*(1+gust*0.22);
     mwind=0.22+rise*f.w*0.30;
     dStreak=0.55+rise*0.65;
-    op=e<0.80?1:Math.max(0,1-(e-0.80)/0.20);
+    op=DriftRelease.releaseTransition(dFly,dReleaseDirection).paperOpacity;
+  }
+  if(dPHASE==='fly'){
+    ({tx,ty,tz}=DriftRelease.releaseFrame(dFly,H,{tx,ty,tz},dReleaseDirection));
   }
   dPaint(tx,ty,tz,rx,ry,rz,curl,mwind,op,f);
-  /* ตัดมาที่ลูกโลก — คนละมุมกล้อง คนละที่ยืน ไม่ใช่ซูมต่อเนื่อง
-     ตัดหลังกระดาษหายไปในแสงแล้ว โดยจุดทองอยู่ตรงที่กระดาษหายไปพอดี */
-  const cut=Math.max(0,(dFly-DRIFT_CUT)/(1-DRIFT_CUT));
-  const vis=(dPHASE==='wait'&&!dDrag)?0:Math.min(1,cut/0.45);
+  // The globe emerges while the distant paper fades; UI returns after zoom settles.
+  const transition=DriftRelease.releaseTransition(dFly,dReleaseDirection);
+  const flying=dPHASE==='fly',vis=flying?transition.worldOpacity:0;
+  document.documentElement.style.setProperty('--release-ui',flying?transition.uiOpacity:0);
+  document.documentElement.style.setProperty('--release-hint',flying?transition.hintOpacity:1);
   stage.style.opacity=vis.toFixed(3);
-  if(vis>0.004&&dLET){
+  if(flying&&dLET){
     const zEnd=G.fitZoom(fitKm(dLET));
-    G.zoom=G.zTarget=zEnd*(1+0.42*Math.pow(1-cut,2));
-    G.R=G.R0*G.zoom;
-    renderGlobe();
+    G.zoom=G.zTarget=zEnd*transition.zoomFactor; G.R=G.R0*G.zoom;
+    if(vis>0.001)renderGlobe(dt);
   }
 }
 
 function openDrift(L,onDone){
+  resetHero();
   dLET=L; dDone=onDone||null;
   const w0=(L.lg&&L.lg[0])?L.lg[0]:null;
   dSPD=w0?w0[2]:3; dDIR=w0?w0[3]:200;
@@ -8106,18 +9097,22 @@ function openDrift(L,onDone){
   if(G.target){ G.rotY=G.target.y; G.rotX=G.target.x; G.target=null; }
   sizeStage();
   stage.style.opacity='0';
+  prepareReleaseWorld(); // Prime the world palette before the gesture, while it is hidden.
   $('#driftWord').textContent="let's drift";
   $('#driftSub').textContent='ปัดขึ้นเพื่อปล่อย';
   $('#drift').classList.add('on');
   document.body.classList.add('drifting');
-  if(!dRAF) dTick();
+  RENDER.start();
 }
 function dCloseDrift(){
   dPHASE='off';
+  dRAF=null; dHold=false; dDrag=false;
   $('#drift').classList.remove('on');
   document.body.classList.remove('drifting');
+  resetReleaseLight();
   stage.style.opacity='1';
   previewOff();
+  releaseSession=null; $('#releaseActions').hidden=true;
   if(dDone){ const f=dDone; dDone=null; f(); }
 }
 addEventListener('touchstart',dDown,{passive:false});
@@ -8127,15 +9122,28 @@ addEventListener('mousedown',dDown);
 addEventListener('mousemove',dMove);
 addEventListener('mouseup',dUp);
 /* เดสก์ท็อป — ต้องค้างไว้ ไม่ใช่กดครั้งเดียว น้ำหนักของท่าทางจึงยังอยู่ */
-let dHold=null;
+let dHold=false;
 addEventListener('keydown',e=>{
-  if((e.key!=='ArrowUp'&&e.key!==' ')||dHold||dPHASE!=='wait') return;
+  if((e.key!=='ArrowUp'&&e.key!==' ')||dHold||dPHASE!=='wait'||e.target?.closest?.('button,a,input,textarea,select')) return;
   e.preventDefault();
-  dHold=setInterval(()=>{ const f=dFeel(dSPD); dY+=innerHeight*0.006*(1+f.assist);
-    dProg=Math.min(1,dY/f.need); if(dProg>=1){clearInterval(dHold);dHold=null;dLaunch();} },16);
+  dHold=true;
 });
-addEventListener('keyup',()=>{ if(dHold){clearInterval(dHold);dHold=null;
+addEventListener('keyup',()=>{ if(dHold){dHold=false;
   if(dPHASE==='wait'&&dProg<dFeel(dSPD).keep){dY=0;dProg=0;} } });
+$('#releaseBack').onclick=cancelPreparedRelease;
+$('#releaseBackup').onclick=exportPreparedDraft;
+$('#releaseNow').onclick=dLaunch;
+addEventListener('keydown',e=>{
+  if(!releaseSession||!['prepare','wait','commit'].includes(dPHASE)) return;
+  if(e.key==='Escape'){e.preventDefault();cancelPreparedRelease();}
+  if(e.key==='Tab'){
+    const items=[...$('#releaseActions').querySelectorAll('button')].filter(b=>!b.hidden&&!b.disabled);
+    if(!items.length){e.preventDefault();return;}
+    const first=items[0],last=items[items.length-1],active=document.activeElement;
+    if(e.shiftKey&&(active===first||!items.includes(active))){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&(active===last||!items.includes(active))){e.preventDefault();first.focus();}
+  }
+});
 
 
 
@@ -8184,7 +9192,7 @@ function aPaint(){
   if(cv.width!==W*dp||cv.height!==H*dp){ cv.width=W*dp; cv.height=H*dp; }
   const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
   if(!dTEX) return;
-  const w=dWindOf(aSPD), now=performance.now(), el=now-aT0;
+  const w=dWindOf(aSPD), now=RENDER.now(), el=now-aT0;
   let S=null, strk=0;
   if(aPHASE==='fall'){
     const k=Math.min(1,el/A_FALL);
@@ -8211,7 +9219,7 @@ function aPaint(){
     if(k>=1){ aPHASE='read'; aT0=now; aFinish(); return; }
   }
   if(!S) return;
-  const bw=Math.min(W*0.86,380), bh=bw*(dTH/dTW);
+  const ratio=dTH/dTW, bw=Math.min(W*0.86,380,H*.64/ratio), bh=bw*ratio;
   const persp=DRIFT_FOC/(DRIFT_FOC+S.depth);
   const lod = persp>0.55?[13,16] : persp>0.28?[9,11] : [6,7];
   const f={w};
@@ -8250,6 +9258,7 @@ const X_GLOBE=1200, X_SNATCH=800, X_TUMBLE=1700, X_GONE=700;
 let xPHASE='off', xT0=0, xLET=null, xSPD=25, xDIR=200, xDone=null, xRAF=null;
 
 function openLost(L,onDone){
+  resetHero();
   xLET=L; xDone=onDone||null;
   const st=letterState(L,Date.now());
   /* ลม ณ ช่วงที่หาย — ไม่ใช่ต้นทางหรือปลายทาง เพราะมันหายตรงกลาง */
@@ -8260,31 +9269,32 @@ function openLost(L,onDone){
   selected=L.id;
   G.focus(posAt(L,st.prog), G.fitZoom(CFG.REVEAL_MIN*2));
   sizeStage();
-  xPHASE='globe'; xT0=performance.now();
+  xPHASE=REDUCED?'snatch':'globe'; xT0=RENDER.now();
   $('#driftWord').textContent='';
   $('#driftSub').textContent='';
   $('#drift').classList.add('on');
   document.body.classList.add('drifting');
-  if(!xRAF) xTick();
+  RENDER.start();
 }
 function xFinish(){
   xPHASE='off';
+  xRAF=null;
   $('#drift').classList.remove('on');
   document.body.classList.remove('drifting');
   stage.style.opacity='1';
   $('#driftWord').textContent='';
   if(xDone){ const f=xDone; xDone=null; f(); }
 }
-function xTick(){
-  xRAF=requestAnimationFrame(xTick);
-  if(xPHASE==='off') return;
-  dT+=1/60;
-  const now=performance.now(), el=now-xT0;
+function xTick(dt=1/60){
+  if(xPHASE==='off'){ xRAF=null; return; }
+  dT+=REDUCED?0:dt;
+  const now=RENDER.now(), el=now-xT0;
+  if(REDUCED){ paintHeroStill(false,1-Math.min(1,el/220)); if(el>=220) xFinish(); return; }
   if(xPHASE==='globe'){
     /* เห็นก่อนว่ามันหายตรงไหน — จุดนั้นคือที่ที่รอยบนลูกโลกจะค้างอยู่ตลอดไป */
     const k=Math.min(1,el/X_GLOBE);
     stage.style.opacity=(1-Math.max(0,(k-0.5)/0.5)).toFixed(3);
-    renderGlobe();
+    renderGlobe(dt);
     if(k>=1){ xPHASE='snatch'; xT0=now; stage.style.opacity='0'; }
     return;
   }
@@ -8295,7 +9305,7 @@ function xPaint(){
   if(cv.width!==W*dp||cv.height!==H*dp){ cv.width=W*dp; cv.height=H*dp; }
   const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
   if(!dTEX) return;
-  const w=dWindOf(xSPD), now=performance.now(), el=now-xT0;
+  const w=dWindOf(xSPD), now=RENDER.now(), el=now-xT0;
   const blow=(xDIR+180)*RAD;                 /* ทิศที่ลมพัดไป (เดียวกับองก์ปล่อย) */
   let S=null, strk=0, op=1;
 
@@ -8329,7 +9339,7 @@ function xPaint(){
     return;
   }
   if(!S) return;
-  const bw=Math.min(W*0.86,380), bh=bw*(dTH/dTW);
+  const ratio=dTH/dTW, bw=Math.min(W*0.86,380,H*.64/ratio), bh=bw*ratio;
   const persp=DRIFT_FOC/(DRIFT_FOC+S.depth);
   const lod = persp>0.55?[13,16] : persp>0.28?[9,11] : [6,7];
   const f={w};
@@ -8341,23 +9351,30 @@ function xPaint(){
   dGrain(g,0.085,W,H);
 }
 
-function aTick(){
-  aRAF=requestAnimationFrame(aTick);
-  if(aPHASE==='off') return;
-  dT+=1/60;
+function aTick(dt=1/60){
+  if(aPHASE==='off'){ aRAF=null; return; }
+  dT+=REDUCED?0:dt;
+  if(REDUCED){
+    if(aPHASE!=='wait'&&aPHASE!=='pick'){ aPHASE='wait'; aT0=RENDER.now(); $('#driftWord').textContent='แตะเพื่อหยิบขึ้นมา'; }
+    const k=aPHASE==='pick'?Math.min(1,(RENDER.now()-aT0)/180):0;
+    paintHeroStill(false,1-k);
+    if(k>=1) aFinish();
+    return;
+  }
   if(aPHASE==='globe'){
-    const el=performance.now()-aT0;
+    const el=RENDER.now()-aT0;
     /* ลูกโลกค้างไว้ครู่หนึ่งก่อน แล้วจางออก — ผู้รับได้เห็นว่ามันมาจากไหน */
     const k=Math.min(1,el/A_GLOBE);
     stage.style.opacity=(1-Math.max(0,(k-0.55)/0.45)).toFixed(3);
-    renderGlobe();
-    if(k>=1){ aPHASE='fall'; aT0=performance.now(); stage.style.opacity='0'; }
+    renderGlobe(dt);
+    if(k>=1){ aPHASE='fall'; aT0=RENDER.now(); stage.style.opacity='0'; }
     return;
   }
   aPaint();
 }
 
 function openArrive(L,onDone){
+  resetHero();
   aLET=L; aDone=onDone||null;
   /* ลมที่ *ปลายทาง* เป็นตัวกำหนดการร่อน ไม่ใช่ลมต้นทาง — จดหมายกำลังตกลงที่นั่น */
   const last=(L.lg&&L.lg.length)?L.lg[L.lg.length-1]:null;
@@ -8368,15 +9385,16 @@ function openArrive(L,onDone){
   const at=llOf(L.t);
   G.focus(at, G.fitZoom(CFG.REVEAL_MIN*2));
   sizeStage();
-  aPHASE='globe'; aT0=performance.now();
+  aPHASE='globe'; aT0=RENDER.now();
   $('#driftWord').textContent='drifted in';
   $('#driftSub').textContent='';
   $('#drift').classList.add('on');
   document.body.classList.add('drifting');
-  if(!aRAF) aTick();
+  RENDER.start();
 }
 function aFinish(){
   aPHASE='off';
+  aRAF=null;
   $('#drift').classList.remove('on');
   document.body.classList.remove('drifting');
   stage.style.opacity='1';
@@ -8386,7 +9404,7 @@ function aFinish(){
 $('#drift').addEventListener('pointerdown',e=>{
   if(aPHASE!=='wait') return;
   e.preventDefault();
-  aPHASE='pick'; aT0=performance.now();
+  aPHASE='pick'; aT0=RENDER.now();
   $('#driftWord').textContent='';
 });
 
@@ -8401,7 +9419,7 @@ syncInstall();
 syncOriginNote();
 LS.set('lw.probe','1');
 if(!LS_OK) setTimeout(()=>toast('เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ — ปิดแล้วประวัติจะหาย'),800);
-requestAnimationFrame(frame);
+RENDER.start();
 /* ---------- ตารางเปิดแอป (ข้อ 99.10ซ · ล็อกเพิ่มในข้อ 116) ----------
    ลิงก์มาก่อนเสมอ — คนที่กดลิงก์มาต้องได้เห็นสิ่งที่เขากดมาดู ไม่ใช่หน้าเปิดของแอป
    หน้าเปิดเป็นของคนที่มาเองแบบมือเปล่าเท่านั้น
@@ -8460,8 +9478,9 @@ function applyScheme(dark){
   Object.assign(PAPER, dark ? DARK_PAPER : LIGHT_PAPER);
   CFG.FOG = dark ? DARK_FOG : LIGHT_FOG;
   try{ G._key=null; G._nkey=null; }catch(e){}
-  try{ renderGlobe(); }catch(e){}
+  RENDER.start();
   try{ repaintPaper(); }catch(e){}
+  try{ if(['wait','prepare','commit'].includes(dPHASE))prepareReleaseWorld(); }catch(e){}
 }
 /* ✅ โหมดมืดเปิดแล้ว 4 ก.ย. (ข้อ 159) — เปิดได้เพราะข้อ 158 ทำปุ่มเลือกโหมดสีเสร็จ
    ก่อนหน้านั้นคนที่ตั้งเครื่องมืดถาวรจะไม่มีวันเห็นโหมดสว่างเลย ซึ่งเป็นเหตุผลที่ปิดไว้
@@ -8508,16 +9527,211 @@ SCHEME.addEventListener('change', syncScheme);
 /* ⚠️ event เดียวไม่พอ — คนสลับโหมดนอกแอปแล้วค่อยกลับมา
    และ "อัตโนมัติ" ของ iOS สลับตอนพระอาทิตย์ตกซึ่งอาจเกิดตอนแอปอยู่หลัง
    ถ้าตอนนั้น event หายไป แอปจะค้างอยู่คนละโหมดกับเครื่องโดยไม่มีอะไรฟ้อง (ข้อ 131.3) */
-addEventListener('visibilitychange', () => { if(!document.hidden) syncScheme(); });
-addEventListener('focus', syncScheme);
+function releaseHeldInput(){
+  dHold=false; dDrag=false; G.drag=false; G.vX=G.vY=0; PTR.clear();
+  if(dPHASE==='wait'){dY=0;dProg=0;}
+}
+addEventListener('visibilitychange', () => {
+  RENDER.syncVisibility();
+  if(document.hidden) releaseHeldInput();
+  else{ syncScheme(); syncRenderQuality(); syncMotion(); windHere(); }
+});
+addEventListener('blur',releaseHeldInput);
+addEventListener('focus', ()=>{syncScheme();syncRenderQuality();});
 syncScheme();
+
+/* BEGIN PENCIL_WORLD */
+'use strict';
+// Chosen B: pencil lines, soft light and weather occlusion. Installed once,
+// only in the app; comparison viewers retain their original renderer.
+function installPencilWorld(){
+  const scene={strength:1,sheen:1.5,surface:'pencil-detail',get dark(){return !!schemeNow;},get weather(){return snowNow()?'snow':RAIN_HERE>0?'rain':'clear';}};
+  const preset={haze:.12,rim:.16,foreground:12,starCount:75,starAlpha:.44,starSize:.55,parallax:.055,grain:.025,dark:['#202735','#303747'],light:['#f0ece2','#e2e5e3']};
+  const originals={renderGlobe,dust,rain,snow,splash,paint:G.paint,cities:G.cities};
+  const home={y:108*RAD,x:19*RAD};
+  let seed=4415;
+  function rnd(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+  const distant=Array.from({length:112},()=>({x:rnd(),y:rnd(),r:.25+rnd()*.68,a:.25+rnd()*.7,phase:rnd()*Math.PI*2,rate:.17+rnd()*.27,depth:rnd()>.75?1:0}));
+  const near=Array.from({length:17},()=>({x:rnd(),y:rnd(),r:.65+rnd()*.9,phase:rnd()*Math.PI*2,depth:.35+rnd()*.65}));
+  const texture=document.createElement('canvas');texture.width=texture.height=128;
+  const textureCtx=texture.getContext('2d'),noise=textureCtx.createImageData(128,128);
+  for(let i=0;i<noise.data.length;i+=4){const v=rnd()>.5?255:0;noise.data[i]=noise.data[i+1]=noise.data[i+2]=v;noise.data[i+3]=70+Math.floor(rnd()*110);}
+  textureCtx.putImageData(noise,0,0);
+  const fixedGrain=textureCtx.createPattern(texture,'repeat');
+  const stableLines=window.DriftStudyLines,paintLines=stableLines.createPainter({projectInto:stableLines.createProjector()});
+  function config(){return preset;}
+  const detailMarks=Array.from({length:900},(_,i)=>{
+    const y=1-2*(i+.5)/900,lat=Math.asin(y),lng=i*2.399963229728653;
+    const normal={x:Math.cos(lat)*Math.sin(lng),y,z:Math.cos(lat)*Math.cos(lng)};
+    const east={x:Math.cos(lng),y:0,z:-Math.sin(lng)},north={x:-y*Math.sin(lng),y:Math.cos(lat),z:-y*Math.cos(lng)};
+    const angle=.57+.19*Math.sin(i*1.73),length=.015+.023*(.5+.5*Math.sin(i*2.13));
+    const tangent={x:east.x*Math.cos(angle)+north.x*Math.sin(angle),y:north.y*Math.sin(angle),z:east.z*Math.cos(angle)+north.z*Math.sin(angle)};
+    const across={x:east.x*Math.sin(angle)-north.x*Math.cos(angle),y:-north.y*Math.cos(angle),z:east.z*Math.sin(angle)-north.z*Math.cos(angle)};
+    return [-1,-.28,.28,1].map((t,k)=>{
+      const arc=t*length,bend=.0035*Math.sin(i*.83)*(1-t*t);
+      const x=normal.x*Math.cos(arc)+tangent.x*Math.sin(arc)+across.x*bend,y=normal.y*Math.cos(arc)+tangent.y*Math.sin(arc)+across.y*bend,z=normal.z*Math.cos(arc)+tangent.z*Math.sin(arc)+across.z*bend,n=Math.hypot(x,y,z);
+      return {x:x/n,y:y/n,z:z/n,pencilWeight:[.48,1.04,.98,.36][k]};
+    });
+  });
+  function graphite(ctx){
+    if(!scene.sheen)return;
+    const sun=sunVec();
+    function midtone(v,z){const d=v.x*sun.x+v.y*sun.y+v.z*sun.z;return clamp((d+.15)/.45,0,1)*(1-clamp((d-.35)/.65,0,1)*.8)*Math.sqrt(Math.max(0,z));}
+    paintLines(G,ctx,detailMarks,.112*scene.sheen,.57,true,'40,45,56',midtone,{pressure:true});
+    paintLines(G,ctx,detailMarks,.027*scene.sheen,.45,true,'182,192,204',G.shadeNight,{pressure:true});
+  }
+  // Mask whole primitives (including a drop's tail), not just their centre.
+  // Simulation continues behind the world; routes and weather on the world stay visible.
+  function outsideWorld(ctx,draw,box={w:W,h:H,x:G.CX,y:G.CY,r:G.R}){
+    ctx.save();
+    try{
+      ctx.beginPath();ctx.rect(0,0,box.w,box.h);
+      ctx.arc(box.x,box.y,box.r,0,Math.PI*2,true);ctx.clip('evenodd');draw();
+    }finally{ctx.restore();}
+  }
+  for(const name of ['dust','rain','snow','splash']){
+    const draw=originals[name];
+    const wrapped=(ctx,dt)=>outsideWorld(ctx,()=>draw(ctx,dt));
+    if(name==='dust')dust=wrapped;else if(name==='rain')rain=wrapped;else if(name==='snow')snow=wrapped;else splash=wrapped;
+  }
+  // Small normal/half-vector material map, baked only when G.paint's existing
+  // camera/solar cache invalidates. No per-frame pixel pass or new frame owner.
+  const surface=document.createElement('canvas');surface.width=surface.height=192;
+  const surfaceCtx=surface.getContext('2d'),surfaceImage=surfaceCtx.createImageData(surface.width,surface.height);
+  const renderSurface=stableLines.createSurface(surface.width);
+  function material(ctx){
+    if(!scene.sheen)return;
+    surfaceImage.data.set(renderSurface({light:G.rotate(sunVec()),dark:scene.dark,variant:scene.surface,sheen:scene.sheen,pencil:true}));
+    surfaceCtx.putImageData(surfaceImage,0,0);
+    ctx.save();ctx.beginPath();ctx.arc(G.CX,G.CY,G.R,0,Math.PI*2);ctx.clip();
+    ctx.drawImage(surface,G.CX-G.R,G.CY-G.R,G.R*2,G.R*2);graphite(ctx);ctx.restore();
+  }
+  let painting=false,materialDrawn=false;
+  const lineDiagnostics={paints:0,fastPaints:0,detailSwitches:0,maxPoseLagPx:0,last:null,recent:[]};
+  G.paint=function(ctx,fast){
+    const start=performance.now();painting=true;materialDrawn=false;
+    try{return originals.paint.call(this,ctx,fast);}finally{
+      painting=false;const last=lineDiagnostics.last;
+      if(last&&last.fast!==fast)lineDiagnostics.detailSwitches++;
+      const entry={y:this.rotY,x:this.rotX,zoom:this.zoom,fast,costMs:performance.now()-start};
+      lineDiagnostics.last=entry;lineDiagnostics.paints++;if(fast)lineDiagnostics.fastPaints++;
+      lineDiagnostics.recent.push(entry);if(lineDiagnostics.recent.length>120)lineDiagnostics.recent.shift();
+    }
+  };
+  G.segs=function(ctx,lines,a,lw,front,...args){
+    // Surface goes above the old day/night film but below front coast/grid lines.
+    if(painting&&front&&!materialDrawn){materialDrawn=true;material(ctx);}
+    // Geographic coordinates and weather sampling remain available internally.
+    if(lines===GRID)return;
+    const pressure=front&&lines!==GRID;
+    return paintLines(this,ctx,lines,a*(pressure?.94:1),lw,front,args[1],args[2],{pressure});
+  };
+  function cameraOffset(k){let d=G.rotY-home.y;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return {x:clamp(d*G.R0*k,-32,32),y:clamp((G.rotX-home.x)*G.R0*k,-22,22)};}
+  function atmosphere(ctx,front){
+    const p=config(),weight=scene.strength*QUALITY.effects().atmosphere;
+    if(!weight)return;
+    const t=T,off=cameraOffset(.05),cloud=scene.weather==='clear'?1:1.6;
+    if(!front){
+      const bands=QUALITY.effects().atmosphere<1?1:2;
+      ctx.save();
+      for(let i=0;i<bands;i++){
+        const x=W*(i===0?.18:.82)+off.x+Math.sin(t*.035+i*2.7)*W*.018;
+        const y=H*(i===0?.31:.64)+off.y+Math.sin(t*.024+i)*H*.012;
+        ctx.save();ctx.translate(x,y);ctx.scale(1,.30+i*.1);
+        const radius=Math.max(W,H)*(.46+i*.04),g=ctx.createRadialGradient(0,0,0,0,0,radius);
+        const color=scene.dark?(i===0?'198,154,84':'142,157,177'):(i===0?'180,157,119':'135,156,174');
+        g.addColorStop(0,'rgba('+color+','+(p.haze*weight*cloud*(scene.dark?1:.6))+')');g.addColorStop(1,'rgba('+color+',0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fill();ctx.restore();
+      }
+      ctx.restore();return;
+    }
+    // Narrow rim stays behind journey/weather and never covers a letter.
+    const breathe=1+Math.sin(t*.12)*.025+Math.sin(t*.071+1.4)*.014;
+    const r=G.R,outer=r*(1.025+.006*breathe),alpha=p.rim*weight*(scene.dark?1:.5)*breathe*.36;
+    const rgb='198,165,113';
+    const glow=ctx.createRadialGradient(G.CX,G.CY,r*.985,G.CX,G.CY,outer);
+    glow.addColorStop(0,'rgba('+rgb+',0)');glow.addColorStop(.24,'rgba('+rgb+','+alpha+')');glow.addColorStop(1,'rgba('+rgb+',0)');
+    ctx.save();ctx.fillStyle=glow;ctx.beginPath();ctx.arc(G.CX,G.CY,outer,0,Math.PI*2);ctx.arc(G.CX,G.CY,r*.985,0,Math.PI*2,true);ctx.fill();ctx.restore();
+  }
+  grain=function(ctx){
+    ctx.save();ctx.globalAlpha=config().grain;ctx.fillStyle=fixedGrain;ctx.fillRect(0,0,W,H);ctx.restore();atmosphere(ctx,false);
+  };
+  stars=function(ctx,dt){
+    if(!scene.dark)return;
+    const p=config(),off=cameraOffset(.02),weatherFade=scene.weather==='clear'?1:.12;
+    const solar=G.pipeV(sunVec()),sunFade=1-clamp(solar.z,0,1)*.75;
+    ctx.save();
+    for(let i=0;i<qualityCount(p.starCount,'distant');i++){
+      const s=distant[i],depth=1;
+      const x=s.x*W+off.x*depth,y=s.y*H+off.y*depth;
+      if(Math.hypot(x-G.CX,y-G.CY)<G.R*1.085)continue;
+      const flicker=.83+.09*Math.sin(T*s.rate+s.phase)+.04*Math.sin(T*s.rate*.43+s.phase*1.7);
+      ctx.globalAlpha=p.starAlpha*s.a*flicker*weatherFade*sunFade;
+      ctx.fillStyle=s.depth?'#ecdcc1':'#bcc8dc';ctx.beginPath();ctx.arc(x,y,s.r*p.starSize*depth,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  };
+  let skyPalette=null;
+  paintSky=function(){
+    const p=config(),palette=scene.dark?p.dark:p.light;
+    const key=palette.join(',');
+    if(skyPalette!==key){skyPalette=key;document.body.style.background='linear-gradient(150deg,'+palette[0]+','+palette[1]+')';}
+  };
+  G.sphere=function(ctx){
+    atmosphere(ctx,true);
+      // One stable topology during drag and rest. Exact pose keeps the baked
+      // coast/grid aligned with the live routes; 2x sampling smooths thin strokes.
+      const dpr=2,key='pencil-world:'+stableLines.poseKey(this,sunKey(),dpr);
+      if(!this._cv){this._cv=document.createElement('canvas');this._cx=this._cv.getContext('2d');}
+      if(this._key!==key){
+        this._key=key;
+        const width=Math.round(this.W*dpr),height=Math.round(this.H*dpr);
+        if(this._cv.width!==width||this._cv.height!==height){this._cv.width=width;this._cv.height=height;}
+        this._cx.setTransform(dpr,0,0,dpr,0,0);this._cx.clearRect(0,0,this.W,this.H);
+        this.paint(this._cx,false);
+      }
+      ctx.drawImage(this._cv,0,0,this.W,this.H);this.liftNight(ctx);
+      if(this.terminator())this.cities(ctx,false);
+    const last=lineDiagnostics.last;
+    if(last)lineDiagnostics.maxPoseLagPx=Math.max(lineDiagnostics.maxPoseLagPx,this.R*Math.hypot(this.rotY-last.y,this.rotX-last.x));
+  };
+  G.cities=function(ctx,fast){ctx.save();ctx.globalAlpha=.94;originals.cities.call(this,ctx,fast);ctx.restore();};
+  function foreground(ctx){
+    if(scene.weather!=='clear'||!scene.strength||WIND_HERE==null||WIND_HERE<=0)return;
+    const p=config(),off=cameraOffset(p.parallax),t=T,flow=(WIND_DIR+180)*RAD;
+    ctx.save();
+    ctx.beginPath();ctx.rect(0,0,W,H);ctx.arc(G.CX,G.CY,G.R,0,Math.PI*2,true);ctx.clip('evenodd');
+    for(let i=0;i<qualityCount(p.foreground,'foreground');i++){
+      const a=near[i],speed=.007+a.depth*.006;
+      const x=((a.x+t*speed*Math.sin(flow))%1+1)%1*W+off.x*a.depth;
+      const y=((a.y-t*speed*.22)%1+1)%1*H+off.y*a.depth+Math.sin(t*.11+a.phase)*3;
+      ctx.globalAlpha=(scene.dark?.11:.07)*scene.strength*(.6+a.depth*.4);
+      ctx.fillStyle=scene.dark?'#d5c8ad':'#776a55';ctx.beginPath();ctx.arc(x,y,a.r*(.8+a.depth*.3),0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  renderGlobe=function(dt){
+    const result=originals.renderGlobe(dt);
+    if(!sheetOpen&&!heroActive())foreground(sctx);
+    return result;
+  };
+
+  // B changes the world palette only. Paper, routes and real solar time retain
+  // the app's theme and journey logic. Theme changes invalidate the same cache.
+  const originalScheme=applyScheme;
+  applyScheme=function(dark){originalScheme(dark);CFG.FOG=dark?.18:.44;if(dark){SKIN.atmo='198,161,102';SKIN.cityGlow='226,172,88';}G._key=null;};
+  applyScheme(!!schemeNow);
+  return {snapshot:()=>({style:'B / pencil-detail',gridVisible:false,sheen:scene.sheen,marks:detailMarks.length,verticesPerMark:4,worldAnchored:true,occlusion:true,cacheSampling:2,lines:{paints:lineDiagnostics.paints,fastPaints:lineDiagnostics.fastPaints,detailSwitches:lineDiagnostics.detailSwitches,maxPoseLagPx:lineDiagnostics.maxPoseLagPx},particles:{stars:qualityCount(preset.starCount,'distant'),foreground:qualityCount(preset.foreground,'foreground')},reduced:REDUCED}),outsideWorld};
+}
+/* END PENCIL_WORLD */
+const PENCIL_WORLD=(!DRIFT_IS_STUDY||new URLSearchParams(location.search).get('renderer')==='production')?installPencilWorld():null;
 
 bootRoute();
 startSplash();
-try{ localStorage.removeItem('drift.lock'); }catch(e){}   /* ล้างของที่เคยตั้งไว้ ไม่งั้นค้างเป็นขยะ */
+try{ DRIFT_LOCAL.removeItem('drift.lock'); }catch(e){}   /* ล้างของที่เคยตั้งไว้ ไม่งั้นค้างเป็นขยะ */
 addEventListener('hashchange',receiveFromHash);   /* วางลิงก์ในแท็บที่เปิดอยู่แล้วก็ต้องรับได้ */
 notifyArrivals();
-setInterval(()=>{ if(document.hidden) return; notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
+setInterval(()=>{ if(document.hidden) return; windHere(); notifyArrivals(); if(!sheetOpen) refreshDock(); }, 30000);
 
 </script>
 </body>

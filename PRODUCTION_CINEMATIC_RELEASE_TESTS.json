@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-07T08:40:52.550Z",
+  "passed": true,
+  "cases": [
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 5,
+      "hz": 30,
+      "elapsedMs": 6000,
+      "passed": true
+    },
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 5,
+      "hz": 60,
+      "elapsedMs": 5983.333333333333,
+      "passed": true
+    },
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 5,
+      "hz": 120,
+      "elapsedMs": 5975,
+      "passed": true
+    },
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 34,
+      "hz": 30,
+      "elapsedMs": 5566.666666666667,
+      "passed": true
+    },
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 34,
+      "hz": 60,
+      "elapsedMs": 5566.666666666667,
+      "passed": true
+    },
+    {
+      "size": [
+        733,
+        780
+      ],
+      "speed": 34,
+      "hz": 120,
+      "elapsedMs": 5558.333333333333,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 5,
+      "hz": 30,
+      "elapsedMs": 6000,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 5,
+      "hz": 60,
+      "elapsedMs": 5983.333333333333,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 5,
+      "hz": 120,
+      "elapsedMs": 5975,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 34,
+      "hz": 30,
+      "elapsedMs": 5566.666666666667,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 34,
+      "hz": 60,
+      "elapsedMs": 5566.666666666667,
+      "passed": true
+    },
+    {
+      "size": [
+        390,
+        680
+      ],
+      "speed": 34,
+      "hz": 120,
+      "elapsedMs": 5558.333333333333,
+      "passed": true
+    }
+  ],
+  "checks": [
+    "actual shipped departure at 30/60/120 Hz",
+    "desktop and mobile strong/weak wind",
+    "monotone camera retreat/lift/zoom",
+    "paper and globe overlap",
+    "exact final camera and CSS reset",
+    "reduced motion final camera",
+    "embedded offline source parity"
+  ]
+}

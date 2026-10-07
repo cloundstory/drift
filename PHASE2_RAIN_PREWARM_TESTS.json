@@ -1,0 +1,81 @@
+{
+  "passed": true,
+  "date": "2026-10-07T08:16:06.559Z",
+  "scope": "Exact geometry/attributes versus frozen reference; cooperative task yielding, cancelled builds and cache preservation",
+  "checks": [
+    {
+      "weather": "clear",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 408
+    },
+    {
+      "weather": "clear",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 413
+    },
+    {
+      "weather": "rain",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 559
+    },
+    {
+      "weather": "rain",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 567
+    },
+    {
+      "weather": "snow",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 645
+    },
+    {
+      "weather": "snow",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 643
+    },
+    {
+      "weather": "ice",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 604
+    },
+    {
+      "weather": "ice",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 602
+    },
+    {
+      "weather": "fog",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 391
+    },
+    {
+      "weather": "fog",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 400
+    },
+    {
+      "weather": "storm",
+      "progress": 0,
+      "exact": true,
+      "taskYields": 637
+    },
+    {
+      "weather": "storm",
+      "progress": 0.5,
+      "exact": true,
+      "taskYields": 641
+    }
+  ],
+  "cancellation": true,
+  "releaseCacheReuse": true
+}

@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-07T08:17:54.364Z",
+  "cases": [
+    {
+      "direction": "B",
+      "hz": 30,
+      "durationMs": 5400
+    },
+    {
+      "direction": "B",
+      "hz": 60,
+      "durationMs": 5400
+    },
+    {
+      "direction": "B",
+      "hz": 120,
+      "durationMs": 5400
+    },
+    {
+      "direction": "C",
+      "hz": 30,
+      "durationMs": 4600
+    },
+    {
+      "direction": "C",
+      "hz": 60,
+      "durationMs": 4600
+    },
+    {
+      "direction": "C",
+      "hz": 120,
+      "durationMs": 4600
+    }
+  ],
+  "checks": [
+    "monotone camera retreat at 30/60/120 Hz",
+    "bounded continuous fade and zoom",
+    "world visible before paper fully disappears",
+    "zero velocity at transition joins",
+    "exact final opacity and camera zoom"
+  ],
+  "passed": true
+}
